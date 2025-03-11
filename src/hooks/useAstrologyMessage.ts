@@ -18,6 +18,12 @@ export const useAstrologyMessage = () => {
       }
 
       try {
+        console.log('Fetching astrology message for:', {
+          userId: user.id,
+          zodiacSign: profile.zodiac_sign,
+          firstName: profile.first_name
+        });
+
         const { data, error } = await supabase.functions.invoke('daily-astrology', {
           body: {
             userId: user.id,
@@ -37,8 +43,12 @@ export const useAstrologyMessage = () => {
           return;
         }
 
+        console.log('Received response from daily-astrology function:', data);
+
         if (data?.message) {
           setMessage(data.message);
+        } else {
+          console.error('No message received from daily-astrology function');
         }
       } catch (error) {
         console.error('Error in fetchAstrologyMessage:', error);

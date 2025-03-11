@@ -24,8 +24,11 @@ const AstrologyMessage: React.FC = () => {
   }
 
   if (!message) {
+    console.log('No message to display');
     return null;
   }
+
+  console.log('Displaying message:', message);
 
   return (
     <div className="glass-card p-6 mb-8 border-l-4 border-pi-focus animate-fadeIn">

@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,8 +7,6 @@ const corsHeaders = {
 };
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://uhqeuhysxkzptbvxgnvt.supabase.co';
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVocWV1aHlzeGt6cHRidnhnbnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE3MTU3NTQsImV4cCI6MjA1NzI5MTc1NH0.G0z9wnB5jk7Axk4uwTowLRrWw50v1BkL-7443hKr5Q8';
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -44,6 +41,8 @@ serve(async (req) => {
       Keep it positive, inspiring and under 150 words. Format it nicely with paragraphs.
     `;
 
+    console.log('Sending request to OpenAI with prompt:', prompt);
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -75,6 +74,8 @@ serve(async (req) => {
 
     const data = await response.json();
     const message = data.choices[0].message.content.trim();
+    
+    console.log('Generated message:', message);
 
     return new Response(
       JSON.stringify({ message }),
