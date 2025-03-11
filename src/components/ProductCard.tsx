@@ -33,7 +33,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
       className="glass-card overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-pi-focus/20 cursor-pointer"
       onClick={onClick}
     >
-      <div className="relative h-48 overflow-hidden bg-dark-secondary">
+      <div className="relative h-64 overflow-hidden bg-dark-secondary">
         <img 
           src={product.imageUrl} 
           alt={product.title} 
@@ -64,7 +64,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
         <div className="flex items-center justify-between">
           <span className="text-xl font-medium">${product.price.toFixed(2)}</span>
           <div className="flex gap-2">
-            {showEditButton && isOwner && (
+            {showEditButton && isOwner ? (
               <Button 
                 size="sm" 
                 variant="outline" 
@@ -77,15 +77,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
                 <Edit className="h-4 w-4 mr-1 group-hover:text-pi-focus" />
                 <span>Edit</span>
               </Button>
+            ) : (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="group" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // View product details
+                  onClick();
+                }}
+              >
+                <ShoppingCart className="h-4 w-4 mr-1 group-hover:text-pi-focus" />
+                <span>Buy Now</span>
+              </Button>
             )}
-            <Button size="sm" variant="outline" className="group" onClick={(e) => {
-              e.stopPropagation();
-              // View product details
-              onClick();
-            }}>
-              <ShoppingCart className="h-4 w-4 mr-1 group-hover:text-pi-focus" />
-              <span>View</span>
-            </Button>
           </div>
         </div>
       </div>

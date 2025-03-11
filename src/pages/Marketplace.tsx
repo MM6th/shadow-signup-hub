@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, ShoppingCart, Star } from 'lucide-react';
+import { Search, Filter, ShoppingCart, Star, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -32,6 +33,7 @@ const Marketplace: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [walletAddresses, setWalletAddresses] = useState<Record<string, any[]>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [showQRCode, setShowQRCode] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -93,6 +95,16 @@ const Marketplace: React.FC = () => {
   const handleProductClick = (product: any) => {
     setSelectedProduct(product);
     setIsDialogOpen(true);
+  };
+
+  const generateQRCode = (walletAddress: string) => {
+    setShowQRCode(walletAddress);
+  };
+
+  // Helper function to generate QR code URL
+  const getQRCodeUrl = (text: string) => {
+    // Using Google Charts API to generate QR code
+    return `https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(text)}`;
   };
 
   return (
@@ -218,20 +230,39 @@ const Marketplace: React.FC = () => {
                                 <code className="text-xs text-gray-400 truncate flex-1">
                                   {wallet.wallet_address}
                                 </code>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(wallet.wallet_address);
-                                    toast({
-                                      title: "Address copied",
-                                      description: `${wallet.crypto_type} wallet address copied to clipboard`,
-                                    });
-                                  }}
-                                >
-                                  Copy
-                                </Button>
+                                <div className="flex gap-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(wallet.wallet_address);
+                                      toast({
+                                        title: "Address copied",
+                                        description: `${wallet.crypto_type} wallet address copied to clipboard`,
+                                      });
+                                    }}
+                                  >
+                                    Copy
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => generateQRCode(wallet.wallet_address)}
+                                  >
+                                    <QrCode size={16} className="mr-1" />
+                                    QR
+                                  </Button>
+                                </div>
                               </div>
+                              {showQRCode === wallet.wallet_address && (
+                                <div className="mt-2 flex justify-center bg-white p-2 rounded">
+                                  <img 
+                                    src={getQRCodeUrl(wallet.wallet_address)} 
+                                    alt="QR Code" 
+                                    className="h-32 w-32"
+                                  />
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -268,7 +299,10 @@ const Marketplace: React.FC = () => {
                           Buy Now
                         </Button>
                       )}
-                      <Button variant="outline" className="w-1/3" onClick={() => setIsDialogOpen(false)}>
+                      <Button variant="outline" className="w-1/3" onClick={() => {
+                        setShowQRCode(null);
+                        setIsDialogOpen(false);
+                      }}>
                         Close
                       </Button>
                     </div>

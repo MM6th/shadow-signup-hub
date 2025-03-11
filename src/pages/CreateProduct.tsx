@@ -40,7 +40,7 @@ const CreateProduct = () => {
           </Button>
           
           <h1 className="text-3xl font-elixia text-gradient">Create New Product</h1>
-          <p className="text-pi-muted">Add a new product or service to your cosmic marketplace.</p>
+          <p className="text-pi-muted mb-6">Add a new product or service to your cosmic marketplace.</p>
         </div>
         
         <ProductForm />
