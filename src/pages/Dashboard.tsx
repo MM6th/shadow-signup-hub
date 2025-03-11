@@ -1,9 +1,8 @@
-
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
-import { MapPin, Clock, Briefcase, Tag, Star, PenSquare } from 'lucide-react';
+import { MapPin, Clock, Briefcase, Tag, Star, PenSquare, ShoppingBag } from 'lucide-react';
 import Button from '@/components/Button';
 import AstrologyMessage from '@/components/AstrologyMessage';
 
@@ -36,7 +35,6 @@ const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-dark bg-dark-gradient text-pi py-10">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="glass-card rounded-xl overflow-hidden">
-          {/* Header section with photo and name */}
           <div className="relative">
             <div className="h-40 bg-gradient-to-r from-dark-accent to-pi-focus/30"></div>
             <div className="absolute top-24 left-8 rounded-full border-4 border-dark overflow-hidden">
@@ -57,7 +55,6 @@ const Dashboard: React.FC = () => {
             <div className="h-24"></div>
           </div>
           
-          {/* Profile content */}
           <div className="p-8">
             <div className="mb-6 flex justify-between items-center">
               <div>
@@ -72,17 +69,26 @@ const Dashboard: React.FC = () => {
                   </div>
                 )}
               </div>
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/create-profile')}
-                className="flex items-center gap-2"
-              >
-                <PenSquare size={16} />
-                Edit Profile
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/create-profile')}
+                  className="flex items-center gap-2"
+                >
+                  <PenSquare size={16} />
+                  Edit Profile
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => navigate('/marketplace')}
+                  className="flex items-center gap-2"
+                >
+                  <ShoppingBag size={16} />
+                  Marketplace
+                </Button>
+              </div>
             </div>
             
-            {/* Astrology Message */}
             {profile.zodiac_sign && profile.show_zodiac_sign && (
               <AstrologyMessage />
             )}
@@ -180,6 +186,9 @@ const Dashboard: React.FC = () => {
             <div className="flex justify-end space-x-4 mt-6">
               <Button variant="outline" onClick={() => navigate('/')}>
                 Go to Home
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/marketplace')}>
+                Marketplace
               </Button>
               <Button variant="primary" onClick={signOut}>
                 Sign Out

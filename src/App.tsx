@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import CreateProfile from "./pages/CreateProfile";
 import Dashboard from "./pages/Dashboard";
 import DigitalOffice from "./pages/DigitalOffice";
+import Marketplace from "./pages/Marketplace";
 import { useAuth } from "./context/AuthContext";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const AppRoutes = () => {
       <Route path="/create-profile" element={<ProtectedRoute><CreateProfile /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/digital-office" element={<ProtectedRoute><DigitalOffice /></ProtectedRoute>} />
+      <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
