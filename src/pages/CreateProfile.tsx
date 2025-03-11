@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -240,40 +239,22 @@ const CreateProfile: React.FC = () => {
                 control={form.control}
                 name="date_of_birth"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Date of Birth</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full pl-3 text-left font-normal bg-dark-secondary border border-white/10",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 bg-dark-secondary border border-white/10" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
+                    <FormControl>
+                      <Input
+                        type="date"
+                        className="bg-dark-secondary border border-white/10"
+                        {...field}
+                        value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
+                        onChange={(e) => {
+                          const date = e.target.value ? new Date(e.target.value) : null;
+                          if (date) {
+                            field.onChange(date);
                           }
-                          initialFocus
-                          className="p-3 pointer-events-auto bg-dark text-pi"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                        }}
+                      />
+                    </FormControl>
                     <FormDescription>
                       Your date of birth is required to calculate your zodiac sign.
                     </FormDescription>

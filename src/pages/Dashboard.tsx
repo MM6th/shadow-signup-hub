@@ -1,9 +1,8 @@
-
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
-import { MapPin, Clock, Briefcase, Tag, Star } from 'lucide-react';
+import { MapPin, Clock, Briefcase, Tag, Star, PenSquare } from 'lucide-react';
 import Button from '@/components/Button';
 
 const Dashboard: React.FC = () => {
@@ -58,17 +57,27 @@ const Dashboard: React.FC = () => {
           
           {/* Profile content */}
           <div className="p-8">
-            <div className="mb-6">
-              <h1 className="text-3xl font-elixia text-gradient mb-2">
-                {profile.first_name} {profile.last_name}
-              </h1>
-              
-              {profile.industry && (
-                <div className="flex items-center text-pi-muted">
-                  <Tag size={16} className="mr-2" />
-                  <span>{profile.industry}</span>
-                </div>
-              )}
+            <div className="mb-6 flex justify-between items-center">
+              <div>
+                <h1 className="text-3xl font-elixia text-gradient mb-2">
+                  {profile.first_name} {profile.last_name}
+                </h1>
+                
+                {profile.industry && (
+                  <div className="flex items-center text-pi-muted">
+                    <Tag size={16} className="mr-2" />
+                    <span>{profile.industry}</span>
+                  </div>
+                )}
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/create-profile')}
+                className="flex items-center gap-2"
+              >
+                <PenSquare size={16} />
+                Edit Profile
+              </Button>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
