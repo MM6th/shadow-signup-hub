@@ -54,13 +54,14 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const CreateProfile: React.FC = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [dateInputValue, setDateInputValue] = useState('');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -78,7 +79,13 @@ const CreateProfile: React.FC = () => {
       
       try {
         // Parse the date string from profile correctly
+        console.log("Original date_of_birth:", profile.date_of_birth);
         const dateOfBirth = new Date(profile.date_of_birth);
+        console.log("Parsed dateOfBirth:", dateOfBirth);
+
+        // Format the date for display in the input field
+        const formattedDate = format(dateOfBirth, 'MM/dd/yyyy');
+        setDateInputValue(formattedDate);
         
         // Set initial form values
         form.reset({
@@ -109,6 +116,23 @@ const CreateProfile: React.FC = () => {
       // Create a preview URL
       const objectUrl = URL.createObjectURL(file);
       setProfileImageUrl(objectUrl);
+    }
+  };
+
+  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setDateInputValue(value);
+    
+    try {
+      // Try to parse the date from the input
+      const parsedDate = parse(value, 'MM/dd/yyyy', new Date());
+      
+      // Only update if it's a valid date
+      if (!isNaN(parsedDate.getTime())) {
+        form.setValue('date_of_birth', parsedDate);
+      }
+    } catch (error) {
+      console.error("Error parsing date:", error);
     }
   };
 
@@ -167,6 +191,8 @@ const CreateProfile: React.FC = () => {
         industry: data.industry,
       };
 
+      console.log("Saving profile data with date:", profileData.date_of_birth);
+
       let error;
       
       if (isEditing) {
@@ -192,6 +218,9 @@ const CreateProfile: React.FC = () => {
       if (error) {
         throw error;
       }
+
+      // Refresh the profile data
+      await refreshProfile();
 
       toast({
         title: isEditing ? "Profile updated!" : "Profile created!",
@@ -300,37 +329,18 @@ const CreateProfile: React.FC = () => {
                     <FormLabel>Date of Birth</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal bg-dark-secondary border border-white/10",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? (
-                                format(field.value, "MM/dd/yyyy")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
-                              className="pointer-events-auto"
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <Input
+                          type="text"
+                          placeholder="MM/DD/YYYY"
+                          value={dateInputValue}
+                          onChange={handleDateInputChange}
+                          className="bg-dark-secondary border border-white/10 pl-10"
+                        />
+                        <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pi-muted w-4 h-4" />
                       </div>
                     </FormControl>
                     <FormDescription>
-                      Your date of birth is required to calculate your zodiac sign.
+                      Your date of birth is required to calculate your zodiac sign. Format: MM/DD/YYYY
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
