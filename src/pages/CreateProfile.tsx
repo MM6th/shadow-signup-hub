@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -72,22 +71,20 @@ const CreateProfile: React.FC = () => {
     },
   });
 
-  // Load existing profile data when editing
   useEffect(() => {
     if (profile) {
       setIsEditing(true);
       
       try {
-        // Parse the date string from profile correctly
-        console.log("Original date_of_birth:", profile.date_of_birth);
-        const dateOfBirth = new Date(profile.date_of_birth);
+        const originalDateString = profile.date_of_birth;
+        console.log("Original date string from profile:", originalDateString);
+        
+        const dateOfBirth = parse(originalDateString, 'yyyy-MM-dd', new Date());
         console.log("Parsed dateOfBirth:", dateOfBirth);
-
-        // Format the date for display in the input field
+        
         const formattedDate = format(dateOfBirth, 'MM/dd/yyyy');
         setDateInputValue(formattedDate);
         
-        // Set initial form values
         form.reset({
           first_name: profile.first_name,
           last_name: profile.last_name,
@@ -99,7 +96,6 @@ const CreateProfile: React.FC = () => {
           industry: profile.industry as any || undefined,
         });
         
-        // Set profile image URL if it exists
         if (profile.profile_photo_url) {
           setProfileImageUrl(profile.profile_photo_url);
         }
@@ -113,7 +109,6 @@ const CreateProfile: React.FC = () => {
     const file = event.target.files?.[0];
     if (file) {
       setProfileImage(file);
-      // Create a preview URL
       const objectUrl = URL.createObjectURL(file);
       setProfileImageUrl(objectUrl);
     }
@@ -124,10 +119,8 @@ const CreateProfile: React.FC = () => {
     setDateInputValue(value);
     
     try {
-      // Try to parse the date from the input
       const parsedDate = parse(value, 'MM/dd/yyyy', new Date());
       
-      // Only update if it's a valid date
       if (!isNaN(parsedDate.getTime())) {
         form.setValue('date_of_birth', parsedDate);
       }
@@ -153,7 +146,6 @@ const CreateProfile: React.FC = () => {
         throw error;
       }
 
-      // Get the public URL
       const { data: publicUrlData } = supabase.storage
         .from('profile-photos')
         .getPublicUrl(filePath);
@@ -176,14 +168,16 @@ const CreateProfile: React.FC = () => {
 
     try {
       setIsUploading(true);
-      // First upload the profile image if there is one
       const profilePhotoUrl = profileImage ? await uploadProfileImage() : profileImageUrl;
+
+      const formattedDate = format(data.date_of_birth, 'yyyy-MM-dd');
+      console.log("Saving profile data with formatted date:", formattedDate);
 
       const profileData = {
         first_name: data.first_name,
         last_name: data.last_name,
         profile_photo_url: profilePhotoUrl,
-        date_of_birth: format(data.date_of_birth, 'yyyy-MM-dd'),
+        date_of_birth: formattedDate,
         time_of_birth: data.time_of_birth,
         place_of_birth: data.place_of_birth,
         show_zodiac_sign: data.show_zodiac_sign,
@@ -191,12 +185,9 @@ const CreateProfile: React.FC = () => {
         industry: data.industry,
       };
 
-      console.log("Saving profile data with date:", profileData.date_of_birth);
-
       let error;
       
       if (isEditing) {
-        // Update existing profile
         const { error: updateError } = await supabase
           .from('profiles')
           .update(profileData)
@@ -204,7 +195,6 @@ const CreateProfile: React.FC = () => {
           
         error = updateError;
       } else {
-        // Create new profile
         const { error: insertError } = await supabase
           .from('profiles')
           .insert({
@@ -219,7 +209,6 @@ const CreateProfile: React.FC = () => {
         throw error;
       }
 
-      // Refresh the profile data
       await refreshProfile();
 
       toast({
@@ -229,7 +218,6 @@ const CreateProfile: React.FC = () => {
           : "Your profile has been created successfully.",
       });
 
-      // Redirect to dashboard
       navigate('/dashboard');
     } catch (error: any) {
       toast({

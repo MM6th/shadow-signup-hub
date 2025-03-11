@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { parseISO } from 'date-fns';
 
 export type Profile = {
   id: string;
@@ -34,6 +33,8 @@ export const useProfile = (userId: string | undefined) => {
         .maybeSingle();
         
       if (!error) {
+        // When receiving profile data from the database, we don't need to manipulate the date
+        // Just use it as is from the database
         setProfile(profileData);
         return profileData;
       } else {
