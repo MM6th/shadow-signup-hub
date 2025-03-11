@@ -8,7 +8,7 @@ import { AuthProvider } from "./context/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import CreateProfile from "./pages/CreateProfile";
-import DigitalOffice from "./pages/DigitalOffice";
+import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -22,7 +22,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/create-profile" element={<CreateProfile />} />
-            <Route path="/digital-office" element={<DigitalOffice />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </TooltipProvider>
