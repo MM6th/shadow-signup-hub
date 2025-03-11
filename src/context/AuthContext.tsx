@@ -28,6 +28,7 @@ type AuthContextType = {
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   hasProfile: boolean;
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,6 +41,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+        
+      if (!error && profileData) {
+        setProfile(profileData);
+        return profileData;
+      } else if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error in fetchProfile:', error);
+      return null;
+    }
+    return null;
+  };
+
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  };
+
   useEffect(() => {
     const fetchSession = async () => {
       try {
@@ -48,15 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(data.session?.user || null);
         
         if (data.session?.user) {
-          const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', data.session.user.id)
-            .single();
-            
-          if (!error && profileData) {
-            setProfile(profileData);
-          }
+          await fetchProfile(data.session.user.id);
         }
       } catch (error) {
         console.error('Error fetching session:', error);
@@ -76,16 +97,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (event === 'SIGNED_IN' && session?.user) {
         try {
           setIsLoading(true);
-          const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
+          const profileData = await fetchProfile(session.user.id);
             
-          if (!error && profileData) {
-            setProfile(profileData);
+          if (profileData) {
             navigate('/dashboard');
-          } else if (error) {
+          } else {
             navigate('/create-profile');
           }
         } catch (error) {
@@ -187,7 +203,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signIn, 
       signUp, 
       signOut,
-      hasProfile
+      hasProfile,
+      refreshProfile
     }}>
       {children}
     </AuthContext.Provider>

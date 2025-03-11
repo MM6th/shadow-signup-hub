@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -53,12 +54,13 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const CreateProfile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -68,6 +70,30 @@ const CreateProfile: React.FC = () => {
       show_zodiac_sign: false,
     },
   });
+
+  // Load existing profile data when editing
+  useEffect(() => {
+    if (profile) {
+      setIsEditing(true);
+      
+      // Set initial form values
+      form.reset({
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        date_of_birth: new Date(profile.date_of_birth),
+        time_of_birth: profile.time_of_birth || undefined,
+        place_of_birth: profile.place_of_birth || undefined,
+        show_zodiac_sign: profile.show_zodiac_sign || false,
+        business_type: profile.business_type as any || undefined,
+        industry: profile.industry as any || undefined,
+      });
+      
+      // Set profile image URL if it exists
+      if (profile.profile_photo_url) {
+        setProfileImageUrl(profile.profile_photo_url);
+      }
+    }
+  }, [profile, form]);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -120,11 +146,9 @@ const CreateProfile: React.FC = () => {
     try {
       setIsUploading(true);
       // First upload the profile image if there is one
-      const profilePhotoUrl = profileImage ? await uploadProfileImage() : null;
+      const profilePhotoUrl = profileImage ? await uploadProfileImage() : profileImageUrl;
 
-      // Create the profile
-      const { error } = await supabase.from('profiles').insert({
-        id: user.id,
+      const profileData = {
         first_name: data.first_name,
         last_name: data.last_name,
         profile_photo_url: profilePhotoUrl,
@@ -134,22 +158,46 @@ const CreateProfile: React.FC = () => {
         show_zodiac_sign: data.show_zodiac_sign,
         business_type: data.business_type,
         industry: data.industry,
-      });
+      };
+
+      let error;
+      
+      if (isEditing) {
+        // Update existing profile
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('id', user.id);
+          
+        error = updateError;
+      } else {
+        // Create new profile
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            ...profileData
+          });
+          
+        error = insertError;
+      }
 
       if (error) {
         throw error;
       }
 
       toast({
-        title: "Profile created!",
-        description: "Your profile has been created successfully.",
+        title: isEditing ? "Profile updated!" : "Profile created!",
+        description: isEditing 
+          ? "Your profile has been updated successfully." 
+          : "Your profile has been created successfully.",
       });
 
       // Redirect to dashboard
       navigate('/dashboard');
     } catch (error: any) {
       toast({
-        title: "Error creating profile",
+        title: isEditing ? "Error updating profile" : "Error creating profile",
         description: error.message,
         variant: "destructive",
       });
@@ -162,7 +210,9 @@ const CreateProfile: React.FC = () => {
     <div className="min-h-screen bg-dark bg-dark-gradient text-pi py-10">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="glass-card rounded-xl p-6 md:p-8">
-          <h1 className="text-2xl md:text-3xl font-elixia mb-6 text-center text-gradient">Create Your Profile</h1>
+          <h1 className="text-2xl md:text-3xl font-elixia mb-6 text-center text-gradient">
+            {isEditing ? 'Edit Your Profile' : 'Create Your Profile'}
+          </h1>
           
           <div className="mb-8 flex flex-col items-center">
             <div className="relative w-32 h-32 mb-4">
@@ -349,7 +399,7 @@ const CreateProfile: React.FC = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Business Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="bg-dark-secondary border border-white/10">
                             <SelectValue placeholder="Select business type" />
@@ -376,7 +426,7 @@ const CreateProfile: React.FC = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Industry</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="bg-dark-secondary border border-white/10">
                             <SelectValue placeholder="Select your industry" />
@@ -413,7 +463,7 @@ const CreateProfile: React.FC = () => {
                   <>Uploading... <span className="animate-spin ml-1">⟳</span></>
                 ) : (
                   <>
-                    <Save size={18} /> Create Profile
+                    <Save size={18} /> {isEditing ? 'Update Profile' : 'Create Profile'}
                   </>
                 )}
               </Button>
