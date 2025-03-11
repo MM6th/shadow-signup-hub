@@ -1,9 +1,11 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
 import { MapPin, Clock, Briefcase, Tag, Star, PenSquare } from 'lucide-react';
 import Button from '@/components/Button';
+import AstrologyMessage from '@/components/AstrologyMessage';
 
 const Dashboard: React.FC = () => {
   const { user, profile, isLoading, hasProfile, signOut } = useAuth();
@@ -79,6 +81,11 @@ const Dashboard: React.FC = () => {
                 Edit Profile
               </Button>
             </div>
+            
+            {/* Astrology Message */}
+            {profile.zodiac_sign && profile.show_zodiac_sign && (
+              <AstrologyMessage />
+            )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="space-y-4">
