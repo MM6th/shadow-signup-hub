@@ -1,10 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Minus, ShoppingBag, Upload, X } from 'lucide-react';
+import { Plus, Minus, ShoppingBag, Upload, X, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -51,23 +51,33 @@ interface WalletAddress {
   address: string;
 }
 
-const ProductForm = () => {
+interface ProductFormProps {
+  initialValues?: any;
+  initialWalletAddresses?: WalletAddress[];
+  isEditing?: boolean;
+}
+
+const ProductForm: React.FC<ProductFormProps> = ({ 
+  initialValues = null, 
+  initialWalletAddresses = [], 
+  isEditing = false 
+}) => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [walletAddresses, setWalletAddresses] = useState<WalletAddress[]>([]);
+  const [walletAddresses, setWalletAddresses] = useState<WalletAddress[]>(initialWalletAddresses);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initialValues?.image_url || null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: '',
-      type: 'digital',
-      description: '',
-      price: '',
-      category: '',
+      title: initialValues?.title || '',
+      type: initialValues?.type || 'digital',
+      description: initialValues?.description || '',
+      price: initialValues?.price ? String(initialValues.price) : '',
+      category: initialValues?.category || '',
     },
   });
 
@@ -149,7 +159,7 @@ const ProductForm = () => {
     setIsSubmitting(true);
     
     try {
-      let imageUrl = null;
+      let imageUrl = initialValues?.image_url || null;
       
       // Upload image if provided
       if (imageFile) {
@@ -172,22 +182,54 @@ const ProductForm = () => {
         imageUrl = publicUrl;
       }
       
-      // Insert product into database
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .insert({
-          user_id: user.id,
-          title: values.title,
-          type: values.type,
-          description: values.description,
-          price: parseFloat(values.price),
-          category: values.category,
-          image_url: imageUrl,
-        })
-        .select()
-        .single();
+      let product;
+      
+      if (isEditing && initialValues) {
+        // Update existing product
+        const { data: updatedProduct, error: updateError } = await supabase
+          .from('products')
+          .update({
+            title: values.title,
+            type: values.type,
+            description: values.description,
+            price: parseFloat(values.price),
+            category: values.category,
+            image_url: imageUrl,
+          })
+          .eq('id', initialValues.id)
+          .select()
+          .single();
+          
+        if (updateError) throw new Error(updateError.message);
+        product = updatedProduct;
         
-      if (productError) throw new Error(productError.message);
+        // Handle wallet addresses updates
+        // First, delete all existing wallet addresses
+        const { error: deleteWalletsError } = await supabase
+          .from('wallet_addresses')
+          .delete()
+          .eq('product_id', initialValues.id);
+          
+        if (deleteWalletsError) throw new Error(deleteWalletsError.message);
+      } else {
+        // Insert new product
+        const { data: newProduct, error: productError } = await supabase
+          .from('products')
+          .insert({
+            user_id: user.id,
+            title: values.title,
+            type: values.type,
+            description: values.description,
+            price: parseFloat(values.price),
+            category: values.category,
+            image_url: imageUrl,
+          })
+          .select()
+          .single();
+          
+        if (productError) throw new Error(productError.message);
+        product = newProduct;
+      }
       
       // Insert wallet addresses
       const walletData = walletAddresses.map(wallet => ({
@@ -203,17 +245,19 @@ const ProductForm = () => {
       if (walletError) throw new Error(walletError.message);
       
       toast({
-        title: "Product created successfully",
-        description: "Your product has been added to the marketplace",
+        title: isEditing ? "Product updated successfully" : "Product created successfully",
+        description: isEditing 
+          ? "Your product has been updated in the marketplace" 
+          : "Your product has been added to the marketplace",
       });
       
       // Redirect to marketplace
       navigate('/marketplace');
       
     } catch (error) {
-      console.error('Error creating product:', error);
+      console.error('Error saving product:', error);
       toast({
-        title: "Error creating product",
+        title: isEditing ? "Error updating product" : "Error creating product",
         description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
@@ -224,7 +268,9 @@ const ProductForm = () => {
 
   return (
     <div className="glass-card p-6">
-      <h2 className="text-xl font-elixia text-gradient mb-6">Create New Product or Service</h2>
+      <h2 className="text-xl font-elixia text-gradient mb-6">
+        {isEditing ? "Edit Product or Service" : "Create New Product or Service"}
+      </h2>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -448,7 +494,9 @@ const ProductForm = () => {
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Creating...' : 'Create Product'}
+              {isSubmitting 
+                ? (isEditing ? 'Updating...' : 'Creating...') 
+                : (isEditing ? 'Update Product' : 'Create Product')}
             </Button>
           </div>
         </form>

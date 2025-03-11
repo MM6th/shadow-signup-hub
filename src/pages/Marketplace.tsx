@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, ShoppingCart, Star } from 'lucide-react';
@@ -9,6 +8,7 @@ import ProductCard from '@/components/ProductCard';
 import FeaturedServices from '@/components/FeaturedServices';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 // Categories for filtering
 const categories = [
@@ -24,6 +24,7 @@ const categories = [
 const Marketplace: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -160,6 +161,7 @@ const Marketplace: React.FC = () => {
                 key={product.id} 
                 product={{
                   id: product.id,
+                  user_id: product.user_id,
                   title: product.title,
                   description: product.description,
                   price: product.price,
@@ -169,6 +171,7 @@ const Marketplace: React.FC = () => {
                   imageUrl: product.image_url || '/placeholder.svg'
                 }} 
                 onClick={() => handleProductClick(product)} 
+                showEditButton={true}
               />
             ))}
           </div>
@@ -236,23 +239,35 @@ const Marketplace: React.FC = () => {
                     )}
                     
                     <div className="flex gap-2">
-                      <Button className="w-full" onClick={() => {
-                        if (walletAddresses[selectedProduct.id] && walletAddresses[selectedProduct.id].length > 0) {
-                          navigator.clipboard.writeText(walletAddresses[selectedProduct.id][0].wallet_address);
-                          toast({
-                            title: "Payment information",
-                            description: "Wallet address copied to clipboard. Send payment to complete your purchase.",
-                          });
-                        } else {
-                          toast({
-                            title: "No payment information",
-                            description: "This product doesn't have payment information available.",
-                            variant: "destructive",
-                          });
-                        }
-                      }}>
-                        Buy Now
-                      </Button>
+                      {user && selectedProduct.user_id === user.id ? (
+                        <Button 
+                          className="w-full" 
+                          onClick={() => {
+                            setIsDialogOpen(false);
+                            navigate(`/edit-product/${selectedProduct.id}`);
+                          }}
+                        >
+                          Edit Product
+                        </Button>
+                      ) : (
+                        <Button className="w-full" onClick={() => {
+                          if (walletAddresses[selectedProduct.id] && walletAddresses[selectedProduct.id].length > 0) {
+                            navigator.clipboard.writeText(walletAddresses[selectedProduct.id][0].wallet_address);
+                            toast({
+                              title: "Payment information",
+                              description: "Wallet address copied to clipboard. Send payment to complete your purchase.",
+                            });
+                          } else {
+                            toast({
+                              title: "No payment information",
+                              description: "This product doesn't have payment information available.",
+                              variant: "destructive",
+                            });
+                          }
+                        }}>
+                          Buy Now
+                        </Button>
+                      )}
                       <Button variant="outline" className="w-1/3" onClick={() => setIsDialogOpen(false)}>
                         Close
                       </Button>

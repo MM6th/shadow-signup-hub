@@ -9,6 +9,45 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      products: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          price: number
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          image_url?: string | null
+          price: number
+          title: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          price?: number
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           business_type: string | null
@@ -56,6 +95,38 @@ export type Database = {
           zodiac_sign?: string | null
         }
         Relationships: []
+      }
+      wallet_addresses: {
+        Row: {
+          created_at: string
+          crypto_type: string
+          id: string
+          product_id: string
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          crypto_type: string
+          id?: string
+          product_id: string
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          crypto_type?: string
+          id?: string
+          product_id?: string
+          wallet_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_addresses_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

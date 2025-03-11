@@ -1,10 +1,13 @@
 
 import React from 'react';
-import { Star, ShoppingCart } from 'lucide-react';
+import { Star, ShoppingCart, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface Product {
   id: string;
+  user_id?: string;
   title: string;
   description: string;
   price: number;
@@ -17,9 +20,14 @@ interface Product {
 interface ProductCardProps {
   product: Product;
   onClick: () => void;
+  showEditButton?: boolean;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditButton = false }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const isOwner = user && product.user_id === user.id;
+
   return (
     <div 
       className="glass-card overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-pi-focus/20 cursor-pointer"
@@ -55,14 +63,30 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
         
         <div className="flex items-center justify-between">
           <span className="text-xl font-medium">${product.price.toFixed(2)}</span>
-          <Button size="sm" variant="outline" className="group" onClick={(e) => {
-            e.stopPropagation();
-            // View product details
-            onClick();
-          }}>
-            <ShoppingCart className="h-4 w-4 mr-1 group-hover:text-pi-focus" />
-            <span>View</span>
-          </Button>
+          <div className="flex gap-2">
+            {showEditButton && isOwner && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="group" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/edit-product/${product.id}`);
+                }}
+              >
+                <Edit className="h-4 w-4 mr-1 group-hover:text-pi-focus" />
+                <span>Edit</span>
+              </Button>
+            )}
+            <Button size="sm" variant="outline" className="group" onClick={(e) => {
+              e.stopPropagation();
+              // View product details
+              onClick();
+            }}>
+              <ShoppingCart className="h-4 w-4 mr-1 group-hover:text-pi-focus" />
+              <span>View</span>
+            </Button>
+          </div>
         </div>
       </div>
     </div>
