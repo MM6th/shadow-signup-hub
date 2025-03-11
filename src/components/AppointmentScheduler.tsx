@@ -6,9 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 interface AppointmentSchedulerProps {
-  onScheduleSelected: (date: Date, timeSlot: string) => void;
+  onScheduleSelected?: (date: Date, timeSlot: string) => void;
+  productId?: string;
+  productTitle?: string;
+  sellerId?: string;
+  onSchedulingComplete?: () => void;
 }
 
 const TIME_SLOTS = [
@@ -16,19 +23,77 @@ const TIME_SLOTS = [
   '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'
 ];
 
-const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({ onScheduleSelected }) => {
+const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({ 
+  onScheduleSelected, 
+  productId, 
+  productTitle, 
+  sellerId, 
+  onSchedulingComplete 
+}) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
     setSelectedTimeSlot(null); // Reset time slot when date changes
   };
 
-  const handleTimeSelect = (timeSlot: string) => {
+  const handleTimeSelect = async (timeSlot: string) => {
     setSelectedTimeSlot(timeSlot);
+    
     if (selectedDate) {
-      onScheduleSelected(selectedDate, timeSlot);
+      // Call the callback if provided (for backward compatibility)
+      if (onScheduleSelected) {
+        onScheduleSelected(selectedDate, timeSlot);
+      }
+      
+      // If we have product info, handle the appointment creation
+      if (productId && sellerId && user && productTitle) {
+        try {
+          setIsSubmitting(true);
+          
+          const appointmentData = {
+            product_id: productId,
+            product_title: productTitle,
+            seller_id: sellerId,
+            buyer_id: user.id,
+            buyer_name: user.user_metadata?.full_name || user.email,
+            appointment_date: format(selectedDate, 'yyyy-MM-dd'),
+            appointment_time: timeSlot,
+            status: 'scheduled'
+          };
+          
+          const { data, error } = await supabase
+            .from('appointments')
+            .insert(appointmentData)
+            .select()
+            .single();
+            
+          if (error) throw error;
+          
+          toast({
+            title: "Appointment Scheduled",
+            description: "Your appointment has been successfully scheduled.",
+          });
+          
+          if (onSchedulingComplete) {
+            onSchedulingComplete();
+          }
+          
+        } catch (error: any) {
+          console.error('Error scheduling appointment:', error);
+          toast({
+            title: "Error",
+            description: error.message || "Failed to schedule appointment",
+            variant: "destructive",
+          });
+        } finally {
+          setIsSubmitting(false);
+        }
+      }
     }
   };
 
@@ -97,6 +162,7 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({ onScheduleS
                       selectedTimeSlot === timeSlot && "bg-pi-focus text-white"
                     )}
                     onClick={() => handleTimeSelect(timeSlot)}
+                    disabled={isSubmitting}
                   >
                     <Clock className="mr-1 h-3 w-3" /> {timeSlot}
                   </Button>

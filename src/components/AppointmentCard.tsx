@@ -9,10 +9,10 @@ import { useNavigate } from 'react-router-dom';
 interface AppointmentCardProps {
   appointment: {
     id: string;
-    productTitle: string;
-    customerName: string;
-    appointmentDate: string;
-    appointmentTime: string;
+    product_title: string;
+    buyer_name: string;
+    appointment_date: string;
+    appointment_time: string;
     status: string;
   };
   isSeller: boolean;
@@ -23,8 +23,8 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
   isSeller 
 }) => {
   const navigate = useNavigate();
-  const formattedDate = formatDate(new Date(appointment.appointmentDate));
-  const isPast = new Date(`${appointment.appointmentDate}T${appointment.appointmentTime}`) < new Date();
+  const formattedDate = formatDate(new Date(appointment.appointment_date));
+  const isPast = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`) < new Date();
   
   const isActive = appointment.status === 'scheduled' && !isPast;
   const statusText = isPast ? 'Completed' : appointment.status;
@@ -37,7 +37,7 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
     <Card className="overflow-hidden">
       <CardContent className="p-6">
         <div className="flex flex-col space-y-4">
-          <h3 className="text-lg font-semibold">{appointment.productTitle}</h3>
+          <h3 className="text-lg font-semibold">{appointment.product_title}</h3>
           
           <div className="flex items-center text-sm text-gray-500">
             <Calendar size={16} className="mr-2" />
@@ -46,13 +46,13 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
           
           <div className="flex items-center text-sm text-gray-500">
             <Clock size={16} className="mr-2" />
-            <span>{appointment.appointmentTime}</span>
+            <span>{appointment.appointment_time}</span>
           </div>
           
           {isSeller && (
             <div className="flex items-center text-sm text-gray-500">
               <User size={16} className="mr-2" />
-              <span>Client: {appointment.customerName}</span>
+              <span>Client: {appointment.buyer_name}</span>
             </div>
           )}
           

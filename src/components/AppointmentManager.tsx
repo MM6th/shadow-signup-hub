@@ -81,12 +81,7 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ isSeller = fals
       {appointments.map((appointment) => (
         <AppointmentCard
           key={appointment.id}
-          id={appointment.id}
-          productTitle={appointment.productTitle}
-          customerName={appointment.customerName}
-          appointmentDate={appointment.appointmentDate}
-          appointmentTime={appointment.appointmentTime}
-          status={appointment.status}
+          appointment={appointment}
           isSeller={isSeller}
         />
       ))}
