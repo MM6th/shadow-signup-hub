@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Minus, ShoppingBag, Upload, X, Edit } from 'lucide-react';
+import { Plus, Minus, ShoppingBag, Upload, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -83,6 +83,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
     },
   });
 
+  // Wallet address management functions
   const addWalletAddress = () => {
     if (walletAddresses.length >= 3) {
       toast({
@@ -109,6 +110,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
     ));
   };
 
+  // Image handling functions
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -127,6 +129,60 @@ const ProductForm: React.FC<ProductFormProps> = ({
     setImagePreview(null);
   };
 
+  // Upload image to Supabase storage
+  const uploadImage = async (): Promise<string | null> => {
+    if (!imageFile) return initialValues?.image_url || null;
+    
+    try {
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${uuidv4()}.${fileExt}`;
+      const filePath = `product-images/${fileName}`;
+      
+      const { error: uploadError, data } = await supabase.storage
+        .from('products')
+        .upload(filePath, imageFile);
+        
+      if (uploadError) {
+        throw new Error(uploadError.message);
+      }
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('products')
+        .getPublicUrl(filePath);
+        
+      return publicUrl;
+    } catch (error) {
+      console.error('Image upload error:', error);
+      throw error;
+    }
+  };
+
+  // Validate wallet addresses
+  const validateWalletAddresses = (): boolean => {
+    if (walletAddresses.length === 0) {
+      toast({
+        title: "Wallet address required",
+        description: "Please add at least one wallet address",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    for (const wallet of walletAddresses) {
+      if (!wallet.cryptoType || !wallet.address) {
+        toast({
+          title: "Incomplete wallet information",
+          description: "Please fill in all wallet address fields",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
+  // Handle form submission
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) {
       toast({
@@ -138,68 +194,13 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }
     
     // Validate wallet addresses
-    if (walletAddresses.length === 0) {
-      toast({
-        title: "Wallet address required",
-        description: "Please add at least one wallet address",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    for (const wallet of walletAddresses) {
-      if (!wallet.cryptoType || !wallet.address) {
-        toast({
-          title: "Incomplete wallet information",
-          description: "Please fill in all wallet address fields",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
+    if (!validateWalletAddresses()) return;
     
     setIsSubmitting(true);
     
     try {
-      let imageUrl = initialValues?.image_url || null;
-      
       // Upload image if provided
-      if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${uuidv4()}.${fileExt}`;
-        const filePath = `product-images/${fileName}`;
-        
-        // First create the storage bucket if it doesn't exist
-        try {
-          // Check if the products bucket exists
-          const { data: buckets } = await supabase.storage.listBuckets();
-          const productsBucket = buckets?.find(bucket => bucket.name === 'products');
-          
-          if (!productsBucket) {
-            // Create the bucket
-            await supabase.storage.createBucket('products', {
-              public: true
-            });
-          }
-        } catch (error) {
-          // If this fails, the bucket might already exist
-          console.log('Bucket operation:', error);
-        }
-        
-        const { error: uploadError } = await supabase.storage
-          .from('products')
-          .upload(filePath, imageFile);
-          
-        if (uploadError) {
-          throw new Error(uploadError.message);
-        }
-        
-        const { data: { publicUrl } } = supabase.storage
-          .from('products')
-          .getPublicUrl(filePath);
-          
-        imageUrl = publicUrl;
-      }
+      const imageUrl = await uploadImage();
       
       let product;
       
@@ -222,8 +223,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
         if (updateError) throw new Error(updateError.message);
         product = updatedProduct;
         
-        // Handle wallet addresses updates
-        // First, delete all existing wallet addresses
+        // Delete existing wallet addresses
         const { error: deleteWalletsError } = await supabase
           .from('wallet_addresses')
           .delete()
@@ -293,6 +293,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Product Details */}
           <FormField
             control={form.control}
             name="title"
@@ -440,6 +441,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             )}
           />
           
+          {/* Wallet Addresses Section */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-medium">Wallet Addresses</h3>
@@ -508,6 +510,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             ))}
           </div>
           
+          {/* Form Controls */}
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={() => navigate('/dashboard')}>
               Cancel
