@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, ShoppingCart, Star, QrCode, User } from 'lucide-react';
+import { Search, Filter, ShoppingCart, Star, QrCode, User, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -9,6 +10,10 @@ import FeaturedServices from '@/components/FeaturedServices';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useForm } from 'react-hook-form';
 
 // Categories for filtering
 const categories = [
@@ -20,6 +25,13 @@ const categories = [
   { id: 'workshop', name: 'Workshops' },
   { id: 'ebook', name: 'Digital Products' }
 ];
+
+// Form validation schema
+const emailFormSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+});
+
+type EmailFormValues = z.infer<typeof emailFormSchema>;
 
 const Marketplace: React.FC = () => {
   const navigate = useNavigate();
@@ -33,6 +45,15 @@ const Marketplace: React.FC = () => {
   const [walletAddresses, setWalletAddresses] = useState<Record<string, any[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [showQRCode, setShowQRCode] = useState<string | null>(null);
+  const [isConfirmingPurchase, setIsConfirmingPurchase] = useState(false);
+  const [selectedWallet, setSelectedWallet] = useState<any>(null);
+
+  const emailForm = useForm<EmailFormValues>({
+    resolver: zodResolver(emailFormSchema),
+    defaultValues: {
+      email: user?.email || '',
+    },
+  });
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -100,10 +121,46 @@ const Marketplace: React.FC = () => {
     setShowQRCode(walletAddress);
   };
 
+  const handlePurchase = (wallet: any) => {
+    setSelectedWallet(wallet);
+    setIsConfirmingPurchase(true);
+  };
+
+  const confirmPurchase = async (formData: EmailFormValues) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-purchase-confirmation', {
+        body: {
+          email: formData.email,
+          productTitle: selectedProduct.title,
+          productPrice: selectedProduct.price,
+          walletAddress: selectedWallet.wallet_address,
+          cryptoType: selectedWallet.crypto_type
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Purchase initiated",
+        description: "A confirmation email has been sent with payment details.",
+      });
+
+      setIsConfirmingPurchase(false);
+      navigator.clipboard.writeText(selectedWallet.wallet_address);
+    } catch (error) {
+      console.error('Error sending purchase confirmation:', error);
+      toast({
+        title: "Error processing purchase",
+        description: "There was a problem sending the confirmation email. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Helper function to generate QR code URL
   const getQRCodeUrl = (text: string) => {
-    // Using Google Charts API to generate QR code
-    return `https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(text)}`;
+    // Using QR Server API which properly renders QR codes
+    return `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(text)}&size=200x200&bgcolor=ffffff`;
   };
 
   return (
@@ -281,43 +338,78 @@ const Marketplace: React.FC = () => {
                       </div>
                     )}
                     
-                    <div className="flex gap-2">
-                      {user && selectedProduct.user_id === user.id ? (
-                        <Button 
-                          className="w-full" 
-                          onClick={() => {
-                            setIsDialogOpen(false);
-                            navigate(`/edit-product/${selectedProduct.id}`);
-                          }}
-                        >
-                          Edit Product
-                        </Button>
-                      ) : (
-                        <Button className="w-full" onClick={() => {
-                          if (walletAddresses[selectedProduct.id] && walletAddresses[selectedProduct.id].length > 0) {
-                            navigator.clipboard.writeText(walletAddresses[selectedProduct.id][0].wallet_address);
-                            toast({
-                              title: "Payment information",
-                              description: "Wallet address copied to clipboard. Send payment to complete your purchase.",
-                            });
-                          } else {
-                            toast({
-                              title: "No payment information",
-                              description: "This product doesn't have payment information available.",
-                              variant: "destructive",
-                            });
-                          }
+                    {isConfirmingPurchase ? (
+                      <Form {...emailForm}>
+                        <form onSubmit={emailForm.handleSubmit(confirmPurchase)} className="space-y-4">
+                          <FormField
+                            control={emailForm.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email for purchase confirmation</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="your@email.com" 
+                                    {...field} 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <div className="flex gap-2">
+                            <Button type="submit" className="flex-1">
+                              <Mail className="mr-2 h-4 w-4" />
+                              Send Confirmation
+                            </Button>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              onClick={() => setIsConfirmingPurchase(false)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </form>
+                      </Form>
+                    ) : (
+                      <div className="flex gap-2">
+                        {user && selectedProduct.user_id === user.id ? (
+                          <Button 
+                            className="w-full" 
+                            onClick={() => {
+                              setIsDialogOpen(false);
+                              navigate(`/edit-product/${selectedProduct.id}`);
+                            }}
+                          >
+                            Edit Product
+                          </Button>
+                        ) : (
+                          walletAddresses[selectedProduct.id] && walletAddresses[selectedProduct.id].length > 0 ? (
+                            <Button 
+                              className="w-full" 
+                              onClick={() => handlePurchase(walletAddresses[selectedProduct.id][0])}
+                            >
+                              Buy Now
+                            </Button>
+                          ) : (
+                            <Button 
+                              className="w-full" 
+                              disabled
+                            >
+                              No Payment Option Available
+                            </Button>
+                          )
+                        )}
+                        <Button variant="outline" className="w-1/3" onClick={() => {
+                          setShowQRCode(null);
+                          setIsConfirmingPurchase(false);
+                          setIsDialogOpen(false);
                         }}>
-                          Buy Now
+                          Close
                         </Button>
-                      )}
-                      <Button variant="outline" className="w-1/3" onClick={() => {
-                        setShowQRCode(null);
-                        setIsDialogOpen(false);
-                      }}>
-                        Close
-                      </Button>
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </>
