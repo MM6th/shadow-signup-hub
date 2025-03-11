@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +7,6 @@ import { useAuth } from "@/context/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Input } from "@/components/ui/input";
 
 interface ProductCardProps {
   product: {
@@ -17,10 +16,10 @@ interface ProductCardProps {
     price: number;
     image_url: string | null;
     user_id: string;
-    category?: string; // Make category optional
+    category?: string; 
   };
-  onClick?: () => void; // Make onClick optional
-  showEditButton?: boolean; // Make showEditButton optional
+  onClick?: () => void;
+  showEditButton?: boolean;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditButton }) => {
@@ -28,18 +27,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [buyerEmail, setBuyerEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const isOwner = user?.id === product.user_id;
-
-  // Reset QR code when dialog closes
-  useEffect(() => {
-    if (!isDialogOpen) {
-      setQrCode(null);
-      setBuyerEmail("");
-    }
-  }, [isDialogOpen]);
 
   const handleEdit = () => {
     navigate(`/edit-product/${product.id}`);
@@ -81,10 +71,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
       const qrCodeUrl = await generateQRCode(walletData.wallet_address);
       setQrCode(qrCodeUrl);
 
-      // Send purchase confirmation email
-      const { error: emailError } = await supabase.functions.invoke('send-purchase-confirmation', {
+      // Copy wallet address to clipboard
+      navigator.clipboard.writeText(walletData.wallet_address);
+
+      // Record the purchase (without email)
+      await supabase.functions.invoke('send-purchase-confirmation', {
         body: {
-          email: buyerEmail,
           productTitle: product.title,
           productPrice: product.price,
           walletAddress: walletData.wallet_address,
@@ -92,13 +84,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
         },
       });
 
-      if (emailError) {
-        throw emailError;
-      }
-
       toast({
         title: "Purchase initiated!",
-        description: "Check your email for payment instructions.",
+        description: `Send ${product.price} ${walletData.crypto_type} to the copied address to complete your purchase.`,
       });
 
     } catch (error: any) {
@@ -164,18 +152,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
           <DialogHeader>
             <DialogTitle>Complete Your Purchase</DialogTitle>
             <DialogDescription>
-              Please enter your email address to receive payment instructions
+              Click the button below to copy the payment address to your clipboard
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            <Input
-              type="email"
-              placeholder="Enter your email"
-              value={buyerEmail}
-              onChange={(e) => setBuyerEmail(e.target.value)}
-            />
-            
             {qrCode && (
               <div className="flex justify-center">
                 <img src={qrCode} alt="Payment QR Code" className="max-w-full" />
@@ -185,9 +166,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
             <Button 
               onClick={handleBuyNow} 
               className="w-full"
-              disabled={!buyerEmail || isLoading}
+              disabled={isLoading}
             >
-              {isLoading ? "Processing..." : "Confirm Purchase"}
+              {isLoading ? "Processing..." : "Copy Payment Address"}
             </Button>
           </div>
         </DialogContent>
