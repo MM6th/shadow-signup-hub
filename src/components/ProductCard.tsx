@@ -119,6 +119,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
     }
   };
 
+  const handleBuyButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent the card click event from triggering
+    setIsDialogOpen(true);
+  };
+
   return (
     <Card className="overflow-hidden h-[500px] flex flex-col" onClick={handleCardClick}>
       <div className="relative h-64 overflow-hidden">
@@ -147,7 +152,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
               Edit
             </Button>
           ) : (
-            <Button onClick={() => setIsDialogOpen(true)} className="w-full">
+            <Button onClick={handleBuyButtonClick} className="w-full">
               Buy Now
             </Button>
           )}
