@@ -246,6 +246,7 @@ const Marketplace: React.FC = () => {
                   description: product.description,
                   price: product.price,
                   image_url: product.image_url,
+                  category: product.category,
                 }} 
                 onClick={() => handleProductClick(product)} 
                 showEditButton={true}

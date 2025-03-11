@@ -19,9 +19,11 @@ interface ProductCardProps {
     user_id: string;
     category?: string; // Make category optional
   };
+  onClick?: () => void; // Make onClick optional
+  showEditButton?: boolean; // Make showEditButton optional
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditButton }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -103,8 +105,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }
   };
 
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick();
+    }
+  };
+
   return (
-    <Card className="overflow-hidden h-[500px] flex flex-col">
+    <Card className="overflow-hidden h-[500px] flex flex-col" onClick={handleCardClick}>
       <div className="relative h-64 overflow-hidden">
         {product.image_url ? (
           <img
@@ -126,7 +134,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </p>
         <div className="mt-auto">
           <p className="text-lg font-bold mb-4">${product.price.toFixed(2)}</p>
-          {isOwner ? (
+          {isOwner && (showEditButton !== false) ? (
             <Button onClick={handleEdit} className="w-full">
               Edit
             </Button>
