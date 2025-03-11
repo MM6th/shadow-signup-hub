@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -167,6 +168,23 @@ const ProductForm: React.FC<ProductFormProps> = ({
         const fileExt = imageFile.name.split('.').pop();
         const fileName = `${uuidv4()}.${fileExt}`;
         const filePath = `product-images/${fileName}`;
+        
+        // First create the storage bucket if it doesn't exist
+        try {
+          // Check if the products bucket exists
+          const { data: buckets } = await supabase.storage.listBuckets();
+          const productsBucket = buckets?.find(bucket => bucket.name === 'products');
+          
+          if (!productsBucket) {
+            // Create the bucket
+            await supabase.storage.createBucket('products', {
+              public: true
+            });
+          }
+        } catch (error) {
+          // If this fails, the bucket might already exist
+          console.log('Bucket operation:', error);
+        }
         
         const { error: uploadError } = await supabase.storage
           .from('products')
@@ -363,12 +381,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
               <FormItem>
                 <FormLabel>Price (USD)</FormLabel>
                 <FormControl>
-                  <div className="relative">
-                    <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-pi-muted">
-                      USD
-                    </div>
-                  </div>
+                  <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
