@@ -1,14 +1,19 @@
-import React, { useEffect } from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
-import { MapPin, Clock, Briefcase, Tag, Star, PenSquare, ShoppingBag } from 'lucide-react';
+import { MapPin, Clock, Briefcase, Tag, Star, PenSquare, ShoppingBag, Plus } from 'lucide-react';
 import Button from '@/components/Button';
 import AstrologyMessage from '@/components/AstrologyMessage';
+import ProductForm from '@/components/ProductForm';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button as ShadcnButton } from '@/components/ui/button';
 
 const Dashboard: React.FC = () => {
   const { user, profile, isLoading, hasProfile, signOut } = useAuth();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('profile');
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -93,95 +98,115 @@ const Dashboard: React.FC = () => {
               <AstrologyMessage />
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="space-y-4">
-                <div>
-                  <h2 className="text-lg font-medium mb-3">Personal Details</h2>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-start">
-                      <div className="p-2 rounded-md bg-dark-secondary mr-3">
-                        <Star size={18} className="text-pi-focus" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-pi-muted">Date of Birth</p>
-                        <p className="text-pi">
-                          {format(new Date(profile.date_of_birth), 'MMMM d, yyyy')}
-                        </p>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
+              <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-6">
+                <TabsTrigger value="profile">Profile Details</TabsTrigger>
+                <TabsTrigger value="products">My Products</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="profile">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  <div className="space-y-4">
+                    <div>
+                      <h2 className="text-lg font-medium mb-3">Personal Details</h2>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-start">
+                          <div className="p-2 rounded-md bg-dark-secondary mr-3">
+                            <Star size={18} className="text-pi-focus" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-pi-muted">Date of Birth</p>
+                            <p className="text-pi">
+                              {format(new Date(profile.date_of_birth), 'MMMM d, yyyy')}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {profile.zodiac_sign && profile.show_zodiac_sign && (
+                          <div className="flex items-start">
+                            <div className="p-2 rounded-md bg-dark-secondary mr-3">
+                              <Star size={18} className="text-pi-focus" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-pi-muted">Zodiac Sign</p>
+                              <p className="text-pi">{profile.zodiac_sign}</p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {profile.time_of_birth && (
+                          <div className="flex items-start">
+                            <div className="p-2 rounded-md bg-dark-secondary mr-3">
+                              <Clock size={18} className="text-pi-focus" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-pi-muted">Time of Birth</p>
+                              <p className="text-pi">{profile.time_of_birth}</p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {profile.place_of_birth && (
+                          <div className="flex items-start">
+                            <div className="p-2 rounded-md bg-dark-secondary mr-3">
+                              <MapPin size={18} className="text-pi-focus" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-pi-muted">Place of Birth</p>
+                              <p className="text-pi">{profile.place_of_birth}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    
-                    {profile.zodiac_sign && profile.show_zodiac_sign && (
-                      <div className="flex items-start">
-                        <div className="p-2 rounded-md bg-dark-secondary mr-3">
-                          <Star size={18} className="text-pi-focus" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-pi-muted">Zodiac Sign</p>
-                          <p className="text-pi">{profile.zodiac_sign}</p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {profile.time_of_birth && (
-                      <div className="flex items-start">
-                        <div className="p-2 rounded-md bg-dark-secondary mr-3">
-                          <Clock size={18} className="text-pi-focus" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-pi-muted">Time of Birth</p>
-                          <p className="text-pi">{profile.time_of_birth}</p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {profile.place_of_birth && (
-                      <div className="flex items-start">
-                        <div className="p-2 rounded-md bg-dark-secondary mr-3">
-                          <MapPin size={18} className="text-pi-focus" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-pi-muted">Place of Birth</p>
-                          <p className="text-pi">{profile.place_of_birth}</p>
-                        </div>
-                      </div>
-                    )}
                   </div>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <h2 className="text-lg font-medium mb-3">Business Details</h2>
                   
-                  <div className="space-y-3">
-                    {profile.business_type && (
-                      <div className="flex items-start">
-                        <div className="p-2 rounded-md bg-dark-secondary mr-3">
-                          <Briefcase size={18} className="text-pi-focus" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-pi-muted">Business Type</p>
-                          <p className="text-pi">{profile.business_type}</p>
-                        </div>
+                  <div className="space-y-4">
+                    <div>
+                      <h2 className="text-lg font-medium mb-3">Business Details</h2>
+                      
+                      <div className="space-y-3">
+                        {profile.business_type && (
+                          <div className="flex items-start">
+                            <div className="p-2 rounded-md bg-dark-secondary mr-3">
+                              <Briefcase size={18} className="text-pi-focus" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-pi-muted">Business Type</p>
+                              <p className="text-pi">{profile.business_type}</p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {profile.industry && (
+                          <div className="flex items-start">
+                            <div className="p-2 rounded-md bg-dark-secondary mr-3">
+                              <Tag size={18} className="text-pi-focus" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-pi-muted">Industry</p>
+                              <p className="text-pi">{profile.industry}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    
-                    {profile.industry && (
-                      <div className="flex items-start">
-                        <div className="p-2 rounded-md bg-dark-secondary mr-3">
-                          <Tag size={18} className="text-pi-focus" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-pi-muted">Industry</p>
-                          <p className="text-pi">{profile.industry}</p>
-                        </div>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </TabsContent>
+              
+              <TabsContent value="products">
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="text-lg font-medium">My Products & Services</h2>
+                  <ShadcnButton onClick={() => navigate('/create-product')} className="flex items-center">
+                    <Plus size={16} className="mr-2" /> Create New
+                  </ShadcnButton>
+                </div>
+                
+                <ProductsList userId={user.id} />
+              </TabsContent>
+            </Tabs>
             
             <div className="flex justify-end space-x-4 mt-6">
               <Button variant="outline" onClick={() => navigate('/')}>
@@ -197,6 +222,90 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Component to display user's products
+const ProductsList = ({ userId }: { userId: string }) => {
+  const [products, setProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+          
+        if (error) throw error;
+        setProducts(data || []);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchProducts();
+  }, [userId]);
+  
+  if (isLoading) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-spin h-8 w-8 border-4 border-pi-focus border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p className="text-pi-muted">Loading your products...</p>
+      </div>
+    );
+  }
+  
+  if (products.length === 0) {
+    return (
+      <div className="glass-card p-8 text-center">
+        <ShoppingBag size={48} className="mx-auto text-pi-muted mb-4" />
+        <h3 className="text-xl font-medium mb-2">No Products Yet</h3>
+        <p className="text-pi-muted mb-6">You haven't added any products or services to your store yet.</p>
+        <ShadcnButton onClick={() => navigate('/create-product')}>
+          <Plus size={16} className="mr-2" /> Create Your First Product
+        </ShadcnButton>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {products.map(product => (
+        <div key={product.id} className="glass-card p-4 flex">
+          <div className="w-16 h-16 bg-dark-secondary rounded-md overflow-hidden mr-4 flex-shrink-0">
+            {product.image_url ? (
+              <img src={product.image_url} alt={product.title} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <ShoppingBag size={24} className="text-pi-muted" />
+              </div>
+            )}
+          </div>
+          <div className="flex-grow">
+            <h3 className="font-medium line-clamp-1">{product.title}</h3>
+            <p className="text-sm text-pi-muted line-clamp-1">{product.description}</p>
+            <div className="flex justify-between items-center mt-2">
+              <span className="font-medium">${product.price.toFixed(2)}</span>
+              <div className="flex gap-2">
+                <ShadcnButton 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate(`/edit-product/${product.id}`)}
+                >
+                  Edit
+                </ShadcnButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

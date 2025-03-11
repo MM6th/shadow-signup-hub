@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, ShoppingCart, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,70 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import ProductCard from '@/components/ProductCard';
 import FeaturedServices from '@/components/FeaturedServices';
-
-// Sample product data - in a real app, this would come from Supabase
-const sampleProducts = [
-  {
-    id: '1',
-    title: 'Personal Cosmic Reading',
-    description: 'A comprehensive reading of your cosmic energy tailored specifically for your business journey.',
-    price: 149.99,
-    category: 'reading',
-    rating: 4.8,
-    reviewCount: 124,
-    imageUrl: '/placeholder.svg'
-  },
-  {
-    id: '2',
-    title: 'Business Alignment Session',
-    description: 'Align your business goals with the cosmic energies to maximize success and growth potential.',
-    price: 299.99,
-    category: 'consulting',
-    rating: 4.9,
-    reviewCount: 89,
-    imageUrl: '/placeholder.svg'
-  },
-  {
-    id: '3',
-    title: 'Cosmic Strategy Blueprint',
-    description: 'A detailed roadmap for your business based on astrological insights and market trends.',
-    price: 499.99,
-    category: 'strategy',
-    rating: 5.0,
-    reviewCount: 42,
-    imageUrl: '/placeholder.svg'
-  },
-  {
-    id: '4',
-    title: 'Monthly Alignment Check-in',
-    description: 'Regular sessions to ensure your business stays aligned with the cosmic energies.',
-    price: 79.99,
-    category: 'subscription',
-    rating: 4.7,
-    reviewCount: 156,
-    imageUrl: '/placeholder.svg'
-  },
-  {
-    id: '5',
-    title: 'Team Cosmic Harmony Workshop',
-    description: 'Build a cohesive team by understanding individual cosmic profiles and how they complement each other.',
-    price: 399.99,
-    category: 'workshop',
-    rating: 4.6,
-    reviewCount: 67,
-    imageUrl: '/placeholder.svg'
-  },
-  {
-    id: '6',
-    title: 'Decision-Making Astrology Guide',
-    description: 'Learn how to time critical business decisions based on astrological insights.',
-    price: 129.99,
-    category: 'ebook',
-    rating: 4.5,
-    reviewCount: 93,
-    imageUrl: '/placeholder.svg'
-  }
-];
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 // Categories for filtering
 const categories = [
@@ -85,13 +23,66 @@ const categories = [
 
 const Marketplace: React.FC = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
+  const [walletAddresses, setWalletAddresses] = useState<Record<string, any[]>>({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (error) throw error;
+        
+        setProducts(data || []);
+        
+        // Fetch wallet addresses for all products
+        if (data && data.length > 0) {
+          const productIds = data.map(product => product.id);
+          const { data: walletData, error: walletError } = await supabase
+            .from('wallet_addresses')
+            .select('*')
+            .in('product_id', productIds);
+            
+          if (walletError) throw walletError;
+          
+          // Group wallet addresses by product_id
+          const walletsByProduct = (walletData || []).reduce((acc: any, wallet: any) => {
+            if (!acc[wallet.product_id]) {
+              acc[wallet.product_id] = [];
+            }
+            acc[wallet.product_id].push(wallet);
+            return acc;
+          }, {});
+          
+          setWalletAddresses(walletsByProduct);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        toast({
+          title: "Error loading products",
+          description: "There was a problem loading the products. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchProducts();
+  }, [toast]);
 
   // Filter products based on search term and category
-  const filteredProducts = sampleProducts.filter(product => {
+  const filteredProducts = products.filter(product => {
     const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
@@ -147,15 +138,41 @@ const Marketplace: React.FC = () => {
         </div>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {filteredProducts.map(product => (
-            <ProductCard 
-              key={product.id} 
-              product={product} 
-              onClick={() => handleProductClick(product)} 
-            />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin h-12 w-12 border-4 border-pi-focus rounded-full border-t-transparent"></div>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="glass-card p-12 text-center">
+            <ShoppingCart className="h-16 w-16 mx-auto text-pi-muted mb-4" />
+            <h2 className="text-2xl font-medium mb-2">No Products Found</h2>
+            <p className="text-pi-muted mb-6">
+              {searchTerm || selectedCategory !== 'all' 
+                ? "No products match your current filters. Try adjusting your search criteria."
+                : "There are no products available in the marketplace yet."}
+            </p>
+            <Button onClick={() => navigate('/create-product')}>Create Your Own Product</Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {filteredProducts.map(product => (
+              <ProductCard 
+                key={product.id} 
+                product={{
+                  id: product.id,
+                  title: product.title,
+                  description: product.description,
+                  price: product.price,
+                  category: product.category,
+                  rating: 5.0, // Default rating for now
+                  reviewCount: 0, // Default review count for now
+                  imageUrl: product.image_url || '/placeholder.svg'
+                }} 
+                onClick={() => handleProductClick(product)} 
+              />
+            ))}
+          </div>
+        )}
 
         {/* Product Detail Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -168,7 +185,7 @@ const Marketplace: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                   <div className="bg-dark rounded-lg overflow-hidden">
                     <img 
-                      src={selectedProduct.imageUrl} 
+                      src={selectedProduct.image_url || '/placeholder.svg'} 
                       alt={selectedProduct.title} 
                       className="w-full h-64 object-cover"
                     />
@@ -176,8 +193,8 @@ const Marketplace: React.FC = () => {
                   <div>
                     <div className="flex items-center mb-2">
                       <Star className="h-5 w-5 fill-yellow-500 text-yellow-500 mr-1" />
-                      <span className="text-white font-medium">{selectedProduct.rating}</span>
-                      <span className="text-pi-muted ml-1">({selectedProduct.reviewCount} reviews)</span>
+                      <span className="text-white font-medium">5.0</span>
+                      <span className="text-pi-muted ml-1">(New)</span>
                     </div>
                     <DialogDescription className="text-pi mb-4">
                       {selectedProduct.description}
@@ -185,13 +202,61 @@ const Marketplace: React.FC = () => {
                     <div className="text-2xl font-medium text-white mb-6">
                       ${selectedProduct.price.toFixed(2)}
                     </div>
-                    <Button className="w-full mb-2">
-                      <ShoppingCart className="mr-2 h-4 w-4" />
-                      Add to Cart
-                    </Button>
-                    <Button variant="outline" className="w-full">
-                      Buy Now
-                    </Button>
+                    
+                    {/* Payment Options */}
+                    {walletAddresses[selectedProduct.id] && walletAddresses[selectedProduct.id].length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-sm font-medium mb-2">Payment Options:</h3>
+                        <div className="space-y-2">
+                          {walletAddresses[selectedProduct.id].map((wallet: any) => (
+                            <div key={wallet.id} className="p-3 rounded bg-dark">
+                              <p className="text-sm font-medium capitalize">{wallet.crypto_type}</p>
+                              <div className="flex items-center">
+                                <code className="text-xs text-gray-400 truncate flex-1">
+                                  {wallet.wallet_address}
+                                </code>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(wallet.wallet_address);
+                                    toast({
+                                      title: "Address copied",
+                                      description: `${wallet.crypto_type} wallet address copied to clipboard`,
+                                    });
+                                  }}
+                                >
+                                  Copy
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex gap-2">
+                      <Button className="w-full" onClick={() => {
+                        if (walletAddresses[selectedProduct.id] && walletAddresses[selectedProduct.id].length > 0) {
+                          navigator.clipboard.writeText(walletAddresses[selectedProduct.id][0].wallet_address);
+                          toast({
+                            title: "Payment information",
+                            description: "Wallet address copied to clipboard. Send payment to complete your purchase.",
+                          });
+                        } else {
+                          toast({
+                            title: "No payment information",
+                            description: "This product doesn't have payment information available.",
+                            variant: "destructive",
+                          });
+                        }
+                      }}>
+                        Buy Now
+                      </Button>
+                      <Button variant="outline" className="w-1/3" onClick={() => setIsDialogOpen(false)}>
+                        Close
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </>

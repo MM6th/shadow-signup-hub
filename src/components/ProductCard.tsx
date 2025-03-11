@@ -30,6 +30,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
           src={product.imageUrl} 
           alt={product.title} 
           className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+          onError={(e) => {
+            // Fallback for broken images
+            (e.target as HTMLImageElement).src = '/placeholder.svg';
+          }}
         />
         <div className="absolute top-2 right-2 bg-pi-focus text-white text-xs font-bold px-2 py-1 rounded-full">
           {product.category}
@@ -53,10 +57,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
           <span className="text-xl font-medium">${product.price.toFixed(2)}</span>
           <Button size="sm" variant="outline" className="group" onClick={(e) => {
             e.stopPropagation();
-            // Add to cart logic would go here
+            // View product details
+            onClick();
           }}>
             <ShoppingCart className="h-4 w-4 mr-1 group-hover:text-pi-focus" />
-            <span>Add</span>
+            <span>View</span>
           </Button>
         </div>
       </div>
