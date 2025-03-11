@@ -9,8 +9,59 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import CreateProfile from "./pages/CreateProfile";
 import Dashboard from "./pages/Dashboard";
+import DigitalOffice from "./pages/DigitalOffice";
+import { useAuth } from "./context/AuthContext";
 
 const queryClient = new QueryClient();
+
+// Protected route component that redirects unauthenticated users
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div className="h-screen w-full flex items-center justify-center bg-dark">
+      <div className="animate-spin h-12 w-12 border-4 border-pi-focus rounded-full border-t-transparent"></div>
+    </div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+// Public route that redirects authenticated users
+const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, hasProfile, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div className="h-screen w-full flex items-center justify-center bg-dark">
+      <div className="animate-spin h-12 w-12 border-4 border-pi-focus rounded-full border-t-transparent"></div>
+    </div>;
+  }
+  
+  if (user) {
+    if (!hasProfile) {
+      return <Navigate to="/create-profile" replace />;
+    }
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+const AppRoutes = () => {
+  return (
+    <Routes>
+      <Route path="/" element={<PublicRoute><Index /></PublicRoute>} />
+      <Route path="/create-profile" element={<ProtectedRoute><CreateProfile /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/digital-office" element={<ProtectedRoute><DigitalOffice /></ProtectedRoute>} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -19,12 +70,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/create-profile" element={<CreateProfile />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppRoutes />
         </TooltipProvider>
       </AuthProvider>
     </BrowserRouter>

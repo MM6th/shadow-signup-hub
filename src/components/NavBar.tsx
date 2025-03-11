@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Button from './Button';
-import { Menu, X, User } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -13,7 +13,6 @@ interface NavBarProps {
 const NavBar: React.FC<NavBarProps> = ({ onOpenAuthModal }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, signOut, profile } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,11 +23,6 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenAuthModal }) => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const handleProfileClick = () => {
-    navigate('/dashboard');
-    setIsMenuOpen(false);
-  };
 
   return (
     <header
@@ -57,47 +51,18 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenAuthModal }) => {
         </nav>
 
         <div className="hidden md:flex items-center space-x-4">
-          {user ? (
-            <>
-              <Button 
-                variant="ghost" 
-                onClick={handleProfileClick}
-                className="flex items-center space-x-2"
-              >
-                {profile?.profile_photo_url ? (
-                  <img 
-                    src={profile.profile_photo_url} 
-                    alt="Profile" 
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                ) : (
-                  <User size={18} />
-                )}
-                <span>Profile</span>
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => signOut()}
-              >
-                Sign Out
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button 
-                variant="ghost" 
-                onClick={() => onOpenAuthModal('signin')}
-              >
-                Sign In
-              </Button>
-              <Button 
-                variant="primary"
-                onClick={() => onOpenAuthModal('signup')}
-              >
-                Sign Up
-              </Button>
-            </>
-          )}
+          <Button 
+            variant="ghost" 
+            onClick={() => onOpenAuthModal('signin')}
+          >
+            Sign In
+          </Button>
+          <Button 
+            variant="primary"
+            onClick={() => onOpenAuthModal('signup')}
+          >
+            Sign Up
+          </Button>
         </div>
 
         <button
@@ -134,56 +99,24 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenAuthModal }) => {
               Contact
             </a>
             <div className="pt-4 flex flex-col space-y-3">
-              {user ? (
-                <>
-                  <Button 
-                    variant="outline" 
-                    onClick={handleProfileClick}
-                    className="flex items-center justify-center space-x-2"
-                  >
-                    {profile?.profile_photo_url ? (
-                      <img 
-                        src={profile.profile_photo_url} 
-                        alt="Profile" 
-                        className="w-6 h-6 rounded-full object-cover"
-                      />
-                    ) : (
-                      <User size={16} />
-                    )}
-                    <span>Profile</span>
-                  </Button>
-                  <Button 
-                    variant="primary"
-                    onClick={() => {
-                      signOut();
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    Sign Out
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      onOpenAuthModal('signin');
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    Sign In
-                  </Button>
-                  <Button 
-                    variant="primary"
-                    onClick={() => {
-                      onOpenAuthModal('signup');
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    Sign Up
-                  </Button>
-                </>
-              )}
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  onOpenAuthModal('signin');
+                  setIsMenuOpen(false);
+                }}
+              >
+                Sign In
+              </Button>
+              <Button 
+                variant="primary"
+                onClick={() => {
+                  onOpenAuthModal('signup');
+                  setIsMenuOpen(false);
+                }}
+              >
+                Sign Up
+              </Button>
             </div>
           </div>
         </div>

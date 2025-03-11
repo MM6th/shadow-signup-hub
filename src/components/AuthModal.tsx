@@ -5,6 +5,7 @@ import SignInForm from './SignInForm';
 import { X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -27,8 +28,16 @@ const AuthModal: React.FC<AuthModalProps> = ({
       onClose();
       if (!hasProfile) {
         navigate('/create-profile');
+        toast({
+          title: "Profile needed",
+          description: "Please complete your profile to continue.",
+        });
       } else {
         navigate('/dashboard');
+        toast({
+          title: "Welcome back",
+          description: "You've been redirected to your dashboard.",
+        });
       }
     }
   }, [user, isOpen, onClose, navigate, hasProfile]);

@@ -68,30 +68,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session);
+      
       setSession(session);
       setUser(session?.user || null);
       
       if (event === 'SIGNED_IN' && session?.user) {
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-          
-        if (!error && profileData) {
-          setProfile(profileData);
+        try {
+          setIsLoading(true);
+          const { data: profileData, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (!error && profileData) {
+            setProfile(profileData);
+            navigate('/dashboard');
+          } else if (error) {
+            navigate('/create-profile');
+          }
+        } catch (error) {
+          console.error('Error fetching profile:', error);
+        } finally {
+          setIsLoading(false);
         }
       }
       
       if (event === 'SIGNED_OUT') {
         setProfile(null);
+        navigate('/');
       }
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -147,7 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       await supabase.auth.signOut();
-      navigate('/');
+      
       toast({
         title: "Signed out",
         description: "You have been signed out successfully.",
