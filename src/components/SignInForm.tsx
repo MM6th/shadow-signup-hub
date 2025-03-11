@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import Button from './Button';
 import { Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface SignInFormProps {
   mode: 'signin' | 'signup';
@@ -12,6 +14,8 @@ interface SignInFormProps {
 
 const SignInForm: React.FC<SignInFormProps> = ({ mode, onToggleMode, onClose }) => {
   const { toast } = useToast();
+  const { signIn, signUp, user, hasProfile } = useAuth();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
@@ -31,23 +35,26 @@ const SignInForm: React.FC<SignInFormProps> = ({ mode, onToggleMode, onClose }) 
     setIsLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      toast({
-        title: mode === 'signin' ? "Welcome back!" : "Account created!",
-        description: mode === 'signin' 
-          ? "Successfully signed in." 
-          : "Your account has been created successfully.",
-      });
-      
-      if (onClose) onClose();
-    } catch (error) {
-      toast({
-        title: "Authentication error",
-        description: "There was an error processing your request.",
-        variant: "destructive",
-      });
+      if (mode === 'signin') {
+        await signIn(formData.email, formData.password);
+        if (onClose) onClose();
+        
+        // Redirect based on whether user has created a profile
+        if (user && !hasProfile) {
+          navigate('/create-profile');
+        } else if (user && hasProfile) {
+          navigate('/dashboard');
+        }
+      } else {
+        await signUp(formData.email, formData.password);
+        toast({
+          title: "Account created!",
+          description: "Please check your email to confirm your account.",
+        });
+        if (onClose) onClose();
+      }
+    } catch (error: any) {
+      console.error('Authentication error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -78,7 +85,6 @@ const SignInForm: React.FC<SignInFormProps> = ({ mode, onToggleMode, onClose }) 
               name="name"
               value={formData.name}
               onChange={handleChange}
-              required
               className="w-full px-4 py-3 rounded-lg bg-dark-secondary border border-white/10 text-pi placeholder-pi-muted/50 focus:outline-none focus:ring-2 focus:ring-pi-focus/50 transition-all"
               placeholder="Enter your full name"
             />

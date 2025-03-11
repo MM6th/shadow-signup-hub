@@ -9,13 +9,65 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          business_type: string | null
+          created_at: string
+          date_of_birth: string
+          first_name: string
+          id: string
+          industry: string | null
+          last_name: string
+          place_of_birth: string | null
+          profile_photo_url: string | null
+          show_zodiac_sign: boolean | null
+          time_of_birth: string | null
+          updated_at: string
+          zodiac_sign: string | null
+        }
+        Insert: {
+          business_type?: string | null
+          created_at?: string
+          date_of_birth: string
+          first_name: string
+          id: string
+          industry?: string | null
+          last_name: string
+          place_of_birth?: string | null
+          profile_photo_url?: string | null
+          show_zodiac_sign?: boolean | null
+          time_of_birth?: string | null
+          updated_at?: string
+          zodiac_sign?: string | null
+        }
+        Update: {
+          business_type?: string | null
+          created_at?: string
+          date_of_birth?: string
+          first_name?: string
+          id?: string
+          industry?: string | null
+          last_name?: string
+          place_of_birth?: string | null
+          profile_photo_url?: string | null
+          show_zodiac_sign?: boolean | null
+          time_of_birth?: string | null
+          updated_at?: string
+          zodiac_sign?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_zodiac_sign: {
+        Args: {
+          dob: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

@@ -1,8 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import SignInForm from './SignInForm';
 import { X } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -16,6 +18,20 @@ const AuthModal: React.FC<AuthModalProps> = ({
   defaultMode = 'signin'
 }) => {
   const [mode, setMode] = useState<'signin' | 'signup'>(defaultMode);
+  const { user, hasProfile } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // If user is authenticated and modal is open, close it and redirect
+    if (user && isOpen) {
+      onClose();
+      if (!hasProfile) {
+        navigate('/create-profile');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [user, isOpen, onClose, navigate, hasProfile]);
 
   const toggleMode = () => {
     setMode(mode === 'signin' ? 'signup' : 'signin');
