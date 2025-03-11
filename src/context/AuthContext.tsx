@@ -1,9 +1,8 @@
-
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useUserSession } from '@/hooks/useUserSession';
 import { useProfile } from '@/hooks/useProfile';
 import type { Profile } from '@/hooks/useProfile';
@@ -27,6 +26,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { profile, isLoading: profileLoading, refreshProfile } = useProfile(user?.id);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!sessionLoading && !profileLoading) {
+      const currentPath = location.pathname;
+      
+      if (user) {
+        if (!profile && currentPath !== '/create-profile') {
+          navigate('/create-profile');
+        } else if (profile && (currentPath === '/' || currentPath === '/create-profile')) {
+          navigate('/dashboard');
+        }
+      }
+    }
+  }, [user, profile, sessionLoading, profileLoading, navigate, location.pathname]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -113,4 +127,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import Button from './Button';
@@ -14,7 +13,7 @@ interface SignInFormProps {
 
 const SignInForm: React.FC<SignInFormProps> = ({ mode, onToggleMode, onClose }) => {
   const { toast } = useToast();
-  const { signIn, signUp, user, hasProfile } = useAuth();
+  const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -39,12 +38,8 @@ const SignInForm: React.FC<SignInFormProps> = ({ mode, onToggleMode, onClose }) 
         await signIn(formData.email, formData.password);
         if (onClose) onClose();
         
-        // Redirect based on whether user has created a profile
-        if (user && !hasProfile) {
-          navigate('/create-profile');
-        } else if (user && hasProfile) {
-          navigate('/dashboard');
-        }
+        // After signing in, let the auth state change handler in AuthContext handle the redirect
+        // The router protection will automatically redirect to the appropriate page
       } else {
         await signUp(formData.email, formData.password);
         toast({

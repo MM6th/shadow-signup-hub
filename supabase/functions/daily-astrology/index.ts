@@ -22,6 +22,12 @@ serve(async (req) => {
       throw new Error('User ID and zodiac sign are required');
     }
 
+    // Check if OpenAI API key is available
+    if (!OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not set');
+      throw new Error('OpenAI API key is not configured');
+    }
+
     // Get current date
     const today = new Date();
     const formattedDate = today.toLocaleDateString('en-US', { 

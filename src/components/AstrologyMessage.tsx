@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { useAstrologyMessage } from '@/hooks/useAstrologyMessage';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, RefreshCw } from 'lucide-react';
+import Button from './Button';
 
 const AstrologyMessage: React.FC = () => {
-  const { message, isLoading } = useAstrologyMessage();
+  const { message, isLoading, error, refetch } = useAstrologyMessage();
 
   if (isLoading) {
     return (
@@ -23,18 +24,49 @@ const AstrologyMessage: React.FC = () => {
     );
   }
 
-  if (!message) {
-    console.log('No message to display');
-    return null;
+  if (error || !message) {
+    console.log('Error or no message to display:', error);
+    return (
+      <div className="glass-card p-6 mb-8 border-l-4 border-yellow-500">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="h-5 w-5 text-pi-focus" />
+          <h3 className="text-lg font-medium">Your Cosmic Insight</h3>
+        </div>
+        <p className="text-pi-muted mb-4">
+          We couldn't load your daily insight right now. Please try again later.
+        </p>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={refetch} 
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Try Again
+        </Button>
+      </div>
+    );
   }
 
   console.log('Displaying message:', message);
 
   return (
     <div className="glass-card p-6 mb-8 border-l-4 border-pi-focus animate-fadeIn">
-      <div className="flex items-center gap-2 mb-4">
-        <Sparkles className="h-5 w-5 text-pi-focus" />
-        <h3 className="text-lg font-medium">Your Cosmic Insight</h3>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-pi-focus" />
+          <h3 className="text-lg font-medium">Your Cosmic Insight</h3>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={refetch} 
+          className="h-8 w-8 p-0 rounded-full"
+          title="Refresh"
+        >
+          <RefreshCw className="h-4 w-4" />
+          <span className="sr-only">Refresh</span>
+        </Button>
       </div>
       <div className="prose prose-invert prose-sm max-w-none">
         {message.split('\n\n').map((paragraph, index) => (
