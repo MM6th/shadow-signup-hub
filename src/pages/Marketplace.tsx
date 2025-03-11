@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, ShoppingCart, Star, QrCode } from 'lucide-react';
+import { Search, Filter, ShoppingCart, Star, QrCode, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -110,12 +109,25 @@ const Marketplace: React.FC = () => {
   return (
     <div className="min-h-screen bg-dark bg-dark-gradient text-pi py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-10">
-          <h1 className="text-4xl font-elixia text-gradient mb-2">Cosmic Marketplace</h1>
-          <p className="text-pi-muted max-w-3xl">
-            Discover products and services designed to align your business with cosmic energies and
-            maximize your potential for success and growth.
-          </p>
+        <div className="mb-10 flex justify-between items-center">
+          <div>
+            <h1 className="text-4xl font-elixia text-gradient mb-2">Cosmic Marketplace</h1>
+            <p className="text-pi-muted max-w-3xl">
+              Discover products and services designed to align your business with cosmic energies and
+              maximize your potential for success and growth.
+            </p>
+          </div>
+          
+          {user && (
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={() => navigate('/dashboard')}
+            >
+              <User size={18} />
+              <span className="hidden sm:inline">My Profile</span>
+            </Button>
+          )}
         </div>
 
         {/* Featured Services Carousel */}

@@ -30,10 +30,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
 
   return (
     <div 
-      className="glass-card overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-pi-focus/20 cursor-pointer"
+      className="glass-card overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-pi-focus/20 cursor-pointer h-[440px] flex flex-col"
       onClick={onClick}
     >
-      <div className="relative h-64 overflow-hidden bg-dark-secondary">
+      <div className="relative h-72 overflow-hidden bg-dark-secondary">
         <img 
           src={product.imageUrl} 
           alt={product.title} 
@@ -48,7 +48,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
         </div>
       </div>
       
-      <div className="p-4">
+      <div className="p-4 flex flex-col flex-grow">
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-lg font-medium line-clamp-1">{product.title}</h3>
           <div className="flex items-center">
@@ -61,7 +61,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
           {product.description}
         </p>
         
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mt-auto">
           <span className="text-xl font-medium">${product.price.toFixed(2)}</span>
           <div className="flex gap-2">
             {showEditButton && isOwner ? (
