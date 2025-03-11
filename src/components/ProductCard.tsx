@@ -17,6 +17,7 @@ interface ProductCardProps {
     price: number;
     image_url: string | null;
     user_id: string;
+    category?: string; // Make category optional
   };
 }
 

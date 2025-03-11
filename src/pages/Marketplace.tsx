@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, ShoppingCart, Star, QrCode, User, Mail } from 'lucide-react';
@@ -246,10 +245,7 @@ const Marketplace: React.FC = () => {
                   title: product.title,
                   description: product.description,
                   price: product.price,
-                  category: product.category,
-                  rating: 5.0, // Default rating for now
-                  reviewCount: 0, // Default review count for now
-                  imageUrl: product.image_url || '/placeholder.svg'
+                  image_url: product.image_url,
                 }} 
                 onClick={() => handleProductClick(product)} 
                 showEditButton={true}
