@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,6 +21,8 @@ const CRYPTO_OPTIONS = [
   { value: 'solana', label: 'Solana (SOL)' },
   { value: 'cardano', label: 'Cardano (ADA)' },
   { value: 'polkadot', label: 'Polkadot (DOT)' },
+  { value: 'litecoin', label: 'Litecoin (LTC)' },
+  { value: 'usdc', label: 'USD Coin (USDC)' },
 ];
 
 // Product categories
@@ -360,9 +361,14 @@ const ProductForm: React.FC<ProductFormProps> = ({
             name="price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Price</FormLabel>
+                <FormLabel>Price (USD)</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
+                  <div className="relative">
+                    <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-pi-muted">
+                      USD
+                    </div>
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>

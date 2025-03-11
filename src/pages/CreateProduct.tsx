@@ -22,6 +22,7 @@ const CreateProduct = () => {
   }
   
   if (!user) {
+    // Redirect to login if not authenticated
     navigate('/');
     return null;
   }
