@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +32,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const [isLoading, setIsLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const isOwner = user?.id === product.user_id;
+
+  // Reset QR code when dialog closes
+  useEffect(() => {
+    if (!isDialogOpen) {
+      setQrCode(null);
+      setBuyerEmail("");
+    }
+  }, [isDialogOpen]);
 
   const handleEdit = () => {
     navigate(`/edit-product/${product.id}`);
