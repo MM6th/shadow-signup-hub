@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const corsHeaders = {
@@ -10,6 +11,12 @@ interface PurchaseConfirmationRequest {
   productPrice: number;
   walletAddress: string;
   cryptoType: string;
+  appointmentDate?: string;
+  appointmentTime?: string;
+  buyerName?: string;
+  sellerId?: string;
+  productId?: string;
+  buyerId?: string;
 }
 
 serve(async (req) => {
@@ -20,9 +27,20 @@ serve(async (req) => {
 
   try {
     // Log that we're starting to process a request
-    console.log("Processing purchase confirmation request (email functionality removed)");
+    console.log("Processing purchase confirmation request");
     
-    const { productTitle, productPrice, walletAddress, cryptoType }: PurchaseConfirmationRequest = await req.json();
+    const { 
+      productTitle, 
+      productPrice, 
+      walletAddress, 
+      cryptoType,
+      appointmentDate,
+      appointmentTime,
+      buyerName,
+      sellerId,
+      productId,
+      buyerId
+    }: PurchaseConfirmationRequest = await req.json();
 
     console.log(`Request data received: product=${productTitle}, crypto=${cryptoType}`);
 
@@ -48,16 +66,27 @@ serve(async (req) => {
       minute: '2-digit'
     });
 
-    console.log("Purchase recorded successfully (no email sent)");
+    // If this is a consultation purchase with appointment data, log it
+    if (appointmentDate && appointmentTime) {
+      console.log(`Appointment scheduled for ${appointmentDate} at ${appointmentTime}`);
+      
+      // In a real implementation, this would store the appointment in a database
+      // For demo purposes, we'll just log it
+      console.log(`Appointment details - Buyer: ${buyerName}, Seller: ${sellerId}, Product: ${productId}`);
+    }
+
+    console.log("Purchase recorded successfully");
     
     return new Response(
       JSON.stringify({ 
-        message: "Purchase recorded successfully (email functionality removed)",
+        message: "Purchase recorded successfully",
         purchaseDetails: {
           product: productTitle,
           price: productPrice,
           cryptoType,
-          date: purchaseDate
+          date: purchaseDate,
+          appointmentDate,
+          appointmentTime
         }
       }),
       { 
