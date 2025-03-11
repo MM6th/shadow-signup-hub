@@ -2,7 +2,8 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { Resend } from "npm:resend@1.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const resendApiKey = Deno.env.get("RESEND_API_KEY");
+const resend = new Resend(resendApiKey);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,7 +25,18 @@ serve(async (req) => {
   }
 
   try {
+    // Log that we're starting to process a request
+    console.log("Processing purchase confirmation request");
+    
+    // Check if API key is available
+    if (!resendApiKey) {
+      console.error("RESEND_API_KEY is not set");
+      throw new Error("Email service configuration is missing");
+    }
+
     const { email, productTitle, productPrice, walletAddress, cryptoType }: PurchaseConfirmationRequest = await req.json();
+
+    console.log(`Request data received: email=${email}, product=${productTitle}, crypto=${cryptoType}`);
 
     if (!email || !productTitle || !walletAddress || !cryptoType) {
       return new Response(
@@ -48,6 +60,8 @@ serve(async (req) => {
       minute: '2-digit'
     });
 
+    console.log("Generating email with Resend");
+    
     // Create a purchase receipt email
     const { data, error } = await resend.emails.send({
       from: "Cosmic Marketplace <onboarding@resend.dev>",
@@ -68,6 +82,7 @@ serve(async (req) => {
             <h2 style="color: #3b82f6; margin-top: 0;">Payment Information</h2>
             <p>Please complete your purchase by sending payment to the following ${cryptoType} address:</p>
             <p style="background-color: #e2e8f0; padding: 10px; border-radius: 5px; font-family: monospace; word-break: break-all;">${walletAddress}</p>
+            <p>After sending the payment, please keep the transaction ID for your records.</p>
           </div>
           
           <div style="margin: 30px 0; text-align: center;">
