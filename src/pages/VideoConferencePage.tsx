@@ -6,24 +6,71 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import VideoConference from '@/components/VideoConference';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+interface AppointmentDetails {
+  id: string;
+  product_title: string;
+  buyer_name: string;
+  seller_id: string;
+  buyer_id: string;
+  appointment_date: string;
+  appointment_time: string;
+  status: string;
+}
 
 const VideoConferencePage = () => {
   const { user, isLoading } = useAuth();
   const { appointmentId } = useParams();
   const navigate = useNavigate();
-  const [appointmentDetails, setAppointmentDetails] = useState<any>(null);
+  const { toast } = useToast();
+  const [appointmentDetails, setAppointmentDetails] = useState<AppointmentDetails | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [isLoadingAppointment, setIsLoadingAppointment] = useState(true);
   
   useEffect(() => {
-    // In a real application, you would fetch the appointment details from your database
-    // For demo purposes, we're just using the appointment ID as the room ID
-    setIsLoadingAppointment(false);
+    const fetchAppointmentDetails = async () => {
+      if (!user || !appointmentId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('id', appointmentId)
+          .single();
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (!data) {
+          throw new Error('Appointment not found');
+        }
+        
+        // Check if the current user is authorized to join this meeting
+        if (data.seller_id !== user.id && data.buyer_id !== user.id) {
+          throw new Error('You are not authorized to join this meeting');
+        }
+        
+        setAppointmentDetails(data as AppointmentDetails);
+        setIsHost(data.seller_id === user.id);
+      } catch (error: any) {
+        console.error('Error fetching appointment:', error);
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to fetch appointment details',
+          variant: 'destructive',
+        });
+        navigate('/dashboard');
+      } finally {
+        setIsLoadingAppointment(false);
+      }
+    };
     
-    // For demo purposes, randomly decide if user is host or not
-    setIsHost(Math.random() > 0.5);
-    
-  }, [appointmentId]);
+    if (user && !isLoading) {
+      fetchAppointmentDetails();
+    }
+  }, [user, appointmentId, isLoading, navigate, toast]);
   
   if (isLoading || isLoadingAppointment) {
     return (
@@ -39,6 +86,23 @@ const VideoConferencePage = () => {
   if (!user) {
     navigate('/');
     return null;
+  }
+
+  if (!appointmentDetails) {
+    return (
+      <div className="min-h-screen bg-dark bg-dark-gradient flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-pi-muted">Appointment not found or you don't have access to it.</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => navigate('/dashboard')}
+          >
+            Return to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
   }
   
   const handleEndCall = () => {
@@ -56,6 +120,17 @@ const VideoConferencePage = () => {
         >
           <ArrowLeft size={16} className="mr-2" /> Back to Dashboard
         </Button>
+      </div>
+      
+      <div className="p-4">
+        <div className="mb-4 max-w-6xl mx-auto">
+          <h2 className="text-xl font-semibold text-white">
+            {appointmentDetails.product_title}
+          </h2>
+          <p className="text-sm text-gray-400">
+            {new Date(appointmentDetails.appointment_date).toLocaleDateString()} at {appointmentDetails.appointment_time}
+          </p>
+        </div>
       </div>
       
       <div className="flex-grow flex items-center justify-center p-4">

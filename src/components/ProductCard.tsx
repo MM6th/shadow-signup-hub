@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import AppointmentScheduler from "./AppointmentScheduler";
 
 interface ProductCardProps {
   product: {
@@ -17,6 +18,7 @@ interface ProductCardProps {
     image_url: string | null;
     user_id: string;
     category?: string; 
+    type?: string;
   };
   onClick?: () => void;
   showEditButton?: boolean;
@@ -27,9 +29,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const isOwner = user?.id === product.user_id;
+  const isService = product.type === 'service';
 
   const handleEdit = () => {
     navigate(`/edit-product/${product.id}`);
@@ -109,7 +113,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
 
   const handleBuyButtonClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent the card click event from triggering
-    setIsDialogOpen(true);
+    
+    if (isService && user) {
+      setIsSchedulerOpen(true);
+    } else {
+      setIsDialogOpen(true);
+    }
+  };
+
+  const handleSchedulingComplete = () => {
+    setIsSchedulerOpen(false);
+    toast({
+      title: "Appointment Scheduled",
+      description: "Your appointment has been successfully scheduled. Check your dashboard for details.",
+    });
   };
 
   return (
@@ -141,7 +158,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
             </Button>
           ) : (
             <Button onClick={handleBuyButtonClick} className="w-full">
-              Buy Now
+              {isService ? "Schedule Appointment" : "Buy Now"}
             </Button>
           )}
         </div>
@@ -171,6 +188,26 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
               {isLoading ? "Processing..." : "Copy Payment Address"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSchedulerOpen} onOpenChange={setIsSchedulerOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Schedule Appointment</DialogTitle>
+            <DialogDescription>
+              Choose a date and time for your virtual consultation
+            </DialogDescription>
+          </DialogHeader>
+          
+          {user && (
+            <AppointmentScheduler
+              productId={product.id}
+              productTitle={product.title}
+              sellerId={product.user_id}
+              onSchedulingComplete={handleSchedulingComplete}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </Card>

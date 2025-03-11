@@ -22,6 +22,11 @@ interface GetAppointmentsRequest {
   isSeller: boolean;
 }
 
+interface UpdateAppointmentStatusRequest {
+  appointmentId: string;
+  status: 'scheduled' | 'completed' | 'cancelled';
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -147,6 +152,61 @@ serve(async (req) => {
       
       return new Response(
         JSON.stringify({ appointments }),
+        { 
+          status: 200, 
+          headers: { 
+            "Content-Type": "application/json",
+            ...corsHeaders 
+          } 
+        }
+      );
+    } else if (req.method === "PATCH") {
+      // Update appointment status
+      const { appointmentId, status }: UpdateAppointmentStatusRequest = await req.json();
+      
+      if (!appointmentId || !status) {
+        return new Response(
+          JSON.stringify({ error: "Missing required parameters" }),
+          { 
+            status: 400, 
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders 
+            } 
+          }
+        );
+      }
+      
+      console.log(`Updating appointment ${appointmentId} status to ${status}`);
+      
+      const { data, error } = await supabaseAdmin
+        .from('appointments')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', appointmentId)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("Error updating appointment:", error);
+        return new Response(
+          JSON.stringify({ 
+            error: error.message || "Failed to update appointment" 
+          }),
+          { 
+            status: 400, 
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders 
+            } 
+          }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          message: "Appointment updated successfully",
+          appointment: data
+        }),
         { 
           status: 200, 
           headers: { 
