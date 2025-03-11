@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import SignInForm from './SignInForm';
@@ -22,13 +21,12 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If user is authenticated and modal is open, close it and redirect
     if (user && isOpen) {
       onClose();
       if (!hasProfile) {
         navigate('/create-profile');
       } else {
-        navigate('/dashboard');
+        navigate('/digital-office');
       }
     }
   }, [user, isOpen, onClose, navigate, hasProfile]);
