@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { CalendarIcon, Clock, MapPin, Camera, Upload, EyeOff, Eye, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -76,21 +76,28 @@ const CreateProfile: React.FC = () => {
     if (profile) {
       setIsEditing(true);
       
-      // Set initial form values
-      form.reset({
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        date_of_birth: new Date(profile.date_of_birth),
-        time_of_birth: profile.time_of_birth || undefined,
-        place_of_birth: profile.place_of_birth || undefined,
-        show_zodiac_sign: profile.show_zodiac_sign || false,
-        business_type: profile.business_type as any || undefined,
-        industry: profile.industry as any || undefined,
-      });
-      
-      // Set profile image URL if it exists
-      if (profile.profile_photo_url) {
-        setProfileImageUrl(profile.profile_photo_url);
+      try {
+        // Parse the date string from profile correctly
+        const dateOfBirth = new Date(profile.date_of_birth);
+        
+        // Set initial form values
+        form.reset({
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          date_of_birth: dateOfBirth,
+          time_of_birth: profile.time_of_birth || undefined,
+          place_of_birth: profile.place_of_birth || undefined,
+          show_zodiac_sign: profile.show_zodiac_sign || false,
+          business_type: profile.business_type as any || undefined,
+          industry: profile.industry as any || undefined,
+        });
+        
+        // Set profile image URL if it exists
+        if (profile.profile_photo_url) {
+          setProfileImageUrl(profile.profile_photo_url);
+        }
+      } catch (error) {
+        console.error("Error setting form values:", error);
       }
     }
   }, [profile, form]);
@@ -292,18 +299,35 @@ const CreateProfile: React.FC = () => {
                   <FormItem>
                     <FormLabel>Date of Birth</FormLabel>
                     <FormControl>
-                      <Input
-                        type="date"
-                        className="bg-dark-secondary border border-white/10"
-                        {...field}
-                        value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
-                        onChange={(e) => {
-                          const date = e.target.value ? new Date(e.target.value) : null;
-                          if (date) {
-                            field.onChange(date);
-                          }
-                        }}
-                      />
+                      <div className="relative">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal bg-dark-secondary border border-white/10",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? (
+                                format(field.value, "MM/dd/yyyy")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              initialFocus
+                              className="pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </FormControl>
                     <FormDescription>
                       Your date of birth is required to calculate your zodiac sign.

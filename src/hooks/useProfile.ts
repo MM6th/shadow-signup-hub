@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { format, parseISO } from 'date-fns';
 
 export type Profile = {
   id: string;
@@ -63,4 +64,3 @@ export const useProfile = (userId: string | undefined) => {
 
   return { profile, isLoading, refreshProfile };
 };
-
