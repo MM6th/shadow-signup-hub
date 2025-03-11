@@ -23,7 +23,7 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ isSeller = fals
       try {
         setIsLoading(true);
         
-        // Fix: Using the correct parameter format for function invocation
+        // Use the correct format for function invocation with parameters in the body
         const { data, error } = await supabase.functions.invoke('appointments', {
           method: 'GET',
           body: { 

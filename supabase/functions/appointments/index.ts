@@ -17,6 +17,11 @@ interface AppointmentRequest {
   appointmentTime: string;
 }
 
+interface GetAppointmentsRequest {
+  userId: string;
+  isSeller: boolean;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -82,7 +87,8 @@ serve(async (req) => {
       );
     } else if (req.method === "GET") {
       // Get appointments for a user
-      const { userId, isSeller } = await req.json();
+      const params: GetAppointmentsRequest = await req.json();
+      const { userId, isSeller } = params;
       
       if (!userId) {
         return new Response(
@@ -100,10 +106,17 @@ serve(async (req) => {
       console.log(`Fetching appointments for user ${userId} (${isSeller ? "seller" : "buyer"})`);
       
       // Fetch appointments from the database
-      const { data: appointmentsData, error: appointmentsError } = await supabaseAdmin
+      let query = supabaseAdmin
         .from('appointments')
-        .select('*')
-        .or(isSeller ? `seller_id.eq.${userId}` : `buyer_id.eq.${userId}`)
+        .select('*');
+        
+      if (isSeller) {
+        query = query.eq('seller_id', userId);
+      } else {
+        query = query.eq('buyer_id', userId);
+      }
+      
+      const { data: appointmentsData, error: appointmentsError } = await query
         .order('appointment_date', { ascending: true });
       
       if (appointmentsError) {
