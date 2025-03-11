@@ -35,18 +35,42 @@ serve(async (req) => {
       
       console.log("Creating appointment:", appointment);
       
-      // In a real application, this would create a new appointment in the database
-      // and handle notifications to the seller
-      console.log(`Appointment scheduled for product "${appointment.productTitle}"`);
-      console.log(`Date: ${appointment.appointmentDate} at ${appointment.appointmentTime}`);
-      console.log(`Buyer: ${appointment.buyerName} (${appointment.buyerId})`);
-      console.log(`Seller: ${appointment.sellerId}`);
+      // Insert the appointment into the database
+      const { data: appointmentData, error: appointmentError } = await supabaseAdmin
+        .from('appointments')
+        .insert({
+          product_id: appointment.productId,
+          product_title: appointment.productTitle,
+          seller_id: appointment.sellerId,
+          buyer_id: appointment.buyerId,
+          buyer_name: appointment.buyerName,
+          appointment_date: appointment.appointmentDate,
+          appointment_time: appointment.appointmentTime,
+          status: 'scheduled'
+        })
+        .select()
+        .single();
       
-      // For demo purposes, we're just returning success
+      if (appointmentError) {
+        console.error("Error creating appointment:", appointmentError);
+        return new Response(
+          JSON.stringify({ 
+            error: appointmentError.message || "Failed to create appointment" 
+          }),
+          { 
+            status: 400, 
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders 
+            } 
+          }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ 
           message: "Appointment created successfully",
-          appointmentId: crypto.randomUUID()
+          appointmentId: appointmentData.id
         }),
         { 
           status: 200, 
@@ -58,9 +82,7 @@ serve(async (req) => {
       );
     } else if (req.method === "GET") {
       // Get appointments for a user
-      const url = new URL(req.url);
-      const userId = url.searchParams.get("userId");
-      const isSeller = url.searchParams.get("isSeller") === "true";
+      const { userId, isSeller } = await req.json();
       
       if (!userId) {
         return new Response(
@@ -77,26 +99,38 @@ serve(async (req) => {
       
       console.log(`Fetching appointments for user ${userId} (${isSeller ? "seller" : "buyer"})`);
       
-      // In a real application, this would fetch appointments from the database
-      // For demo purposes, we'll return some sample data
-      const appointments = [
-        {
-          id: crypto.randomUUID(),
-          productTitle: "Tarot Reading Session",
-          customerName: "Jane Smith",
-          appointmentDate: new Date().toISOString(),
-          appointmentTime: "10:00 AM",
-          status: "scheduled"
-        },
-        {
-          id: crypto.randomUUID(),
-          productTitle: "Astrology Consultation",
-          customerName: "John Doe",
-          appointmentDate: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
-          appointmentTime: "02:00 PM",
-          status: "scheduled"
-        }
-      ];
+      // Fetch appointments from the database
+      const { data: appointmentsData, error: appointmentsError } = await supabaseAdmin
+        .from('appointments')
+        .select('*')
+        .or(isSeller ? `seller_id.eq.${userId}` : `buyer_id.eq.${userId}`)
+        .order('appointment_date', { ascending: true });
+      
+      if (appointmentsError) {
+        console.error("Error fetching appointments:", appointmentsError);
+        return new Response(
+          JSON.stringify({ 
+            error: appointmentsError.message || "Failed to fetch appointments" 
+          }),
+          { 
+            status: 400, 
+            headers: { 
+              "Content-Type": "application/json",
+              ...corsHeaders 
+            } 
+          }
+        );
+      }
+      
+      // Transform data format for the frontend
+      const appointments = appointmentsData.map(apt => ({
+        id: apt.id,
+        productTitle: apt.product_title,
+        customerName: apt.buyer_name,
+        appointmentDate: apt.appointment_date,
+        appointmentTime: apt.appointment_time,
+        status: apt.status
+      }));
       
       return new Response(
         JSON.stringify({ appointments }),

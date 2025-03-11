@@ -23,11 +23,12 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ isSeller = fals
       try {
         setIsLoading(true);
         
+        // Fix: Using the correct parameter format for function invocation
         const { data, error } = await supabase.functions.invoke('appointments', {
           method: 'GET',
-          query: {
+          body: { 
             userId: user.id,
-            isSeller: isSeller.toString()
+            isSeller: isSeller
           }
         });
         
