@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -31,8 +32,83 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [adminWalletAddresses, setAdminWalletAddresses] = useState<any[]>([]);
   const isOwner = user?.id === product.user_id;
   const isService = product.type === 'service';
+  const ADMIN_EMAIL = "cmooregee@gmail.com";
+  const isAdminUser = user?.email === ADMIN_EMAIL;
+
+  useEffect(() => {
+    // Fetch admin wallet addresses when component mounts
+    const fetchAdminWalletAddresses = async () => {
+      try {
+        // First, try to find the admin user
+        const { data: adminData, error: adminError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user?.id)
+          .single();
+
+        if (adminError || !adminData) {
+          console.error('Error finding admin user', adminError);
+          return;
+        }
+
+        // Fetch all products by the admin
+        const { data: products, error: productsError } = await supabase
+          .from('products')
+          .select('id')
+          .eq('user_id', isAdminUser ? user?.id : adminData.id);
+
+        if (productsError || !products) {
+          console.error('Error finding admin products', productsError);
+          return;
+        }
+
+        // If this product belongs to the admin, fetch its wallet addresses
+        if (isAdminUser) {
+          const { data: walletData, error: walletError } = await supabase
+            .from('wallet_addresses')
+            .select('*')
+            .eq('product_id', product.id);
+
+          if (!walletError && walletData) {
+            setAdminWalletAddresses(walletData);
+          }
+        } else {
+          // For non-admin users, fetch all admin wallet addresses
+          if (products.length > 0) {
+            // Get all admin product IDs
+            const productIds = products.map(p => p.id);
+            
+            // Fetch wallet addresses for any admin product
+            const { data: walletData, error: walletError } = await supabase
+              .from('wallet_addresses')
+              .select('*')
+              .in('product_id', productIds);
+
+            if (!walletError && walletData && walletData.length > 0) {
+              // Get the first wallet address of each crypto type
+              const uniqueWallets: Record<string, any> = {};
+              walletData.forEach(wallet => {
+                if (!uniqueWallets[wallet.crypto_type]) {
+                  uniqueWallets[wallet.crypto_type] = wallet;
+                }
+              });
+              
+              setAdminWalletAddresses(Object.values(uniqueWallets));
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching admin wallet addresses:', error);
+      }
+    };
+
+    if (user) {
+      fetchAdminWalletAddresses();
+    }
+  }, [user, product.id, isAdminUser]);
 
   const handleEdit = () => {
     navigate(`/edit-product/${product.id}`);
@@ -55,15 +131,29 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
     try {
       setIsLoading(true);
       
-      // Get the wallet address for this product
-      const { data: walletData, error: walletError } = await supabase
-        .from('wallet_addresses')
-        .select('*')
-        .eq('product_id', product.id)
-        .single();
+      let walletData;
+      
+      if (isAdminUser) {
+        // Admin can use their own product's wallet addresses
+        const { data, error } = await supabase
+          .from('wallet_addresses')
+          .select('*')
+          .eq('product_id', product.id)
+          .single();
 
-      if (walletError) {
-        throw walletError;
+        if (error) {
+          throw error;
+        }
+
+        walletData = data;
+      } else {
+        // Non-admin users must use admin wallet addresses
+        if (adminWalletAddresses.length === 0) {
+          throw new Error('No payment options available. Please contact the administrator.');
+        }
+        
+        // Use the first available admin wallet address
+        walletData = adminWalletAddresses[0];
       }
 
       if (!walletData) {
@@ -83,7 +173,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
           productTitle: product.title,
           productPrice: product.price,
           walletAddress: walletData.wallet_address,
-          cryptoType: walletData.crypto_type
+          cryptoType: walletData.crypto_type,
+          isAdminUser: isAdminUser
         },
       });
 

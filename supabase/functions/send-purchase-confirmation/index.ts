@@ -17,7 +17,11 @@ interface PurchaseConfirmationRequest {
   sellerId?: string;
   productId?: string;
   buyerId?: string;
+  isAdminUser?: boolean; // Flag to identify if this is the admin user
 }
+
+// Admin email to check against
+const ADMIN_EMAIL = "cmooregee@gmail.com";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -39,7 +43,8 @@ serve(async (req) => {
       buyerName,
       sellerId,
       productId,
-      buyerId
+      buyerId,
+      isAdminUser
     }: PurchaseConfirmationRequest = await req.json();
 
     console.log(`Request data received: product=${productTitle}, crypto=${cryptoType}`);
@@ -65,6 +70,16 @@ serve(async (req) => {
       hour: '2-digit',
       minute: '2-digit'
     });
+
+    // Check if this is a non-admin user
+    if (!isAdminUser) {
+      console.log("Non-admin user purchase - using admin wallet address");
+      // For non-admin users, we're already receiving the admin's wallet address
+      // from the client side, so we continue with the purchase
+    } else {
+      console.log("Admin user purchase - using specified wallet address");
+      // For the admin user, we use their specified wallet address
+    }
 
     // If this is a consultation purchase with appointment data, log it
     if (appointmentDate && appointmentTime) {
