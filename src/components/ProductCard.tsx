@@ -8,8 +8,9 @@ import { useToast } from "@/hooks/use-toast";
 import AppointmentDialog from "./AppointmentDialog";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { QrCode, Copy, Phone } from 'lucide-react';
+import { QrCode, Copy, Phone, Star } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
+import ReviewDialog from "./ReviewDialog";
 
 interface ProductCardProps {
   product: {
@@ -33,6 +34,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const { toast } = useToast();
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   
   const ADMIN_EMAIL = "cmooregee@gmail.com";
   const isAdminUser = user?.email === ADMIN_EMAIL;
@@ -103,6 +105,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
     });
   };
 
+  const handleOpenReviewDialog = () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to leave a review.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsReviewDialogOpen(true);
+  };
+
   return (
     <Card className="overflow-hidden h-[500px] flex flex-col" onClick={handleCardClick}>
       <div className="relative h-64 overflow-hidden">
@@ -137,43 +151,39 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
             </Button>
           ) : (
             <div className="space-y-2">
-              {selectedWalletAddress ? (
-                <>
-                  <Button onClick={handleCopyWallet} className="w-full">
-                    <Copy size={16} className="mr-2" /> Copy Payment Address
-                  </Button>
-                  
-                  <div className="flex justify-between">
-                    <Popover open={showQRCode} onOpenChange={setShowQRCode}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <QrCode size={16} className="mr-2" /> Show QR
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="bg-white p-2 w-auto">
-                        <img 
-                          src={generateQRCode(selectedWalletAddress.wallet_address)} 
-                          alt="QR Code" 
-                          className="h-32 w-32"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    
-                    {product.contact_phone && (
-                      <Button variant="outline" size="sm" onClick={() => {
-                        toast({
-                          title: "Seller Contact",
-                          description: `Contact the seller at: ${product.contact_phone}`,
-                        });
-                      }}>
-                        <Phone size={16} className="mr-2" /> Contact
-                      </Button>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <Button disabled className="w-full">
-                  No Payment Option Available
+              <Button onClick={handleCopyWallet} className="w-full">
+                <Copy size={16} className="mr-2" /> Buy Now
+              </Button>
+              
+              <div className="flex justify-between">
+                <Popover open={showQRCode} onOpenChange={setShowQRCode}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <QrCode size={16} className="mr-2" /> Show QR
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="bg-white p-2 w-auto">
+                    <img 
+                      src={generateQRCode(selectedWalletAddress?.wallet_address || '')} 
+                      alt="QR Code" 
+                      className="h-32 w-32"
+                    />
+                  </PopoverContent>
+                </Popover>
+                
+                <Button variant="outline" size="sm" onClick={handleOpenReviewDialog}>
+                  <Star size={16} className="mr-2" /> Review
+                </Button>
+              </div>
+
+              {product.contact_phone && (
+                <Button variant="outline" size="sm" onClick={() => {
+                  toast({
+                    title: "Seller Contact",
+                    description: `Contact the seller at: ${product.contact_phone}`,
+                  });
+                }} className="w-full">
+                  <Phone size={16} className="mr-2" /> Contact Seller
                 </Button>
               )}
             </div>
@@ -188,6 +198,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
         productTitle={product.title}
         sellerId={product.user_id}
         onSchedulingComplete={handleSchedulingComplete}
+        user={user}
+      />
+
+      <ReviewDialog
+        open={isReviewDialogOpen}
+        onOpenChange={setIsReviewDialogOpen}
+        productId={product.id}
+        sellerId={product.user_id}
         user={user}
       />
     </Card>

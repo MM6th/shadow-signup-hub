@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star } from 'lucide-react';
 import NavBar from '../components/NavBar';
@@ -9,15 +9,23 @@ import AnimatedText from '../components/AnimatedText';
 import FeaturedServices from '../components/FeaturedServices';
 import AuthModal from '../components/AuthModal';
 import AgeVerificationModal from '../components/AgeVerificationModal';
+import { useSellerReviews } from '../hooks/useReviews';
+import { supabase } from '@/integrations/supabase/client';
+
+const ADMIN_ID = '3a25fea8-ec60-4e52-ae40-63f2b1ce89d9'; // Admin user ID
 
 const Index: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
+  const { reviews, isLoading, averageRating, totalReviews } = useSellerReviews(ADMIN_ID);
   
   const handleOpenAuthModal = (mode: 'signin' | 'signup') => {
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
   };
+
+  // Get rounded rating for display (e.g., 4.7 -> 5)
+  const displayRating = Math.round(averageRating);
 
   return (
     <div className="min-h-screen flex flex-col bg-dark">
@@ -54,17 +62,34 @@ const Index: React.FC = () => {
                 
                 <div className="flex items-center mt-8">
                   <div className="flex -space-x-2">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="w-8 h-8 rounded-full border-2 border-dark bg-gradient-to-br from-white/20 to-white/5"></div>
+                    {reviews.slice(0, 4).map((review, i) => (
+                      <div key={i} className="w-8 h-8 rounded-full border-2 border-dark overflow-hidden">
+                        {review.profile_photo_url ? (
+                          <img 
+                            src={review.profile_photo_url} 
+                            alt="User" 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-white/20 to-white/5"></div>
+                        )}
+                      </div>
                     ))}
                   </div>
                   <div className="ml-4">
                     <div className="flex items-center">
                       {[1, 2, 3, 4, 5].map((i) => (
-                        <Star key={i} className="w-4 h-4 text-amber-400" fill="currentColor" />
+                        <Star 
+                          key={i} 
+                          className={`w-4 h-4 ${i <= displayRating ? 'text-amber-400 fill-amber-400' : 'text-gray-400'}`} 
+                        />
                       ))}
                     </div>
-                    <p className="text-sm text-pi-muted">Trusted by 1,000+ users</p>
+                    <p className="text-sm text-pi-muted">
+                      {totalReviews > 0 
+                        ? `Trusted by ${totalReviews} user${totalReviews !== 1 ? 's' : ''}` 
+                        : 'Be the first to leave a review!'}
+                    </p>
                   </div>
                 </div>
               </div>
