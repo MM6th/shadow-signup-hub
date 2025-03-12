@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import PaymentDialog from "./PaymentDialog";
 import AppointmentDialog from "./AppointmentDialog";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { QrCode, Copy, Phone } from 'lucide-react';
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProductCardProps {
   product: {
@@ -31,7 +31,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   
