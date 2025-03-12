@@ -38,7 +38,14 @@ export const useWalletAddresses = (
           
           if (adminUserData && adminUserData.users) {
             // Find the admin user
-            const adminUser = adminUserData.users.find(u => u.email === 'cmooregee@gmail.com');
+            // TypeScript fix: Properly check and type the users array
+            const adminUser = adminUserData.users.find(u => {
+              // Check if u has email property and if it matches the admin email
+              if (u && typeof u === 'object' && 'email' in u) {
+                return u.email === 'cmooregee@gmail.com';
+              }
+              return false;
+            });
             
             if (adminUser) {
               // Fetch all products by the admin
