@@ -17,6 +17,9 @@ const EditProduct = () => {
   const [walletAddresses, setWalletAddresses] = useState([]);
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
   
+  const ADMIN_EMAIL = "cmooregee@gmail.com";
+  const isAdminUser = user?.email === ADMIN_EMAIL;
+  
   useEffect(() => {
     const fetchProduct = async () => {
       if (!productId || !user) return;
@@ -24,12 +27,21 @@ const EditProduct = () => {
       try {
         setIsLoadingProduct(true);
         
+        if (!isAdminUser) {
+          toast({
+            title: "Access restricted",
+            description: "Only administrators can edit products",
+            variant: "destructive",
+          });
+          navigate('/marketplace');
+          return;
+        }
+        
         // Fetch product data
         const { data: productData, error: productError } = await supabase
           .from('products')
           .select('*')
           .eq('id', productId)
-          .eq('user_id', user.id)
           .single();
           
         if (productError) {
@@ -39,7 +51,7 @@ const EditProduct = () => {
         if (!productData) {
           toast({
             title: "Product not found",
-            description: "This product doesn't exist or you don't have permission to edit it.",
+            description: "This product doesn't exist",
             variant: "destructive",
           });
           navigate('/dashboard');
@@ -80,7 +92,7 @@ const EditProduct = () => {
     };
     
     fetchProduct();
-  }, [productId, user, toast, navigate]);
+  }, [productId, user, toast, navigate, isAdminUser]);
   
   if (isLoading || isLoadingProduct) {
     return (
@@ -95,6 +107,10 @@ const EditProduct = () => {
   
   if (!user) {
     navigate('/');
+    return null;
+  }
+  
+  if (!isAdminUser) {
     return null;
   }
   

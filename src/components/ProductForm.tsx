@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +14,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
-// Supported cryptocurrencies
 const CRYPTO_OPTIONS = [
   { value: 'bitcoin', label: 'Bitcoin (BTC)' },
   { value: 'ethereum', label: 'Ethereum (ETH)' },
@@ -26,7 +24,6 @@ const CRYPTO_OPTIONS = [
   { value: 'usdc', label: 'USD Coin (USDC)' },
 ];
 
-// Product categories
 const CATEGORY_OPTIONS = [
   { value: 'reading', label: 'Personal Readings' },
   { value: 'consulting', label: 'Consulting' },
@@ -72,6 +69,24 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const ADMIN_EMAIL = "cmooregee@gmail.com";
+  const isAdminUser = user?.email === ADMIN_EMAIL;
+
+  useEffect(() => {
+    if (user && !isAdminUser) {
+      toast({
+        title: "Access restricted",
+        description: "Only administrators can create or edit products",
+        variant: "destructive",
+      });
+      navigate('/marketplace');
+    }
+  }, [user, isAdminUser, navigate, toast]);
+
+  if (!isAdminUser) {
+    return null;
+  }
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -83,7 +98,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
     },
   });
 
-  // Wallet address management functions
   const addWalletAddress = () => {
     if (walletAddresses.length >= 3) {
       toast({
@@ -110,12 +124,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
     ));
   };
 
-  // Image handling functions
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Preview the image
     const reader = new FileReader();
     reader.onload = () => {
       setImagePreview(reader.result as string);
@@ -129,7 +141,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
     setImagePreview(null);
   };
 
-  // Upload image to Supabase storage
   const uploadImage = async (): Promise<string | null> => {
     if (!imageFile) return initialValues?.image_url || null;
     
@@ -157,7 +168,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }
   };
 
-  // Validate wallet addresses
   const validateWalletAddresses = (): boolean => {
     if (walletAddresses.length === 0) {
       toast({
@@ -182,7 +192,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
     return true;
   };
 
-  // Handle form submission
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) {
       toast({
@@ -193,19 +202,16 @@ const ProductForm: React.FC<ProductFormProps> = ({
       return;
     }
     
-    // Validate wallet addresses
     if (!validateWalletAddresses()) return;
     
     setIsSubmitting(true);
     
     try {
-      // Upload image if provided
       const imageUrl = await uploadImage();
       
       let product;
       
       if (isEditing && initialValues) {
-        // Update existing product
         const { data: updatedProduct, error: updateError } = await supabase
           .from('products')
           .update({
@@ -223,7 +229,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
         if (updateError) throw new Error(updateError.message);
         product = updatedProduct;
         
-        // Delete existing wallet addresses
         const { error: deleteWalletsError } = await supabase
           .from('wallet_addresses')
           .delete()
@@ -231,7 +236,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
           
         if (deleteWalletsError) throw new Error(deleteWalletsError.message);
       } else {
-        // Insert new product
         const { data: newProduct, error: productError } = await supabase
           .from('products')
           .insert({
@@ -250,7 +254,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
         product = newProduct;
       }
       
-      // Insert wallet addresses
       const walletData = walletAddresses.map(wallet => ({
         product_id: product.id,
         crypto_type: wallet.cryptoType,
@@ -270,7 +273,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
           : "Your product has been added to the marketplace",
       });
       
-      // Redirect to marketplace
       navigate('/marketplace');
       
     } catch (error) {
@@ -293,7 +295,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Product Details */}
           <FormField
             control={form.control}
             name="title"
@@ -441,7 +442,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
             )}
           />
           
-          {/* Wallet Addresses Section */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-medium">Wallet Addresses</h3>
@@ -510,7 +510,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
             ))}
           </div>
           
-          {/* Form Controls */}
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={() => navigate('/dashboard')}>
               Cancel

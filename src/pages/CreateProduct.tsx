@@ -5,10 +5,15 @@ import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductForm from '@/components/ProductForm';
+import { useToast } from '@/hooks/use-toast';
 
 const CreateProduct = () => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const ADMIN_EMAIL = "cmooregee@gmail.com";
+  const isAdminUser = user?.email === ADMIN_EMAIL;
   
   if (isLoading) {
     return (
@@ -24,6 +29,16 @@ const CreateProduct = () => {
   if (!user) {
     // Redirect to login if not authenticated
     navigate('/');
+    return null;
+  }
+  
+  if (!isAdminUser) {
+    toast({
+      title: "Access restricted",
+      description: "Only administrators can create products",
+      variant: "destructive",
+    });
+    navigate('/marketplace');
     return null;
   }
   

@@ -32,9 +32,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   
   const ADMIN_EMAIL = "cmooregee@gmail.com";
-  const isOwner = user?.id === product.user_id;
-  const isService = product.type === 'service';
   const isAdminUser = user?.email === ADMIN_EMAIL;
+  const isService = product.type === 'service';
 
   const { adminWalletAddresses } = useWalletAddresses(user, product.id, isAdminUser);
 
@@ -89,7 +88,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
         </p>
         <div className="mt-auto">
           <p className="text-lg font-bold mb-4">${product.price.toFixed(2)}</p>
-          {isOwner && (showEditButton !== false) ? (
+          {isAdminUser && (showEditButton !== false) ? (
             <Button onClick={handleEdit} className="w-full">
               Edit
             </Button>
