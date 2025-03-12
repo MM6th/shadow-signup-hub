@@ -23,6 +23,11 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Set the mode when the defaultMode prop changes
+    setMode(defaultMode);
+  }, [defaultMode]);
+
+  useEffect(() => {
     // If user is authenticated and modal is open, close it and redirect
     if (user && isOpen) {
       onClose();

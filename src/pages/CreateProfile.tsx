@@ -8,7 +8,6 @@ import { Camera, Upload, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 
 import {
   Form,
@@ -130,7 +129,6 @@ const CreateProfile: React.FC = () => {
       const profilePhotoUrl = profileImage ? await uploadProfileImage() : profileImageUrl;
 
       // Using current date as date_of_birth since it's required by the database schema
-      // We removed date_of_birth UI but the column still exists in the database
       const currentDate = new Date().toISOString().split('T')[0];
 
       const profileData = {
@@ -139,7 +137,7 @@ const CreateProfile: React.FC = () => {
         profile_photo_url: profilePhotoUrl,
         business_type: data.business_type,
         industry: data.industry,
-        date_of_birth: currentDate // Adding this field as it's required
+        date_of_birth: currentDate // Adding this field as it's required by the database
       };
 
       let error;
