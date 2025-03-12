@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Star, Clock, Baby, BriefCase, DollarSign } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, Clock, Baby, Briefcase, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // Updated featured services with new descriptions
@@ -13,7 +13,7 @@ const featuredServices = [
     image: '/placeholder.svg',
     rating: 4.9,
     duration: '90 minutes',
-    icon: BriefCase
+    icon: Briefcase
   },
   {
     id: '2',
