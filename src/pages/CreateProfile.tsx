@@ -27,13 +27,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+const businessTypes = ['Sole Proprietorship', 'S Corp', 'C Corp', 'LLC', 'P.I.E student'] as const;
+const industryTypes = [
+  'Influencer', 'Educator', 'Astrologer', 'Spiritualist', 
+  'Gamer', 'Sports', 'Cooking', 'Fashion', 'Adult', 'Film', 'Undecided'
+] as const;
+
 const formSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
-  business_type: z.enum(['Sole Proprietorship', 'S Corp', 'C Corp', 'LLC', 'P.I.E student']).optional(),
-  industry: z.enum([
-    'Influencer', 'Educator', 'Astrologer', 'Spiritualist', 
-    'Gamer', 'Sports', 'Cooking', 'Fashion', 'Adult', 'Film', 'Undecided'
-  ]).optional(),
+  business_type: z.enum(businessTypes).optional(),
+  industry: z.enum(industryTypes).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -123,20 +126,16 @@ const CreateProfile: React.FC = () => {
       setIsUploading(true);
       const profilePhotoUrl = profileImage ? await uploadProfileImage() : profileImageUrl;
 
-      // Using current date for date_of_birth since it's required by the database schema
-      // This is hidden from the user as per requirements
       const currentDate = new Date().toISOString().split('T')[0];
 
       const profileData = {
-        // Keep the username field from the form data
         username: data.username,
-        // Set both first_name and last_name to match the database schema requirements
         first_name: data.username.split(' ')[0] || data.username,
         last_name: data.username.split(' ').slice(1).join(' ') || '',
         profile_photo_url: profilePhotoUrl,
         business_type: data.business_type,
         industry: data.industry,
-        date_of_birth: currentDate // Required by database but not shown to user
+        date_of_birth: currentDate
       };
 
       let error;
