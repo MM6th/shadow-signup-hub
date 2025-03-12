@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -41,6 +42,7 @@ const formSchema = z.object({
     message: 'Price must be a positive number',
   }),
   category: z.string().min(1, 'Please select a category'),
+  contact_phone: z.string().min(10, 'Phone number must be at least 10 digits'),
   image: z.any().optional(),
 });
 
@@ -95,6 +97,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
       description: initialValues?.description || '',
       price: initialValues?.price ? String(initialValues.price) : '',
       category: initialValues?.category || '',
+      contact_phone: initialValues?.contact_phone || '',
     },
   });
 
@@ -221,6 +224,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             price: parseFloat(values.price),
             category: values.category,
             image_url: imageUrl,
+            contact_phone: values.contact_phone,
           })
           .eq('id', initialValues.id)
           .select()
@@ -246,6 +250,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             price: parseFloat(values.price),
             category: values.category,
             image_url: imageUrl,
+            contact_phone: values.contact_phone,
           })
           .select()
           .single();
@@ -381,10 +386,30 @@ const ProductForm: React.FC<ProductFormProps> = ({
             name="price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Price (USD)</FormLabel>
+                <FormLabel>Price per hour (USD)</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
                 </FormControl>
+                <FormDescription>
+                  For services, this is the hourly rate. For products, this is the fixed price.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="contact_phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Contact Phone Number</FormLabel>
+                <FormControl>
+                  <Input type="tel" placeholder="Enter your phone number for client contact" {...field} />
+                </FormControl>
+                <FormDescription>
+                  This number will be shared with buyers after purchase for direct contact.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, ShoppingCart, Star, QrCode, User } from 'lucide-react';
+import { Search, Filter, ShoppingCart, Star, QrCode, User, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -33,8 +33,6 @@ const Marketplace: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [walletAddresses, setWalletAddresses] = useState<Record<string, any[]>>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [showQRCode, setShowQRCode] = useState<string | null>(null);
-  const [selectedWallet, setSelectedWallet] = useState<any>(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -98,45 +96,7 @@ const Marketplace: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  const generateQRCode = (walletAddress: string) => {
-    setShowQRCode(walletAddress);
-  };
-
-  const handlePurchase = (wallet: any) => {
-    setSelectedWallet(wallet);
-    
-    try {
-      // Copy wallet address to clipboard
-      navigator.clipboard.writeText(wallet.wallet_address);
-      
-      // Show toast notification
-      toast({
-        title: "Address copied to clipboard",
-        description: `Send ${selectedProduct.price} ${wallet.crypto_type} to complete your purchase.`,
-      });
-      
-      // Record the purchase (without email)
-      supabase.functions.invoke('send-purchase-confirmation', {
-        body: {
-          productTitle: selectedProduct.title,
-          productPrice: selectedProduct.price,
-          walletAddress: wallet.wallet_address,
-          cryptoType: wallet.crypto_type
-        }
-      });
-    } catch (error) {
-      console.error('Error processing purchase:', error);
-      toast({
-        title: "Error processing purchase",
-        description: "There was a problem completing your purchase. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Helper function to generate QR code URL
   const getQRCodeUrl = (text: string) => {
-    // Using QR Server API which properly renders QR codes
     return `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(text)}&size=200x200&bgcolor=ffffff`;
   };
 
@@ -225,6 +185,8 @@ const Marketplace: React.FC = () => {
                   price: product.price,
                   image_url: product.image_url,
                   category: product.category,
+                  type: product.type,
+                  contact_phone: product.contact_phone,
                 }} 
                 onClick={() => handleProductClick(product)} 
                 showEditButton={true}
@@ -258,9 +220,17 @@ const Marketplace: React.FC = () => {
                     <DialogDescription className="text-pi mb-4">
                       {selectedProduct.description}
                     </DialogDescription>
-                    <div className="text-2xl font-medium text-white mb-6">
-                      ${selectedProduct.price.toFixed(2)}
+                    
+                    <div className="text-2xl font-medium text-white mb-2">
+                      ${selectedProduct.price.toFixed(2)}{selectedProduct.type !== 'tangible' ? '/hr' : ''}
                     </div>
+                    
+                    {selectedProduct.contact_phone && (
+                      <div className="flex items-center text-pi mb-4">
+                        <Phone className="h-4 w-4 mr-2" />
+                        <span className="text-sm">Contact: {selectedProduct.contact_phone}</span>
+                      </div>
+                    )}
                     
                     {/* Payment Options */}
                     {walletAddresses[selectedProduct.id] && walletAddresses[selectedProduct.id].length > 0 && (
@@ -280,9 +250,21 @@ const Marketplace: React.FC = () => {
                                     size="sm"
                                     onClick={() => {
                                       navigator.clipboard.writeText(wallet.wallet_address);
+                                      
+                                      // Record the purchase
+                                      supabase.functions.invoke('send-purchase-confirmation', {
+                                        body: {
+                                          productTitle: selectedProduct.title,
+                                          productPrice: selectedProduct.price,
+                                          walletAddress: wallet.wallet_address,
+                                          cryptoType: wallet.crypto_type,
+                                          contactPhone: selectedProduct.contact_phone || "Not provided"
+                                        },
+                                      });
+                                      
                                       toast({
                                         title: "Address copied",
-                                        description: `${wallet.crypto_type} wallet address copied to clipboard`,
+                                        description: `Send ${selectedProduct.price} ${wallet.crypto_type} to complete your purchase. Contact the seller at ${selectedProduct.contact_phone || "unknown"} after payment.`,
                                       });
                                     }}
                                   >
@@ -291,22 +273,15 @@ const Marketplace: React.FC = () => {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => generateQRCode(wallet.wallet_address)}
+                                    onClick={() => {
+                                      window.open(getQRCodeUrl(wallet.wallet_address), '_blank');
+                                    }}
                                   >
                                     <QrCode size={16} className="mr-1" />
                                     QR
                                   </Button>
                                 </div>
                               </div>
-                              {showQRCode === wallet.wallet_address && (
-                                <div className="mt-2 flex justify-center bg-white p-2 rounded">
-                                  <img 
-                                    src={getQRCodeUrl(wallet.wallet_address)} 
-                                    alt="QR Code" 
-                                    className="h-32 w-32"
-                                  />
-                                </div>
-                              )}
                             </div>
                           ))}
                         </div>
@@ -325,28 +300,13 @@ const Marketplace: React.FC = () => {
                           Edit Product
                         </Button>
                       ) : (
-                        walletAddresses[selectedProduct.id] && walletAddresses[selectedProduct.id].length > 0 ? (
-                          <Button 
-                            className="w-full" 
-                            onClick={() => handlePurchase(walletAddresses[selectedProduct.id][0])}
-                          >
-                            Buy Now
-                          </Button>
-                        ) : (
-                          <Button 
-                            className="w-full" 
-                            disabled
-                          >
-                            No Payment Option Available
-                          </Button>
-                        )
+                        <Button 
+                          className="w-full" 
+                          onClick={() => setIsDialogOpen(false)}
+                        >
+                          Close
+                        </Button>
                       )}
-                      <Button variant="outline" className="w-1/3" onClick={() => {
-                        setShowQRCode(null);
-                        setIsDialogOpen(false);
-                      }}>
-                        Close
-                      </Button>
                     </div>
                   </div>
                 </div>

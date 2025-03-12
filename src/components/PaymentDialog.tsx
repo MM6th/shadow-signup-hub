@@ -13,16 +13,17 @@ interface PaymentDialogProps {
     title: string;
     price: number;
   };
-  adminWalletAddresses: any[];
-  isAdminUser: boolean;
+  walletData: {
+    wallet_address: string;
+    crypto_type: string;
+  } | null;
 }
 
 const PaymentDialog: React.FC<PaymentDialogProps> = ({
   open,
   onOpenChange,
   product,
-  adminWalletAddresses,
-  isAdminUser
+  walletData
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -41,59 +42,40 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     }
   };
 
-  const handleBuyNow = async () => {
+  const handleCopyAddress = async () => {
+    if (!walletData) {
+      toast({
+        title: "Error",
+        description: "No payment address available. Please contact the administrator.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
       
-      let walletData;
-      
-      if (isAdminUser) {
-        // Admin can use their own product's wallet addresses
-        const { data, error } = await supabase
-          .from('wallet_addresses')
-          .select('*')
-          .eq('product_id', product.id)
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        walletData = data;
-      } else {
-        // Non-admin users must use admin wallet addresses
-        if (adminWalletAddresses.length === 0) {
-          throw new Error('No payment options available. Please contact the administrator.');
-        }
-        
-        // Use the first available admin wallet address
-        walletData = adminWalletAddresses[0];
+      // Generate QR code for the wallet address if not already generated
+      if (!qrCode) {
+        const qrCodeUrl = await generateQRCode(walletData.wallet_address);
+        setQrCode(qrCodeUrl);
       }
-
-      if (!walletData) {
-        throw new Error('No wallet address found for this product');
-      }
-
-      // Generate QR code for the wallet address
-      const qrCodeUrl = await generateQRCode(walletData.wallet_address);
-      setQrCode(qrCodeUrl);
 
       // Copy wallet address to clipboard
       navigator.clipboard.writeText(walletData.wallet_address);
 
-      // Record the purchase (without email)
+      // Record the purchase
       await supabase.functions.invoke('send-purchase-confirmation', {
         body: {
           productTitle: product.title,
           productPrice: product.price,
           walletAddress: walletData.wallet_address,
-          cryptoType: walletData.crypto_type,
-          isAdminUser: isAdminUser
+          cryptoType: walletData.crypto_type
         },
       });
 
       toast({
-        title: "Purchase initiated!",
+        title: "Address copied!",
         description: `Send ${product.price} ${walletData.crypto_type} to the copied address to complete your purchase.`,
       });
 
@@ -127,12 +109,18 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
           )}
           
           <Button 
-            onClick={handleBuyNow} 
+            onClick={handleCopyAddress} 
             className="w-full"
-            disabled={isLoading}
+            disabled={isLoading || !walletData}
           >
             {isLoading ? "Processing..." : "Copy Payment Address"}
           </Button>
+          
+          {!walletData && (
+            <p className="text-center text-destructive text-sm">
+              No payment options available. Please contact the administrator.
+            </p>
+          )}
         </div>
       </DialogContent>
     </Dialog>
