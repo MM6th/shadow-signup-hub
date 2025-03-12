@@ -56,7 +56,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   };
 
   const generateQRCode = (walletAddress: string) => {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${walletAddress}`;
+    if (!walletAddress) return '';
+    return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(walletAddress)}`;
   };
 
   const handleCopyWallet = async (e: React.MouseEvent) => {
@@ -139,11 +140,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
         title: "Seller Contact",
         description: `Contact the seller at: ${product.contact_phone}`,
       });
+    } else {
+      toast({
+        title: "Contact Information Unavailable",
+        description: "No contact information provided for this seller.",
+        variant: "destructive",
+      });
     }
   };
 
+  const qrCodeUrl = selectedWalletAddress ? generateQRCode(selectedWalletAddress.wallet_address) : '';
+
   return (
-    <Card className="overflow-hidden h-[500px] flex flex-col" onClick={handleCardClick}>
+    <Card 
+      className="overflow-hidden h-[500px] flex flex-col"
+      onClick={handleCardClick}
+    >
       <div className="relative h-64 overflow-hidden">
         {product.image_url ? (
           <img
@@ -158,7 +170,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
         )}
       </div>
       
-      <CardContent className="p-4 flex flex-col flex-grow">
+      <CardContent className="p-4 flex flex-col flex-grow" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-lg font-semibold mb-2">{product.title}</h3>
         <p className="text-gray-600 mb-4 flex-grow overflow-y-auto">
           {product.description}
@@ -188,11 +200,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="bg-white p-2 w-auto">
-                    <img 
-                      src={generateQRCode(selectedWalletAddress?.wallet_address || '')} 
-                      alt="QR Code" 
-                      className="h-32 w-32"
-                    />
+                    {qrCodeUrl ? (
+                      <img 
+                        src={qrCodeUrl} 
+                        alt="QR Code" 
+                        className="h-32 w-32"
+                      />
+                    ) : (
+                      <div className="h-32 w-32 flex items-center justify-center text-sm text-gray-500">
+                        No wallet address available
+                      </div>
+                    )}
                   </PopoverContent>
                 </Popover>
                 

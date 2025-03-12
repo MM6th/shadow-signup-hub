@@ -96,7 +96,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             
-            {/* Removed AstrologyMessage component */}
+            {/* AstrologyMessage component is empty */}
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
               <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-6">

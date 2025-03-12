@@ -29,6 +29,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
 
     if (!user) {
       toast({
@@ -83,7 +84,6 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
     }
   };
 
-  // Empty the AstrologyMessage component
   const handleDialogClick = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
