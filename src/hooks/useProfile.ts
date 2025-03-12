@@ -7,6 +7,8 @@ import { useToast } from '@/hooks/use-toast';
 export type Profile = {
   id: string;
   username: string;
+  first_name: string;
+  last_name: string;
   profile_photo_url: string | null;
   date_of_birth: string; // Still needed for database but not shown to user
   business_type: string | null;
@@ -32,6 +34,8 @@ export const useProfile = (userId: string | undefined) => {
         const mappedProfile: Profile = {
           id: profileData.id,
           username: profileData.username,
+          first_name: profileData.first_name,
+          last_name: profileData.last_name,
           profile_photo_url: profileData.profile_photo_url,
           date_of_birth: profileData.date_of_birth,
           business_type: profileData.business_type,

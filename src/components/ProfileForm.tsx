@@ -57,6 +57,8 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [username, setUsername] = useState(profile?.username || '');
+  const [firstName, setFirstName] = useState(profile?.first_name || '');
+  const [lastName, setLastName] = useState(profile?.last_name || '');
   const [businessType, setBusinessType] = useState<string | null>(profile?.business_type || null);
   const [industry, setIndustry] = useState<string | null>(profile?.industry || null);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(profile?.profile_photo_url || null);
@@ -81,12 +83,32 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
       });
       return;
     }
+
+    if (!firstName.trim()) {
+      toast({
+        title: "First Name Required",
+        description: "Please enter your first name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!lastName.trim()) {
+      toast({
+        title: "Last Name Required",
+        description: "Please enter your last name.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsSubmitting(true);
     
     try {
       const profileData = {
         username,
+        first_name: firstName,
+        last_name: lastName,
         business_type: businessType,
         industry,
         profile_photo_url: profilePhotoUrl,
@@ -222,6 +244,36 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
             required
             className="bg-dark-secondary border-dark-accent"
           />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label htmlFor="first-name" className="block text-sm font-medium">
+              First Name *
+            </label>
+            <Input
+              id="first-name"
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+              className="bg-dark-secondary border-dark-accent"
+            />
+          </div>
+          
+          <div className="space-y-1">
+            <label htmlFor="last-name" className="block text-sm font-medium">
+              Last Name *
+            </label>
+            <Input
+              id="last-name"
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+              className="bg-dark-secondary border-dark-accent"
+            />
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
