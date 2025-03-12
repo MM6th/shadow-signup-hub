@@ -22,7 +22,7 @@ const Dashboard: React.FC = () => {
   }, [user, isLoading, hasProfile, navigate]);
 
   const handleEditProfile = () => {
-    navigate('/create-profile');
+    navigate('/update-profile');
   };
 
   if (isLoading) {

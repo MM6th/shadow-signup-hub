@@ -40,7 +40,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const isAdminUser = user?.email === ADMIN_EMAIL;
   const isService = product.type === 'service';
 
-  const { adminWalletAddresses } = useWalletAddresses(user, product.id, isAdminUser);
+  const { adminWalletAddresses, isLoading } = useWalletAddresses(user, product.id, isAdminUser);
 
   const selectedWalletAddress = adminWalletAddresses.length > 0 ? adminWalletAddresses[0] : null;
 
@@ -62,6 +62,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
 
   const handleCopyWallet = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    if (isLoading) {
+      toast({
+        title: "Loading payment options",
+        description: "Please wait while we fetch payment information",
+      });
+      return;
+    }
     
     if (!selectedWalletAddress) {
       toast({
