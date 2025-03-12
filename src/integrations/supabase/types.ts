@@ -109,6 +109,7 @@ export type Database = {
           last_name: string
           profile_photo_url: string | null
           updated_at: string
+          username: string
         }
         Insert: {
           business_type?: string | null
@@ -120,6 +121,7 @@ export type Database = {
           last_name: string
           profile_photo_url?: string | null
           updated_at?: string
+          username: string
         }
         Update: {
           business_type?: string | null
@@ -131,6 +133,7 @@ export type Database = {
           last_name?: string
           profile_photo_url?: string | null
           updated_at?: string
+          username?: string
         }
         Relationships: []
       }

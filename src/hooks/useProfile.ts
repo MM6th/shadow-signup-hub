@@ -31,7 +31,7 @@ export const useProfile = (userId: string | undefined) => {
         // Map the database fields to our Profile type
         const mappedProfile: Profile = {
           id: profileData.id,
-          username: profileData.username || 'User',
+          username: profileData.username,
           profile_photo_url: profileData.profile_photo_url,
           date_of_birth: profileData.date_of_birth,
           business_type: profileData.business_type,

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -129,7 +128,11 @@ const CreateProfile: React.FC = () => {
       const currentDate = new Date().toISOString().split('T')[0];
 
       const profileData = {
+        // Keep the username field from the form data
         username: data.username,
+        // Set both first_name and last_name to match the database schema requirements
+        first_name: data.username.split(' ')[0] || data.username,
+        last_name: data.username.split(' ').slice(1).join(' ') || '',
         profile_photo_url: profilePhotoUrl,
         business_type: data.business_type,
         industry: data.industry,
