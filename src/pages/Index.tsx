@@ -14,13 +14,8 @@ const Index: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
   
-  const openSignInModal = () => {
-    setAuthModalMode('signin');
-    setIsAuthModalOpen(true);
-  };
-  
-  const openSignUpModal = () => {
-    setAuthModalMode('signup');
+  const handleOpenAuthModal = (mode: 'signin' | 'signup') => {
+    setAuthModalMode(mode);
     setIsAuthModalOpen(true);
   };
 
@@ -28,7 +23,7 @@ const Index: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-dark">
       <AgeVerificationModal />
       
-      <NavBar onSignInClick={openSignInModal} onSignUpClick={openSignUpModal} />
+      <NavBar onOpenAuthModal={handleOpenAuthModal} />
       
       <div className="flex-1">
         {/* Hero section */}
@@ -49,10 +44,10 @@ const Index: React.FC = () => {
                 </p>
                 
                 <div className="flex flex-wrap gap-4">
-                  <Button size="lg" onClick={openSignUpModal}>
+                  <Button size="lg" onClick={() => handleOpenAuthModal('signup')}>
                     Get Started <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
-                  <Button variant="outline" size="lg" onClick={openSignInModal}>
+                  <Button variant="outline" size="lg" onClick={() => handleOpenAuthModal('signin')}>
                     Sign In
                   </Button>
                 </div>
@@ -103,7 +98,7 @@ const Index: React.FC = () => {
               Join our platform and unlock a world of opportunities for your services.
               Connect with clients, collaborate with peers, and grow your business.
             </p>
-            <Button size="lg" onClick={openSignUpModal}>
+            <Button size="lg" onClick={() => handleOpenAuthModal('signup')}>
               Join P.I.E Today <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
