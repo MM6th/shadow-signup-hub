@@ -9,7 +9,7 @@ export type Profile = {
   first_name: string;
   last_name: string;
   profile_photo_url: string | null;
-  date_of_birth: string;
+  date_of_birth: string; // Still needed for database but not shown to user
   business_type: string | null;
   industry: string | null;
 };

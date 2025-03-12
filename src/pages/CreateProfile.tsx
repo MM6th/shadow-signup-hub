@@ -128,7 +128,8 @@ const CreateProfile: React.FC = () => {
       setIsUploading(true);
       const profilePhotoUrl = profileImage ? await uploadProfileImage() : profileImageUrl;
 
-      // Using current date as date_of_birth since it's required by the database schema
+      // Using current date for date_of_birth since it's required by the database schema
+      // This is hidden from the user as per requirements
       const currentDate = new Date().toISOString().split('T')[0];
 
       const profileData = {
@@ -137,7 +138,7 @@ const CreateProfile: React.FC = () => {
         profile_photo_url: profilePhotoUrl,
         business_type: data.business_type,
         industry: data.industry,
-        date_of_birth: currentDate // Adding this field as it's required by the database
+        date_of_birth: currentDate // Required by database but not shown to user
       };
 
       let error;
