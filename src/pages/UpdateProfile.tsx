@@ -157,7 +157,7 @@ const UpdateProfile: React.FC = () => {
     }
   };
   
-  if (!profile) {
+  if (!profile && !isSubmitting) {
     return (
       <div className="min-h-screen bg-dark bg-dark-gradient flex items-center justify-center">
         <div className="text-center">

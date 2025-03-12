@@ -97,12 +97,52 @@ const Index: React.FC = () => {
               <div className="hidden lg:block">
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-br from-pi-focus/30 to-purple-600/30 rounded-lg blur-3xl opacity-30"></div>
-                  <div className="relative glass-card rounded-xl overflow-hidden border border-white/10">
-                    <img 
-                      src="/placeholder.svg" 
-                      alt="Private Investigation Enterprises Platform" 
-                      className="w-full h-auto"
-                    />
+                  <div className="relative glass-card rounded-xl overflow-hidden border border-white/10 flex items-center justify-center p-8">
+                    {/* Animated P.I.E. Circle */}
+                    <div className="relative w-80 h-80">
+                      {/* Outer rotating ring */}
+                      <div className="absolute inset-0 rounded-full border-4 border-pi-focus/30 animate-[spin_30s_linear_infinite]"></div>
+                      
+                      {/* Middle rotating ring with symbols */}
+                      <div className="absolute inset-4 rounded-full border-2 border-purple-500/40 animate-[spin_20s_linear_infinite_reverse]">
+                        {/* Celestial symbols */}
+                        {[...Array(12)].map((_, i) => (
+                          <div 
+                            key={i}
+                            className="absolute w-3 h-3 bg-white/70 rounded-full transform -translate-x-1/2 -translate-y-1/2"
+                            style={{
+                              left: '50%',
+                              top: '50%',
+                              transform: `rotate(${i * 30}deg) translateY(-40px) rotate(${-i * 30}deg)`,
+                            }}
+                          ></div>
+                        ))}
+                      </div>
+                      
+                      {/* Inner rotating ring */}
+                      <div className="absolute inset-12 rounded-full border border-cyan-400/50 animate-[spin_15s_linear_infinite]"></div>
+                      
+                      {/* Center stable P.I.E. logo */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="bg-gradient-to-br from-pi-focus to-purple-600 w-36 h-36 rounded-full flex items-center justify-center text-white font-elixia text-4xl shadow-lg shadow-pi-focus/20">
+                          P.I.E.
+                        </div>
+                      </div>
+                      
+                      {/* Particles */}
+                      {[...Array(20)].map((_, i) => (
+                        <div 
+                          key={i}
+                          className="absolute w-1 h-1 bg-white/60 rounded-full animate-ping"
+                          style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            animationDelay: `${Math.random() * 5}s`,
+                            animationDuration: `${1 + Math.random() * 3}s`,
+                          }}
+                        ></div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
