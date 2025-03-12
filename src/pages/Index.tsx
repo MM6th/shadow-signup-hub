@@ -1,198 +1,121 @@
 
-import React, { useState, useEffect } from 'react';
-import NavBar from '@/components/NavBar';
-import Footer from '@/components/Footer';
-import AuthModal from '@/components/AuthModal';
-import Button from '@/components/Button';
-import AnimatedText from '@/components/AnimatedText';
-import { Shield, Search, Eye, Lock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Star } from 'lucide-react';
+import NavBar from '../components/NavBar';
+import Footer from '../components/Footer';
+import Button from '../components/Button';
+import AnimatedText from '../components/AnimatedText';
+import FeaturedServices from '../components/FeaturedServices';
+import AuthModal from '../components/AuthModal';
+import AgeVerificationModal from '../components/AgeVerificationModal';
 
-const Index = () => {
+const Index: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    // Simulate loading for a smoother mount animation
-    const timer = setTimeout(() => {
-      setIsLoaded(true);
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleOpenAuthModal = (mode: 'signin' | 'signup') => {
-    setAuthMode(mode);
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
+  
+  const openSignInModal = () => {
+    setAuthModalMode('signin');
+    setIsAuthModalOpen(true);
+  };
+  
+  const openSignUpModal = () => {
+    setAuthModalMode('signup');
     setIsAuthModalOpen(true);
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-dark bg-dark-gradient text-pi">
-      <NavBar onOpenAuthModal={handleOpenAuthModal} />
+    <div className="min-h-screen flex flex-col bg-dark">
+      <AgeVerificationModal />
       
-      {/* Hero Section */}
-      <section className="relative flex flex-col justify-center min-h-screen pt-20 px-6">
-        {/* Background effects */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-pi-focus/20 rounded-full filter blur-[100px] opacity-50"></div>
-          <div className="absolute bottom-10 right-10 w-96 h-96 bg-pi-focus/10 rounded-full filter blur-[120px] opacity-30"></div>
-        </div>
-        
-        <div className="max-w-7xl mx-auto w-full z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-            <div className="order-2 lg:order-1">
-              <div className={`transition-all duration-700 ${isLoaded ? 'opacity-100' : 'opacity-0 translate-y-10'}`}>
-                <div className="inline-block px-4 py-1 bg-white/5 border border-white/10 rounded-full mb-6">
-                  <p className="text-pi-accent text-sm font-medium">Professional & Confidential</p>
-                </div>
-
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-elixia tracking-wider mb-6 leading-tight">
-                  <span className="block text-gradient animate-text-shimmer">
-                    Private Investigation
-                  </span>
-                  <span className="block text-gradient animate-text-shimmer bg-[length:200%_100%]">
-                    Enterprises
+      <NavBar onSignInClick={openSignInModal} onSignUpClick={openSignUpModal} />
+      
+      <div className="flex-1">
+        {/* Hero section */}
+        <section className="relative pt-20 pb-32 bg-dark-gradient px-4">
+          <div className="container mx-auto max-w-6xl">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div>
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-elixia mb-6 text-white">
+                  <AnimatedText text="Private Investigation" />
+                  <span className="block text-gradient mt-2">
+                    <AnimatedText text="Enterprises" delay={0.5} />
                   </span>
                 </h1>
                 
-                <AnimatedText
-                  text="Specialized investigation services with the highest level of discretion, cutting-edge technology, and unmatched expertise."
-                  className="text-pi-muted text-lg max-w-xl mb-8"
-                  delay={300}
-                  wordByWord
-                />
+                <p className="text-lg md:text-xl text-pi-muted mb-8 max-w-xl leading-relaxed">
+                  Discover a digital ecosystem where entrepreneurs, influencers, and knowledge workers
+                  connect, collaborate, and create new economic opportunities.
+                </p>
                 
-                <div className="flex flex-col sm:flex-row gap-4 mt-8">
-                  <Button
-                    size="lg"
-                    onClick={() => handleOpenAuthModal('signup')}
-                    className="group"
-                  >
-                    Get Started
-                    <svg 
-                      className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24" 
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
+                <div className="flex flex-wrap gap-4">
+                  <Button size="lg" onClick={openSignUpModal}>
+                    Get Started <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => handleOpenAuthModal('signin')}
-                  >
+                  <Button variant="outline" size="lg" onClick={openSignInModal}>
                     Sign In
                   </Button>
                 </div>
-              </div>
-            </div>
-            
-            <div className="order-1 lg:order-2 flex justify-center">
-              <div className={`relative w-full max-w-md aspect-square transition-all duration-1000 ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
-                <div className="absolute inset-0 rounded-full bg-dark-gradient opacity-80 animate-pulse-subtle"></div>
-                <div className="absolute inset-10 glass-card rounded-full animate-float">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <h2 className="text-3xl md:text-4xl font-elixia tracking-wider text-gradient mb-2">P.I.E</h2>
-                      <p className="text-pi-muted text-sm">Established 2024</p>
+                
+                <div className="flex items-center mt-8">
+                  <div className="flex -space-x-2">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="w-8 h-8 rounded-full border-2 border-dark bg-gradient-to-br from-white/20 to-white/5"></div>
+                    ))}
+                  </div>
+                  <div className="ml-4">
+                    <div className="flex items-center">
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <Star key={i} className="w-4 h-4 text-amber-400" fill="currentColor" />
+                      ))}
                     </div>
+                    <p className="text-sm text-pi-muted">Trusted by 1,000+ users</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="hidden lg:block">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-pi-focus/30 to-purple-600/30 rounded-lg blur-3xl opacity-30"></div>
+                  <div className="relative glass-card rounded-xl overflow-hidden border border-white/10">
+                    <img 
+                      src="/placeholder.svg" 
+                      alt="Private Investigation Enterprises Platform" 
+                      className="w-full h-auto"
+                    />
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </section>
         
-        {/* Scroll indicator */}
-        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col items-center">
-          <span className="text-pi-muted text-sm mb-2">Scroll to explore</span>
-          <div className="w-0.5 h-16 bg-gradient-to-b from-white/20 to-transparent rounded-full">
-            <div className="w-full h-4 bg-white/40 rounded-full animate-bounce"></div>
-          </div>
-        </div>
-      </section>
-
-      {/* Services Section */}
-      <section id="services" className="py-20 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-elixia mb-6 text-gradient">Our Services</h2>
-            <p className="text-pi-muted max-w-2xl mx-auto">
-              We provide comprehensive investigation services with discretion and professionalism.
+        {/* Featured services section */}
+        <FeaturedServices />
+        
+        {/* CTA section */}
+        <section className="py-20 px-4 bg-dark-secondary">
+          <div className="container mx-auto max-w-5xl text-center">
+            <h2 className="text-3xl md:text-4xl font-elixia mb-6 text-gradient">
+              Ready to Elevate Your Business?
+            </h2>
+            <p className="text-lg text-pi-muted mb-8 max-w-2xl mx-auto">
+              Join our platform and unlock a world of opportunities for your services.
+              Connect with clients, collaborate with peers, and grow your business.
             </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                icon: <Search size={32} />,
-                title: "Background Checks",
-                description: "Thorough verification of personal and professional histories."
-              },
-              {
-                icon: <Eye size={32} />,
-                title: "Surveillance",
-                description: "Discreet monitoring and documentation of activities."
-              },
-              {
-                icon: <Shield size={32} />,
-                title: "Corporate Security",
-                description: "Protecting businesses from internal and external threats."
-              },
-              {
-                icon: <Lock size={32} />,
-                title: "Digital Forensics",
-                description: "Recovery and analysis of electronic data and evidence."
-              }
-            ].map((service, index) => (
-              <div 
-                key={index}
-                className="glass-card p-8 rounded-xl transition-all hover:translate-y-[-5px] hover:bg-white/10"
-              >
-                <div className="text-pi-focus mb-4">{service.icon}</div>
-                <h3 className="text-xl font-medium mb-3">{service.title}</h3>
-                <p className="text-pi-muted">{service.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-      
-      {/* CTA Section */}
-      <section className="py-16 px-6 relative">
-        <div className="absolute inset-0 bg-dark-accent/30"></div>
-        <div className="max-w-3xl mx-auto relative z-10 glass-card rounded-2xl p-10 text-center">
-          <h2 className="text-3xl font-elixia mb-6">Ready to get started?</h2>
-          <p className="text-pi-muted mb-8 max-w-xl mx-auto">
-            Join Private Investigation Enterprises today and access our full suite of investigative services.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              onClick={() => handleOpenAuthModal('signup')}
-            >
-              Create Account
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => handleOpenAuthModal('signin')}
-            >
-              Sign In
+            <Button size="lg" onClick={openSignUpModal}>
+              Join P.I.E Today <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
       
       <Footer />
       
       <AuthModal 
-        isOpen={isAuthModalOpen} 
+        isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        defaultMode={authMode}
+        defaultMode={authModalMode}
       />
     </div>
   );

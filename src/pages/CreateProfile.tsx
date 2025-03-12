@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format, parse } from 'date-fns';
-import { CalendarIcon, Clock, MapPin, Camera, Upload, EyeOff, Eye, Save } from 'lucide-react';
+import { Camera, Upload, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -21,12 +21,6 @@ import {
 } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -34,19 +28,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 
 const formSchema = z.object({
   first_name: z.string().min(2, { message: "First name must be at least 2 characters." }),
   last_name: z.string().min(2, { message: "Last name must be at least 2 characters." }),
-  date_of_birth: z.date({ required_error: "Date of birth is required." }),
-  time_of_birth: z.string().optional(),
-  place_of_birth: z.string().optional(),
-  show_zodiac_sign: z.boolean().default(false),
-  business_type: z.enum(['Sole Proprietorship', 'S Corp', 'C Corp', 'LLC']).optional(),
+  business_type: z.enum(['Sole Proprietorship', 'S Corp', 'C Corp', 'LLC', 'P.I.E student']).optional(),
   industry: z.enum([
     'Influencer', 'Educator', 'Astrologer', 'Spiritualist', 
-    'Gamer', 'Sports', 'Cooking', 'Fashion', 'Adult', 'Film'
+    'Gamer', 'Sports', 'Cooking', 'Fashion', 'Adult', 'Film', 'Undecided'
   ]).optional(),
 });
 
@@ -60,14 +49,12 @@ const CreateProfile: React.FC = () => {
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [dateInputValue, setDateInputValue] = useState('');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       first_name: '',
       last_name: '',
-      show_zodiac_sign: false,
     },
   });
 
@@ -76,22 +63,9 @@ const CreateProfile: React.FC = () => {
       setIsEditing(true);
       
       try {
-        const originalDateString = profile.date_of_birth;
-        console.log("Original date string from profile:", originalDateString);
-        
-        const dateOfBirth = parse(originalDateString, 'yyyy-MM-dd', new Date());
-        console.log("Parsed dateOfBirth:", dateOfBirth);
-        
-        const formattedDate = format(dateOfBirth, 'MM/dd/yyyy');
-        setDateInputValue(formattedDate);
-        
         form.reset({
           first_name: profile.first_name,
           last_name: profile.last_name,
-          date_of_birth: dateOfBirth,
-          time_of_birth: profile.time_of_birth || undefined,
-          place_of_birth: profile.place_of_birth || undefined,
-          show_zodiac_sign: profile.show_zodiac_sign || false,
           business_type: profile.business_type as any || undefined,
           industry: profile.industry as any || undefined,
         });
@@ -111,21 +85,6 @@ const CreateProfile: React.FC = () => {
       setProfileImage(file);
       const objectUrl = URL.createObjectURL(file);
       setProfileImageUrl(objectUrl);
-    }
-  };
-
-  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setDateInputValue(value);
-    
-    try {
-      const parsedDate = parse(value, 'MM/dd/yyyy', new Date());
-      
-      if (!isNaN(parsedDate.getTime())) {
-        form.setValue('date_of_birth', parsedDate);
-      }
-    } catch (error) {
-      console.error("Error parsing date:", error);
     }
   };
 
@@ -170,17 +129,10 @@ const CreateProfile: React.FC = () => {
       setIsUploading(true);
       const profilePhotoUrl = profileImage ? await uploadProfileImage() : profileImageUrl;
 
-      const formattedDate = format(data.date_of_birth, 'yyyy-MM-dd');
-      console.log("Saving profile data with formatted date:", formattedDate);
-
       const profileData = {
         first_name: data.first_name,
         last_name: data.last_name,
         profile_photo_url: profilePhotoUrl,
-        date_of_birth: formattedDate,
-        time_of_birth: data.time_of_birth,
-        place_of_birth: data.place_of_birth,
-        show_zodiac_sign: data.show_zodiac_sign,
         business_type: data.business_type,
         industry: data.industry,
       };
@@ -309,111 +261,6 @@ const CreateProfile: React.FC = () => {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="date_of_birth"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Date of Birth</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type="text"
-                          placeholder="MM/DD/YYYY"
-                          value={dateInputValue}
-                          onChange={handleDateInputChange}
-                          className="bg-dark-secondary border border-white/10 pl-10"
-                        />
-                        <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pi-muted w-4 h-4" />
-                      </div>
-                    </FormControl>
-                    <FormDescription>
-                      Your date of birth is required to calculate your zodiac sign. Format: MM/DD/YYYY
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="time_of_birth"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Time of Birth (Optional)</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input 
-                            type="time"
-                            placeholder="Select time" 
-                            {...field} 
-                            className="bg-dark-secondary border border-white/10 pl-10"
-                          />
-                          <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pi-muted w-4 h-4" />
-                        </div>
-                      </FormControl>
-                      <FormDescription>
-                        This information helps with more precise astrological readings.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="place_of_birth"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Place of Birth (Optional)</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input 
-                            placeholder="e.g., New York, USA" 
-                            {...field} 
-                            className="bg-dark-secondary border border-white/10 pl-10"
-                          />
-                          <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pi-muted w-4 h-4" />
-                        </div>
-                      </FormControl>
-                      <FormDescription>
-                        The location where you were born.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="show_zodiac_sign"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between p-4 rounded-lg border border-white/10 bg-dark-secondary">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Show Zodiac Sign</FormLabel>
-                      <FormDescription>
-                        Allow your zodiac sign to be visible on your public profile.
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                        {field.value ? (
-                          <Eye className="h-4 w-4 text-pi-muted" />
-                        ) : (
-                          <EyeOff className="h-4 w-4 text-pi-muted" />
-                        )}
-                      </div>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -432,6 +279,7 @@ const CreateProfile: React.FC = () => {
                           <SelectItem value="S Corp">S Corp</SelectItem>
                           <SelectItem value="C Corp">C Corp</SelectItem>
                           <SelectItem value="LLC">LLC</SelectItem>
+                          <SelectItem value="P.I.E student">P.I.E student</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>
@@ -465,6 +313,7 @@ const CreateProfile: React.FC = () => {
                           <SelectItem value="Fashion">Fashion</SelectItem>
                           <SelectItem value="Adult">Adult</SelectItem>
                           <SelectItem value="Film">Film</SelectItem>
+                          <SelectItem value="Undecided">Undecided</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>

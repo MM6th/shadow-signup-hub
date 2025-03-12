@@ -107,12 +107,8 @@ export type Database = {
           id: string
           industry: string | null
           last_name: string
-          place_of_birth: string | null
           profile_photo_url: string | null
-          show_zodiac_sign: boolean | null
-          time_of_birth: string | null
           updated_at: string
-          zodiac_sign: string | null
         }
         Insert: {
           business_type?: string | null
@@ -122,12 +118,8 @@ export type Database = {
           id: string
           industry?: string | null
           last_name: string
-          place_of_birth?: string | null
           profile_photo_url?: string | null
-          show_zodiac_sign?: boolean | null
-          time_of_birth?: string | null
           updated_at?: string
-          zodiac_sign?: string | null
         }
         Update: {
           business_type?: string | null
@@ -137,12 +129,8 @@ export type Database = {
           id?: string
           industry?: string | null
           last_name?: string
-          place_of_birth?: string | null
           profile_photo_url?: string | null
-          show_zodiac_sign?: boolean | null
-          time_of_birth?: string | null
           updated_at?: string
-          zodiac_sign?: string | null
         }
         Relationships: []
       }
@@ -183,12 +171,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      calculate_zodiac_sign: {
-        Args: {
-          dob: string
-        }
-        Returns: string
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

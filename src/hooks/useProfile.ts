@@ -10,12 +10,8 @@ export type Profile = {
   last_name: string;
   profile_photo_url: string | null;
   date_of_birth: string;
-  time_of_birth: string | null;
-  place_of_birth: string | null;
-  show_zodiac_sign: boolean;
   business_type: string | null;
   industry: string | null;
-  zodiac_sign: string | null;
 };
 
 export const useProfile = (userId: string | undefined) => {
@@ -33,8 +29,6 @@ export const useProfile = (userId: string | undefined) => {
         .maybeSingle();
         
       if (!error) {
-        // When receiving profile data from the database, we don't need to manipulate the date
-        // Just use it as is from the database
         setProfile(profileData);
         return profileData;
       } else {
