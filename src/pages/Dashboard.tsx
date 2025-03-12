@@ -1,8 +1,9 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
-import { MapPin, Clock, Briefcase, Tag, Star, PenSquare, ShoppingBag, Plus } from 'lucide-react';
+import { Briefcase, Tag, PenSquare, ShoppingBag, Plus } from 'lucide-react';
 import Button from '@/components/Button';
 import AstrologyMessage from '@/components/AstrologyMessage';
 import ProductForm from '@/components/ProductForm';
@@ -94,9 +95,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             
-            {profile.zodiac_sign && profile.show_zodiac_sign && (
-              <AstrologyMessage />
-            )}
+            <AstrologyMessage />
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
               <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-6">
@@ -109,56 +108,6 @@ const Dashboard: React.FC = () => {
                   <div className="space-y-4">
                     <div>
                       <h2 className="text-lg font-medium mb-3">Personal Details</h2>
-                      
-                      <div className="space-y-3">
-                        <div className="flex items-start">
-                          <div className="p-2 rounded-md bg-dark-secondary mr-3">
-                            <Star size={18} className="text-pi-focus" />
-                          </div>
-                          <div>
-                            <p className="text-sm text-pi-muted">Date of Birth</p>
-                            <p className="text-pi">
-                              {format(new Date(profile.date_of_birth), 'MMMM d, yyyy')}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        {profile.zodiac_sign && profile.show_zodiac_sign && (
-                          <div className="flex items-start">
-                            <div className="p-2 rounded-md bg-dark-secondary mr-3">
-                              <Star size={18} className="text-pi-focus" />
-                            </div>
-                            <div>
-                              <p className="text-sm text-pi-muted">Zodiac Sign</p>
-                              <p className="text-pi">{profile.zodiac_sign}</p>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {profile.time_of_birth && (
-                          <div className="flex items-start">
-                            <div className="p-2 rounded-md bg-dark-secondary mr-3">
-                              <Clock size={18} className="text-pi-focus" />
-                            </div>
-                            <div>
-                              <p className="text-sm text-pi-muted">Time of Birth</p>
-                              <p className="text-pi">{profile.time_of_birth}</p>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {profile.place_of_birth && (
-                          <div className="flex items-start">
-                            <div className="p-2 rounded-md bg-dark-secondary mr-3">
-                              <MapPin size={18} className="text-pi-focus" />
-                            </div>
-                            <div>
-                              <p className="text-sm text-pi-muted">Place of Birth</p>
-                              <p className="text-pi">{profile.place_of_birth}</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
                     </div>
                   </div>
                   

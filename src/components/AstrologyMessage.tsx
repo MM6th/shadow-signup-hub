@@ -1,7 +1,5 @@
 
 import React from 'react';
-import { RefreshCw } from 'lucide-react';
-import Button from './Button';
 
 const AstrologyMessage: React.FC = () => {
   return (

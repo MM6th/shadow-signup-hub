@@ -129,12 +129,17 @@ const CreateProfile: React.FC = () => {
       setIsUploading(true);
       const profilePhotoUrl = profileImage ? await uploadProfileImage() : profileImageUrl;
 
+      // Using current date as date_of_birth since it's required by the database schema
+      // We removed date_of_birth UI but the column still exists in the database
+      const currentDate = new Date().toISOString().split('T')[0];
+
       const profileData = {
         first_name: data.first_name,
         last_name: data.last_name,
         profile_photo_url: profilePhotoUrl,
         business_type: data.business_type,
         industry: data.industry,
+        date_of_birth: currentDate // Adding this field as it's required
       };
 
       let error;

@@ -36,13 +36,6 @@ const DigitalOffice = () => {
                 {profile?.first_name} {profile?.last_name}
               </h1>
               
-              {profile?.zodiac_sign && profile?.show_zodiac_sign && (
-                <div className="mb-4">
-                  <span className="text-pi-muted">Zodiac Sign: </span>
-                  <span className="text-pi-focus">{profile.zodiac_sign}</span>
-                </div>
-              )}
-              
               <div className="flex flex-wrap gap-2 mt-4">
                 {profile?.business_type && (
                   <div className="bg-dark-secondary px-3 py-1 rounded-full text-sm">
