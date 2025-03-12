@@ -1,13 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import AppointmentScheduler from "./AppointmentScheduler";
+import PaymentDialog from "./PaymentDialog";
+import AppointmentDialog from "./AppointmentDialog";
+import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 
 interface ProductCardProps {
   product: {
@@ -28,171 +28,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [adminWalletAddresses, setAdminWalletAddresses] = useState<any[]>([]);
+  
+  const ADMIN_EMAIL = "cmooregee@gmail.com";
   const isOwner = user?.id === product.user_id;
   const isService = product.type === 'service';
-  const ADMIN_EMAIL = "cmooregee@gmail.com";
   const isAdminUser = user?.email === ADMIN_EMAIL;
 
-  useEffect(() => {
-    // Fetch admin wallet addresses when component mounts
-    const fetchAdminWalletAddresses = async () => {
-      try {
-        // First, try to find the admin user
-        const { data: adminData, error: adminError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', user?.id)
-          .single();
-
-        if (adminError || !adminData) {
-          console.error('Error finding admin user', adminError);
-          return;
-        }
-
-        // Fetch all products by the admin
-        const { data: products, error: productsError } = await supabase
-          .from('products')
-          .select('id')
-          .eq('user_id', isAdminUser ? user?.id : adminData.id);
-
-        if (productsError || !products) {
-          console.error('Error finding admin products', productsError);
-          return;
-        }
-
-        // If this product belongs to the admin, fetch its wallet addresses
-        if (isAdminUser) {
-          const { data: walletData, error: walletError } = await supabase
-            .from('wallet_addresses')
-            .select('*')
-            .eq('product_id', product.id);
-
-          if (!walletError && walletData) {
-            setAdminWalletAddresses(walletData);
-          }
-        } else {
-          // For non-admin users, fetch all admin wallet addresses
-          if (products.length > 0) {
-            // Get all admin product IDs
-            const productIds = products.map(p => p.id);
-            
-            // Fetch wallet addresses for any admin product
-            const { data: walletData, error: walletError } = await supabase
-              .from('wallet_addresses')
-              .select('*')
-              .in('product_id', productIds);
-
-            if (!walletError && walletData && walletData.length > 0) {
-              // Get the first wallet address of each crypto type
-              const uniqueWallets: Record<string, any> = {};
-              walletData.forEach(wallet => {
-                if (!uniqueWallets[wallet.crypto_type]) {
-                  uniqueWallets[wallet.crypto_type] = wallet;
-                }
-              });
-              
-              setAdminWalletAddresses(Object.values(uniqueWallets));
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching admin wallet addresses:', error);
-      }
-    };
-
-    if (user) {
-      fetchAdminWalletAddresses();
-    }
-  }, [user, product.id, isAdminUser]);
+  const { adminWalletAddresses } = useWalletAddresses(user, product.id, isAdminUser);
 
   const handleEdit = () => {
     navigate(`/edit-product/${product.id}`);
-  };
-
-  const generateQRCode = async (walletAddress: string) => {
-    try {
-      const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${walletAddress}`);
-      if (response.ok) {
-        return response.url;
-      }
-      throw new Error('Failed to generate QR code');
-    } catch (error) {
-      console.error('Error generating QR code:', error);
-      return null;
-    }
-  };
-
-  const handleBuyNow = async () => {
-    try {
-      setIsLoading(true);
-      
-      let walletData;
-      
-      if (isAdminUser) {
-        // Admin can use their own product's wallet addresses
-        const { data, error } = await supabase
-          .from('wallet_addresses')
-          .select('*')
-          .eq('product_id', product.id)
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        walletData = data;
-      } else {
-        // Non-admin users must use admin wallet addresses
-        if (adminWalletAddresses.length === 0) {
-          throw new Error('No payment options available. Please contact the administrator.');
-        }
-        
-        // Use the first available admin wallet address
-        walletData = adminWalletAddresses[0];
-      }
-
-      if (!walletData) {
-        throw new Error('No wallet address found for this product');
-      }
-
-      // Generate QR code for the wallet address
-      const qrCodeUrl = await generateQRCode(walletData.wallet_address);
-      setQrCode(qrCodeUrl);
-
-      // Copy wallet address to clipboard
-      navigator.clipboard.writeText(walletData.wallet_address);
-
-      // Record the purchase (without email)
-      await supabase.functions.invoke('send-purchase-confirmation', {
-        body: {
-          productTitle: product.title,
-          productPrice: product.price,
-          walletAddress: walletData.wallet_address,
-          cryptoType: walletData.crypto_type,
-          isAdminUser: isAdminUser
-        },
-      });
-
-      toast({
-        title: "Purchase initiated!",
-        description: `Send ${product.price} ${walletData.crypto_type} to the copied address to complete your purchase.`,
-      });
-
-    } catch (error: any) {
-      console.error('Error processing purchase:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to process purchase",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleCardClick = () => {
@@ -207,7 +54,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
     if (isService && user) {
       setIsSchedulerOpen(true);
     } else {
-      setIsDialogOpen(true);
+      setIsPaymentDialogOpen(true);
     }
   };
 
@@ -254,52 +101,23 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
         </div>
       </CardContent>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Complete Your Purchase</DialogTitle>
-            <DialogDescription>
-              Click the button below to copy the payment address to your clipboard
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            {qrCode && (
-              <div className="flex justify-center">
-                <img src={qrCode} alt="Payment QR Code" className="max-w-full" />
-              </div>
-            )}
-            
-            <Button 
-              onClick={handleBuyNow} 
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? "Processing..." : "Copy Payment Address"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PaymentDialog 
+        open={isPaymentDialogOpen} 
+        onOpenChange={setIsPaymentDialogOpen}
+        product={product}
+        adminWalletAddresses={adminWalletAddresses}
+        isAdminUser={isAdminUser}
+      />
 
-      <Dialog open={isSchedulerOpen} onOpenChange={setIsSchedulerOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Schedule Appointment</DialogTitle>
-            <DialogDescription>
-              Choose a date and time for your virtual consultation
-            </DialogDescription>
-          </DialogHeader>
-          
-          {user && (
-            <AppointmentScheduler
-              productId={product.id}
-              productTitle={product.title}
-              sellerId={product.user_id}
-              onSchedulingComplete={handleSchedulingComplete}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      <AppointmentDialog
+        open={isSchedulerOpen}
+        onOpenChange={setIsSchedulerOpen}
+        productId={product.id}
+        productTitle={product.title}
+        sellerId={product.user_id}
+        onSchedulingComplete={handleSchedulingComplete}
+        user={user}
+      />
     </Card>
   );
 };
