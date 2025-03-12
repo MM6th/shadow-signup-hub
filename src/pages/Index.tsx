@@ -40,9 +40,9 @@ const Index: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-elixia mb-6 text-white">
-                  <AnimatedText text="Private Investigation" />
+                  <AnimatedText text="Private Investigation" permanent={true} />
                   <span className="block text-gradient mt-2">
-                    <AnimatedText text="Enterprises" delay={0.5} />
+                    <AnimatedText text="Enterprises" delay={0.5} permanent={true} />
                   </span>
                 </h1>
                 

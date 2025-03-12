@@ -8,6 +8,7 @@ interface AnimatedTextProps {
   delay?: number;
   wordByWord?: boolean;
   as?: React.ElementType;
+  permanent?: boolean;
 }
 
 const AnimatedText: React.FC<AnimatedTextProps> = ({
@@ -16,6 +17,7 @@ const AnimatedText: React.FC<AnimatedTextProps> = ({
   delay = 0,
   wordByWord = false,
   as: Component = 'div',
+  permanent = false,
 }) => {
   const textRef = useRef<HTMLDivElement>(null);
 
@@ -26,16 +28,24 @@ const AnimatedText: React.FC<AnimatedTextProps> = ({
     // Add animation class after a small delay
     const timer = setTimeout(() => {
       element.classList.add('animate-blur-in');
+      // If permanent, don't fade out
+      if (permanent) {
+        element.style.opacity = '1';
+      }
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [delay]);
+  }, [delay, permanent]);
 
   if (wordByWord) {
     const words = text.split(' ');
     
     return (
-      <Component ref={textRef} className={cn('opacity-0', className)}>
+      <Component 
+        ref={textRef} 
+        className={cn('opacity-0', className)}
+        style={permanent ? { transition: 'opacity 0.8s' } : undefined}
+      >
         {words.map((word, index) => (
           <span
             key={index}
@@ -50,7 +60,11 @@ const AnimatedText: React.FC<AnimatedTextProps> = ({
   }
 
   return (
-    <Component ref={textRef} className={cn('opacity-0', className)}>
+    <Component 
+      ref={textRef} 
+      className={cn('opacity-0', className)}
+      style={permanent ? { transition: 'opacity 0.8s' } : undefined}
+    >
       {text}
     </Component>
   );

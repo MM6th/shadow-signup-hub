@@ -56,6 +56,8 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppRoutes = () => {
+  const { user, hasProfile } = useAuth();
+  
   return (
     <Routes>
       <Route path="/" element={<PublicRoute><Index /></PublicRoute>} />
