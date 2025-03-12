@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Briefcase, Tag, PenSquare, ShoppingBag, Plus } from 'lucide-react';
+import { Briefcase, Tag, PenSquare, ShoppingBag, Plus, User } from 'lucide-react';
 import Button from '@/components/Button';
 import AstrologyMessage from '@/components/AstrologyMessage';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
