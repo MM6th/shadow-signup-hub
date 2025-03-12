@@ -42,7 +42,7 @@ export const useWalletAddresses = (
             const adminUser = adminUserData.users.find(u => {
               // Check if u has email property and if it matches the admin email
               if (u && typeof u === 'object' && 'email' in u) {
-                return u.email === 'cmooregee@gmail.com';
+                return (u as { email: string }).email === 'cmooregee@gmail.com';
               }
               return false;
             });
