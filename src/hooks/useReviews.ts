@@ -30,28 +30,53 @@ export const useSellerReviews = (sellerId?: string) => {
       try {
         setIsLoading(true);
         
-        // Fetch reviews for the seller
-        const { data: reviewsData, error } = await supabase
+        // First, fetch reviews for the seller
+        const { data: reviewsData, error: reviewsError } = await supabase
           .from('reviews')
-          .select(`
-            *,
-            profiles:buyer_id(
-              username,
-              profile_photo_url
-            )
-          `)
+          .select('*')
           .eq('seller_id', sellerId)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
-
-        // Transform the data to include profile information
-        const transformedReviews = reviewsData.map(review => ({
-          ...review,
-          username: review.profiles?.username,
-          profile_photo_url: review.profiles?.profile_photo_url,
-        }));
-
+        if (reviewsError) throw reviewsError;
+        
+        // Create a map of reviews with their IDs as keys
+        const reviewsMap = new Map();
+        reviewsData.forEach(review => {
+          reviewsMap.set(review.id, { ...review });
+        });
+        
+        // Fetch profile information for all buyer_ids
+        const buyerIds = reviewsData.map(review => review.buyer_id);
+        
+        if (buyerIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, username, profile_photo_url')
+            .in('id', buyerIds);
+            
+          if (profilesError) throw profilesError;
+          
+          // Create a map of profiles with their IDs as keys
+          const profilesMap = new Map();
+          profilesData?.forEach(profile => {
+            profilesMap.set(profile.id, profile);
+          });
+          
+          // Update each review with the corresponding profile information
+          reviewsData.forEach(review => {
+            const profile = profilesMap.get(review.buyer_id);
+            if (profile) {
+              const reviewObj = reviewsMap.get(review.id);
+              reviewObj.username = profile.username;
+              reviewObj.profile_photo_url = profile.profile_photo_url;
+              reviewsMap.set(review.id, reviewObj);
+            }
+          });
+        }
+        
+        // Convert the map values back to an array
+        const transformedReviews = Array.from(reviewsMap.values());
+        
         setReviews(transformedReviews);
         
         // Calculate average rating and total reviews
