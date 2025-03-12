@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Briefcase, Tag, PenSquare, ShoppingBag, Plus, User } from 'lucide-react';
 import Button from '@/components/Button';
-import AstrologyMessage from '@/components/AstrologyMessage';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button as ShadcnButton } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,6 +20,10 @@ const Dashboard: React.FC = () => {
       navigate('/create-profile');
     }
   }, [user, isLoading, hasProfile, navigate]);
+
+  const handleEditProfile = () => {
+    navigate('/create-profile');
+  };
 
   if (isLoading) {
     return (
@@ -76,7 +79,7 @@ const Dashboard: React.FC = () => {
               <div className="flex gap-2">
                 <Button 
                   variant="outline" 
-                  onClick={() => navigate('/create-profile')}
+                  onClick={handleEditProfile}
                   className="flex items-center gap-2"
                 >
                   <PenSquare size={16} />
@@ -93,7 +96,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             
-            <AstrologyMessage />
+            {/* Removed AstrologyMessage component */}
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
               <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-6">

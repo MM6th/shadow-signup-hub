@@ -44,7 +44,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
 
   const selectedWalletAddress = adminWalletAddresses.length > 0 ? adminWalletAddresses[0] : null;
 
-  const handleEdit = () => {
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
     navigate(`/edit-product/${product.id}`);
   };
 
@@ -58,7 +59,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
     return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${walletAddress}`;
   };
 
-  const handleCopyWallet = async () => {
+  const handleCopyWallet = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
     if (!selectedWalletAddress) {
       toast({
         title: "Error",
@@ -105,7 +108,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
     });
   };
 
-  const handleOpenReviewDialog = () => {
+  const handleOpenReviewDialog = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -115,6 +120,26 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
       return;
     }
     setIsReviewDialogOpen(true);
+  };
+
+  const handleScheduleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsSchedulerOpen(true);
+  };
+  
+  const handleShowQR = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowQRCode(!showQRCode);
+  };
+  
+  const handleContactSeller = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (product.contact_phone) {
+      toast({
+        title: "Seller Contact",
+        description: `Contact the seller at: ${product.contact_phone}`,
+      });
+    }
   };
 
   return (
@@ -146,7 +171,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
               Edit
             </Button>
           ) : isService ? (
-            <Button onClick={() => setIsSchedulerOpen(true)} className="w-full">
+            <Button onClick={handleScheduleClick} className="w-full">
               Schedule Appointment
             </Button>
           ) : (
@@ -158,7 +183,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
               <div className="flex justify-between">
                 <Popover open={showQRCode} onOpenChange={setShowQRCode}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleShowQR}>
                       <QrCode size={16} className="mr-2" /> Show QR
                     </Button>
                   </PopoverTrigger>
@@ -177,12 +202,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
               </div>
 
               {product.contact_phone && (
-                <Button variant="outline" size="sm" onClick={() => {
-                  toast({
-                    title: "Seller Contact",
-                    description: `Contact the seller at: ${product.contact_phone}`,
-                  });
-                }} className="w-full">
+                <Button variant="outline" size="sm" onClick={handleContactSeller} className="w-full">
                   <Phone size={16} className="mr-2" /> Contact Seller
                 </Button>
               )}

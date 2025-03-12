@@ -83,9 +83,14 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
     }
   };
 
+  // Empty the AstrologyMessage component
+  const handleDialogClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px]" onClick={handleDialogClick}>
         <DialogHeader>
           <DialogTitle>Leave a Review</DialogTitle>
           <DialogDescription>
