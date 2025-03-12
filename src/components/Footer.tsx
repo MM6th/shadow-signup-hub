@@ -49,10 +49,10 @@ const Footer: React.FC<FooterProps> = ({ className }) => {
           <div>
             <h4 className="text-lg font-medium mb-4 text-pi">Contact Us</h4>
             <ul className="space-y-2 text-pi-muted">
-              <li>123 Investigation Ave</li>
-              <li>Los Angeles, CA 90001</li>
-              <li>contact@pie-investigations.com</li>
-              <li>(555) 123-4567</li>
+              <li>153-70 S Conduit Avenue</li>
+              <li>Jamaica, NY 11434</li>
+              <li>media@pieconfidential.com</li>
+              <li>617-580-2869</li>
             </ul>
           </div>
         </div>

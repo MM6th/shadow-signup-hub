@@ -1,36 +1,39 @@
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Star, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, Clock, Baby, BriefCase, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// Sample featured services
+// Updated featured services with new descriptions
 const featuredServices = [
   {
     id: '1',
-    title: 'Premium Business Cosmic Reading',
-    description: 'Deep dive into how cosmic energies affect your business venture.',
+    title: 'Career Based on Astrological Findings',
+    description: 'Discover your perfect career path through cosmic guidance and astrological insights.',
     price: 499.99,
     image: '/placeholder.svg',
     rating: 4.9,
-    duration: '90 minutes'
+    duration: '90 minutes',
+    icon: BriefCase
   },
   {
     id: '2',
-    title: 'Entrepreneurial Zodiac Workshop',
-    description: 'Understand how your zodiac sign influences your entrepreneurial style.',
+    title: 'Parenting Based on Astrological Findings',
+    description: 'Learn how to nurture your children based on their astrological charts and cosmic energy.',
     price: 299.99,
     image: '/placeholder.svg',
     rating: 5.0,
-    duration: '3 hours'
+    duration: '3 hours',
+    icon: Baby
   },
   {
     id: '3',
-    title: 'Annual Business Forecast',
-    description: 'Plan your year with a detailed cosmic business forecast.',
+    title: 'Financial Security',
+    description: 'Secure your financial future with cosmic insights and astrological timing.',
     price: 699.99,
     image: '/placeholder.svg',
     rating: 4.8,
-    duration: '2 hours'
+    duration: '2 hours',
+    icon: DollarSign
   }
 ];
 

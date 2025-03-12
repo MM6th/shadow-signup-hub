@@ -105,7 +105,6 @@ const UpdateProfile: React.FC = () => {
       
       if (error) throw error;
       
-      // Refresh the profile to get the updated data
       await refreshProfile();
       
       toast({
@@ -135,14 +134,12 @@ const UpdateProfile: React.FC = () => {
     const filePath = `profile_photos/${fileName}`;
     
     try {
-      // Upload the file to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('profiles')
         .upload(filePath, file);
       
       if (uploadError) throw uploadError;
       
-      // Get the public URL
       const { data } = supabase.storage
         .from('profiles')
         .getPublicUrl(filePath);
