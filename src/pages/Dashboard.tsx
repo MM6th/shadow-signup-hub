@@ -2,11 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { format } from 'date-fns';
 import { Briefcase, Tag, PenSquare, ShoppingBag, Plus } from 'lucide-react';
 import Button from '@/components/Button';
 import AstrologyMessage from '@/components/AstrologyMessage';
-import ProductForm from '@/components/ProductForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button as ShadcnButton } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,13 +45,13 @@ const Dashboard: React.FC = () => {
               {profile.profile_photo_url ? (
                 <img 
                   src={profile.profile_photo_url} 
-                  alt={`${profile.first_name} ${profile.last_name}`} 
+                  alt={profile.username} 
                   className="w-32 h-32 object-cover"
                 />
               ) : (
                 <div className="w-32 h-32 bg-dark-secondary flex items-center justify-center">
                   <span className="text-3xl text-pi-muted">
-                    {profile.first_name[0]}{profile.last_name[0]}
+                    {profile.username.charAt(0).toUpperCase()}
                   </span>
                 </div>
               )}
@@ -65,7 +63,7 @@ const Dashboard: React.FC = () => {
             <div className="mb-6 flex justify-between items-center">
               <div>
                 <h1 className="text-3xl font-elixia text-gradient mb-2">
-                  {profile.first_name} {profile.last_name}
+                  {profile.username}
                 </h1>
                 
                 {profile.industry && (
@@ -108,6 +106,15 @@ const Dashboard: React.FC = () => {
                   <div className="space-y-4">
                     <div>
                       <h2 className="text-lg font-medium mb-3">Personal Details</h2>
+                      <div className="flex items-start">
+                        <div className="p-2 rounded-md bg-dark-secondary mr-3">
+                          <User size={18} className="text-pi-focus" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-pi-muted">Username</p>
+                          <p className="text-pi">{profile.username}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   

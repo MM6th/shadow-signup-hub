@@ -23,7 +23,7 @@ const DigitalOffice = () => {
               {profile?.profile_photo_url ? (
                 <img 
                   src={profile.profile_photo_url} 
-                  alt={`${profile.first_name} ${profile.last_name}`}
+                  alt={profile.username}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -33,7 +33,7 @@ const DigitalOffice = () => {
             
             <div className="flex-1">
               <h1 className="text-3xl font-elixia mb-2">
-                {profile?.first_name} {profile?.last_name}
+                {profile?.username || 'User'}
               </h1>
               
               <div className="flex flex-wrap gap-2 mt-4">

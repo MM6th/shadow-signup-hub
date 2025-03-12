@@ -29,8 +29,7 @@ import {
 } from '@/components/ui/select';
 
 const formSchema = z.object({
-  first_name: z.string().min(2, { message: "First name must be at least 2 characters." }),
-  last_name: z.string().min(2, { message: "Last name must be at least 2 characters." }),
+  username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   business_type: z.enum(['Sole Proprietorship', 'S Corp', 'C Corp', 'LLC', 'P.I.E student']).optional(),
   industry: z.enum([
     'Influencer', 'Educator', 'Astrologer', 'Spiritualist', 
@@ -52,8 +51,7 @@ const CreateProfile: React.FC = () => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      first_name: '',
-      last_name: '',
+      username: '',
     },
   });
 
@@ -63,8 +61,7 @@ const CreateProfile: React.FC = () => {
       
       try {
         form.reset({
-          first_name: profile.first_name,
-          last_name: profile.last_name,
+          username: profile.username,
           business_type: profile.business_type as any || undefined,
           industry: profile.industry as any || undefined,
         });
@@ -93,12 +90,11 @@ const CreateProfile: React.FC = () => {
     try {
       setIsUploading(true);
       const fileExt = profileImage.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
       const { data, error } = await supabase.storage
         .from('profile-photos')
-        .upload(filePath, profileImage);
+        .upload(fileName, profileImage);
 
       if (error) {
         throw error;
@@ -106,7 +102,7 @@ const CreateProfile: React.FC = () => {
 
       const { data: publicUrlData } = supabase.storage
         .from('profile-photos')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
 
       return publicUrlData.publicUrl;
     } catch (error: any) {
@@ -133,8 +129,7 @@ const CreateProfile: React.FC = () => {
       const currentDate = new Date().toISOString().split('T')[0];
 
       const profileData = {
-        first_name: data.first_name,
-        last_name: data.last_name,
+        username: data.username,
         profile_photo_url: profilePhotoUrl,
         business_type: data.business_type,
         industry: data.industry,
@@ -227,43 +222,23 @@ const CreateProfile: React.FC = () => {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="first_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First Name</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Enter your first name" 
-                          {...field} 
-                          className="bg-dark-secondary border border-white/10"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="last_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Name</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Enter your last name" 
-                          {...field} 
-                          className="bg-dark-secondary border border-white/10"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter your username" 
+                        {...field} 
+                        className="bg-dark-secondary border border-white/10"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
