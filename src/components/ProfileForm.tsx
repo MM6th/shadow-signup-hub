@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -87,8 +86,8 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
     try {
       const profileData = {
         username,
-        business_type: businessType || null,
-        industry: industry || null,
+        business_type: businessType === "_none" ? null : businessType || null,
+        industry: industry === "_none" ? null : industry || null,
         profile_photo_url: profilePhotoUrl,
         updated_at: new Date().toISOString(),
       };
@@ -237,7 +236,6 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
                 <SelectValue placeholder="Select business type" />
               </SelectTrigger>
               <SelectContent>
-                {/* SelectItem with empty string must have a value prop */}
                 <SelectItem value="_none">None</SelectItem>
                 {businessTypes.map((type) => (
                   <SelectItem key={type} value={type}>
@@ -260,7 +258,6 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
                 <SelectValue placeholder="Select industry" />
               </SelectTrigger>
               <SelectContent>
-                {/* SelectItem with empty string must have a value prop */}
                 <SelectItem value="_none">None</SelectItem>
                 {industries.map((ind) => (
                   <SelectItem key={ind} value={ind}>
