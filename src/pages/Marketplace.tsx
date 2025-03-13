@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, ShoppingCart, Star, QrCode, User, Phone } from 'lucide-react';
+import { Search, Filter, ShoppingCart, Star, QrCode, User, Phone, Video, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -11,6 +11,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 
+// Admin access email
+const ADMIN_EMAILS = ['cmooregee@gmail.com'];
+
 // Categories for filtering
 const categories = [
   { id: 'all', name: 'All Services' },
@@ -19,7 +22,8 @@ const categories = [
   { id: 'strategy', name: 'Strategy' },
   { id: 'subscription', name: 'Subscriptions' },
   { id: 'workshop', name: 'Workshops' },
-  { id: 'ebook', name: 'Digital Products' }
+  { id: 'ebook', name: 'Digital Products' },
+  { id: 'video', name: 'Videos' }
 ];
 
 const Marketplace: React.FC = () => {
@@ -33,6 +37,10 @@ const Marketplace: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [walletAddresses, setWalletAddresses] = useState<Record<string, any[]>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [videos, setVideos] = useState<any[]>([]);
+
+  // Check if user is admin
+  const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -68,6 +76,18 @@ const Marketplace: React.FC = () => {
           
           setWalletAddresses(walletsByProduct);
         }
+
+        // Fetch uploaded videos if user is authenticated
+        if (user) {
+          const { data: videoData, error: videoError } = await supabase
+            .from('video_metadata')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+          if (videoError) throw videoError;
+          
+          setVideos(videoData || []);
+        }
       } catch (error) {
         console.error('Error fetching products:', error);
         toast({
@@ -81,7 +101,7 @@ const Marketplace: React.FC = () => {
     };
     
     fetchProducts();
-  }, [toast]);
+  }, [toast, user]);
 
   // Filter products based on search term and category
   const filteredProducts = products.filter(product => {
@@ -91,9 +111,26 @@ const Marketplace: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
+  // Filter videos based on search term when video category is selected
+  const filteredVideos = videos.filter(video => {
+    if (selectedCategory !== 'all' && selectedCategory !== 'video') return false;
+    return video.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+          (video.description && video.description.toLowerCase().includes(searchTerm.toLowerCase()));
+  });
+
   const handleProductClick = (product: any) => {
     setSelectedProduct(product);
     setIsDialogOpen(true);
+  };
+
+  const handleVideoClick = (video: any) => {
+    // Get the video URL
+    const videoUrl = supabase.storage
+      .from('profile_videos')
+      .getPublicUrl(video.video_path).data.publicUrl;
+    
+    // Open the video in a new tab
+    window.open(videoUrl, '_blank');
   };
 
   const getQRCodeUrl = (text: string) => {
@@ -112,16 +149,29 @@ const Marketplace: React.FC = () => {
             </p>
           </div>
           
-          {user && (
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2"
-              onClick={() => navigate('/dashboard')}
-            >
-              <User size={18} />
-              <span className="hidden sm:inline">My Profile</span>
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {isAdmin && (
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => navigate('/admin-nft')}
+              >
+                <Shield size={18} />
+                <span className="hidden sm:inline">Admin NFT</span>
+              </Button>
+            )}
+            
+            {user && (
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => navigate('/dashboard')}
+              >
+                <User size={18} />
+                <span className="hidden sm:inline">My Profile</span>
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Featured Services Carousel */}
@@ -156,12 +206,12 @@ const Marketplace: React.FC = () => {
           </div>
         </div>
 
-        {/* Product Grid */}
+        {/* Product & Video Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin h-12 w-12 border-4 border-pi-focus rounded-full border-t-transparent"></div>
           </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : filteredProducts.length === 0 && filteredVideos.length === 0 ? (
           <div className="glass-card p-12 text-center">
             <ShoppingCart className="h-16 w-16 mx-auto text-pi-muted mb-4" />
             <h2 className="text-2xl font-medium mb-2">No Products Found</h2>
@@ -173,26 +223,78 @@ const Marketplace: React.FC = () => {
             <Button onClick={() => navigate('/create-product')}>Create Your Own Product</Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {filteredProducts.map(product => (
-              <ProductCard 
-                key={product.id} 
-                product={{
-                  id: product.id,
-                  user_id: product.user_id,
-                  title: product.title,
-                  description: product.description,
-                  price: product.price,
-                  image_url: product.image_url,
-                  category: product.category,
-                  type: product.type,
-                  contact_phone: product.contact_phone,
-                }} 
-                onClick={() => handleProductClick(product)} 
-                showEditButton={true}
-              />
-            ))}
-          </div>
+          <>
+            {/* Display products */}
+            {filteredProducts.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                {filteredProducts.map(product => (
+                  <ProductCard 
+                    key={product.id} 
+                    product={{
+                      id: product.id,
+                      user_id: product.user_id,
+                      title: product.title,
+                      description: product.description,
+                      price: product.price,
+                      image_url: product.image_url,
+                      category: product.category,
+                      type: product.type,
+                      contact_phone: product.contact_phone,
+                    }} 
+                    onClick={() => handleProductClick(product)} 
+                    showEditButton={true}
+                  />
+                ))}
+              </div>
+            )}
+            
+            {/* Display videos if filtered or if video category is selected */}
+            {filteredVideos.length > 0 && (
+              <>
+                {filteredProducts.length > 0 && (
+                  <div className="flex items-center gap-3 mb-6 mt-4">
+                    <Video className="h-6 w-6 text-pi-focus" />
+                    <h2 className="text-2xl font-medium">Videos</h2>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                  {filteredVideos.map(video => (
+                    <div 
+                      key={video.id} 
+                      className="glass-card rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-all group"
+                      onClick={() => handleVideoClick(video)}
+                    >
+                      <div className="h-48 bg-dark-secondary overflow-hidden relative">
+                        {video.thumbnail_url ? (
+                          <img 
+                            src={video.thumbnail_url} 
+                            alt={video.title} 
+                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-dark-accent to-dark">
+                            <Video size={48} className="text-pi-focus opacity-50" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Play size={48} className="text-white" />
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-medium text-lg mb-1 truncate">{video.title}</h3>
+                        {video.description && (
+                          <p className="text-pi-muted text-sm line-clamp-2 mb-2">{video.description}</p>
+                        )}
+                        <div className="flex items-center text-xs text-pi-muted">
+                          <span>Click to watch</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
         )}
 
         {/* Product Detail Dialog */}
