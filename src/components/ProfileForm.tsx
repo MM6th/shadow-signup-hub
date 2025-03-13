@@ -234,7 +234,6 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
                 <SelectValue placeholder="Select business type" />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                <SelectItem value="">None</SelectItem>
                 {businessTypes.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type}

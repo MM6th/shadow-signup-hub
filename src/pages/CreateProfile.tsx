@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,13 @@ const CreateProfile: React.FC = () => {
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
   
+  useEffect(() => {
+    // Debugging to see if user exists
+    console.log("CreateProfile - User:", user);
+  }, [user]);
+  
   if (!user) {
+    console.log("No user found, redirecting to home");
     navigate('/');
     return null;
   }
@@ -22,8 +28,8 @@ const CreateProfile: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white py-10">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex flex-col bg-gray-900 text-white py-10">
+      <div className="max-w-2xl mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <Button 
             variant="outline" 
@@ -35,7 +41,7 @@ const CreateProfile: React.FC = () => {
           </Button>
         </div>
         
-        <Card className="bg-gray-800/80 border border-gray-700 shadow-xl text-white">
+        <Card className="bg-gray-800 border border-gray-700 shadow-xl">
           <CardHeader className="border-b border-gray-700 pb-4">
             <h1 className="text-3xl font-bold text-gradient bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600">
               Create Your Profile
