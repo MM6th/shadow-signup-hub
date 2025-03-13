@@ -14,7 +14,12 @@ export interface LiveSession {
   started_at: string;
   ended_at: string | null;
   created_at: string;
-  // Join with profiles if needed
+  // Added explicit type for profiles
+  profiles?: {
+    username?: string;
+    profile_photo_url?: string;
+  };
+  // These will be populated from profiles
   username?: string;
   profile_photo_url?: string;
 }
@@ -47,11 +52,16 @@ export const useLiveSessions = () => {
       if (error) throw error;
 
       // Transform data to include the profile information at top level
-      const sessionsWithProfiles = data.map(session => ({
-        ...session,
-        username: session.profiles?.username,
-        profile_photo_url: session.profiles?.profile_photo_url
-      }));
+      const sessionsWithProfiles = data.map(session => {
+        // Make TypeScript happy by checking if profiles exists
+        const profiles = session.profiles as { username?: string; profile_photo_url?: string } | null;
+        
+        return {
+          ...session,
+          username: profiles?.username,
+          profile_photo_url: profiles?.profile_photo_url
+        };
+      });
       
       setLiveSessions(sessionsWithProfiles);
     } catch (error) {
