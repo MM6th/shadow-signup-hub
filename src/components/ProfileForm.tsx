@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -54,9 +54,14 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [username, setUsername] = useState(profile?.username || '');
-  const [businessType, setBusinessType] = useState<string>(profile?.business_type || "");
-  const [industry, setIndustry] = useState<string>(profile?.industry || "");
+  const [businessType, setBusinessType] = useState<string>(profile?.business_type || businessTypes[0]); // Default to first option
+  const [industry, setIndustry] = useState<string>(profile?.industry || industries[0]); // Default to first option
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(profile?.profile_photo_url || null);
+  
+  // Debug values
+  useEffect(() => {
+    console.log("Current form values:", { username, businessType, industry, profilePhotoUrl });
+  }, [username, businessType, industry, profilePhotoUrl]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +83,10 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
       });
       return;
     }
+
+    // Ensure we have valid values for businessType and industry
+    const finalBusinessType = businessType || businessTypes[0];
+    const finalIndustry = industry || industries[0];
     
     setIsSubmitting(true);
     
@@ -85,8 +94,8 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
       // Create the profile data object
       const profileData = {
         username,
-        business_type: businessType,
-        industry: industry,
+        business_type: finalBusinessType,
+        industry: finalIndustry,
         profile_photo_url: profilePhotoUrl,
         updated_at: new Date().toISOString(),
       };
@@ -109,9 +118,14 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
           .eq('id', userId);
       }
       
-      const { error } = await query;
+      const { error, data } = await query;
       
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase Error:", error);
+        throw error;
+      }
+      
+      console.log("Profile saved successfully:", data);
       
       toast({
         title: isCreate ? "Profile Created" : "Profile Updated",
@@ -224,11 +238,12 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
             <Label htmlFor="business-type" className="block text-sm font-medium text-gray-300">
-              Business Type
+              Business Type *
             </Label>
             <Select 
               value={businessType} 
               onValueChange={setBusinessType}
+              defaultValue={businessTypes[0]}
             >
               <SelectTrigger id="business-type" className="bg-gray-700 border-gray-600 text-white">
                 <SelectValue placeholder="Select business type" />
@@ -245,11 +260,12 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
           
           <div className="space-y-1">
             <Label htmlFor="industry" className="block text-sm font-medium text-gray-300">
-              Industry
+              Industry *
             </Label>
             <Select 
               value={industry} 
               onValueChange={setIndustry}
+              defaultValue={industries[0]}
             >
               <SelectTrigger id="industry" className="bg-gray-700 border-gray-600 text-white">
                 <SelectValue placeholder="Select industry" />
