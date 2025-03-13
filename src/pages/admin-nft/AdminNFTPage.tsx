@@ -47,17 +47,7 @@ export const AdminNFTPage: React.FC = () => {
   useEffect(() => {
     if (user) {
       // Force a complete refresh of NFTs and collections data
-      fetchNFTs(user.id).then(() => {
-        console.log("NFTs fetched successfully");
-      }).catch(error => {
-        console.error("Error fetching NFTs:", error);
-      });
-      
-      fetchCollections(user.id).then(() => {
-        console.log("Collections fetched successfully");
-      }).catch(error => {
-        console.error("Error fetching collections:", error);
-      });
+      fetchData();
       
       const mockSalesData = Array.from({ length: 30 }, (_, i) => {
         const date = new Date();
@@ -70,6 +60,26 @@ export const AdminNFTPage: React.FC = () => {
       setSalesData(mockSalesData);
     }
   }, [user]);
+
+  // New function to fetch all data to ensure consistency
+  const fetchData = async () => {
+    if (!user) return;
+    
+    try {
+      await Promise.all([
+        fetchNFTs(user.id),
+        fetchCollections(user.id)
+      ]);
+      console.log("Initial data fetch completed successfully");
+    } catch (error) {
+      console.error("Error during initial data fetch:", error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load initial data',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleCreateNFT = () => {
     setIsEditing(false);
@@ -131,16 +141,30 @@ export const AdminNFTPage: React.FC = () => {
   const refreshData = async () => {
     if (user) {
       try {
-        // Ensure we completely refresh all data
-        const [updatedNFTs, updatedCollections] = await Promise.all([
-          fetchNFTs(user.id),
-          fetchCollections(user.id)
-        ]);
-        
-        console.log("Data refreshed successfully:", {
-          nfts: updatedNFTs.length,
-          collections: updatedCollections.length
+        console.log("Starting data refresh...");
+        // First clear the existing data to ensure we see fresh data
+        toast({
+          title: 'Refreshing',
+          description: 'Refreshing NFT data...',
         });
+        
+        // Ensure we completely refresh all data with a slight delay to allow Supabase to process
+        setTimeout(async () => {
+          const [updatedNFTs, updatedCollections] = await Promise.all([
+            fetchNFTs(user.id),
+            fetchCollections(user.id)
+          ]);
+          
+          console.log("Data refreshed successfully:", {
+            nfts: updatedNFTs.length,
+            collections: updatedCollections.length
+          });
+          
+          toast({
+            title: 'Success',
+            description: 'Data refreshed successfully',
+          });
+        }, 1000);
       } catch (error) {
         console.error("Error refreshing data:", error);
         toast({

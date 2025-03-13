@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -202,8 +203,15 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
         });
       }
 
-      await refreshData();
+      // Reset form, close dialog, and refresh data
       setIsOpen(false);
+      
+      // Important: Wait a moment to ensure Supabase has processed the change
+      // before refreshing the data
+      setTimeout(() => {
+        refreshData();
+      }, 1000);
+      
     } catch (error) {
       console.error('Error saving NFT:', error);
       toast({

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -311,6 +310,9 @@ export const useNFT = () => {
         title: 'NFT Minted',
         description: `Your NFT has been minted with token ID: ${tokenId}`,
       });
+      
+      // Immediately update the local NFTs state to reflect the change
+      await fetchNFTs(user?.id);
       
       return data as unknown as NFT;
     } catch (error) {

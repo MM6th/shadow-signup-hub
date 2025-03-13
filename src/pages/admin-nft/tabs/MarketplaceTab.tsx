@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Plus, Edit, DollarSign, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNFT, NFT } from '@/hooks/useNFT';
@@ -27,6 +27,10 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
   const { wallet } = useWallet();
   const { toast } = useToast();
 
+  useEffect(() => {
+    console.log("MarketplaceTab received NFTs:", nfts.length, nfts);
+  }, [nfts]);
+
   const handleMintNFT = async (nftId: string) => {
     if (!wallet.isConnected) {
       toast({
@@ -38,7 +42,8 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
     }
     
     await simulateMintNFT(nftId);
-    refreshData();
+    // Add a slight delay before refreshing to ensure DB consistency
+    setTimeout(() => refreshData(), 1000);
   };
 
   const handleListNFT = async (nftId: string, price: number) => {
@@ -52,7 +57,8 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
     }
     
     await listNFTForSale(nftId, price);
-    refreshData();
+    // Add a slight delay before refreshing to ensure DB consistency
+    setTimeout(() => refreshData(), 1000);
   };
 
   return (
