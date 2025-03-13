@@ -113,18 +113,42 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
       const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
       const filePath = `${userId}/${fileName}`;
       
-      // Start upload with progress tracking
+      // Set up event tracking with XMLHttpRequest
+      const xhr = new XMLHttpRequest();
+      
+      // Create upload promise
+      const uploadPromise = new Promise<void>((resolve, reject) => {
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percent = (event.loaded / event.total) * 100;
+            setUploadProgress(Math.round(percent));
+            setCurrentUploads(prev => ({ ...prev, [fileName]: Math.round(percent) }));
+          }
+        });
+        
+        // Resolve or reject based on upload completion
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        };
+        
+        xhr.onerror = () => reject(new Error('Upload failed'));
+      });
+      
+      // Start the upload using Supabase with the custom xhr
       const { data, error } = await supabase.storage
         .from('profile_videos')
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false,
-          onUploadProgress: (progress) => {
-            const percent = (progress.loaded / progress.total) * 100;
-            setUploadProgress(Math.round(percent));
-            setCurrentUploads(prev => ({ ...prev, [fileName]: Math.round(percent) }));
-          }
+          httpRequest: xhr
         });
+      
+      // Wait for the upload to complete with progress tracking
+      await uploadPromise;
       
       if (error) throw error;
       
