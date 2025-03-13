@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -12,11 +11,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { handleImageUpload } from '../utils/imageUtils';
+import { uploadImage } from '../utils/imageUtils';
 import { Info, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-// Define blockchain options with display names and symbols
 const BLOCKCHAIN_OPTIONS = [
   { value: 'ethereum', label: 'Ethereum', symbol: 'ETH' },
   { value: 'polygon', label: 'Polygon', symbol: 'MATIC' },
@@ -24,7 +22,6 @@ const BLOCKCHAIN_OPTIONS = [
   { value: 'binance', label: 'Binance Smart Chain', symbol: 'BNB' },
 ];
 
-// Define form validation schema
 const formSchema = z.object({
   title: z.string().min(3, { message: 'Title must be at least 3 characters' }),
   description: z.string().min(10, { message: 'Description must be at least 10 characters' }),
@@ -76,7 +73,6 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
     },
   });
 
-  // Update currencies based on selected blockchain
   useEffect(() => {
     const blockchain = form.watch('blockchain');
     const selectedBlockchain = BLOCKCHAIN_OPTIONS.find(option => option.value === blockchain);
@@ -87,11 +83,9 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
     }
   }, [form.watch('blockchain')]);
 
-  // Initialize form when editing or for new NFT
   useEffect(() => {
     if (isOpen) {
       if (isEditing && currentNFT) {
-        // Load existing NFT data for editing
         form.reset({
           title: currentNFT.title || '',
           description: currentNFT.description || '',
@@ -101,14 +95,12 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
           currency: currentNFT.currency || 'eth',
         });
         
-        // Set image preview if available
         if (currentNFT.imageurl) {
           setImagePreview(currentNFT.imageurl);
         } else {
           setImagePreview(null);
         }
       } else {
-        // Reset form for new NFT
         form.reset({
           title: '',
           description: '',
@@ -150,9 +142,8 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
     let imageUrl = currentNFT.imageurl;
 
     try {
-      // Upload image if new one is selected
       if (imageFile) {
-        imageUrl = await handleImageUpload(imageFile, user.id);
+        imageUrl = await uploadImage(imageFile);
       }
 
       if (!imageUrl) {
@@ -176,7 +167,6 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
       };
 
       if (isEditing && currentNFT.id) {
-        // Update existing NFT
         const { data, error } = await supabase
           .from('nfts')
           .update({
@@ -194,7 +184,6 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
           description: 'Your NFT has been updated successfully',
         });
       } else {
-        // Create new NFT
         const { data, error } = await supabase
           .from('nfts')
           .insert({
@@ -213,10 +202,8 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
         });
       }
 
-      // Refresh data and close the dialog
       await refreshData();
       setIsOpen(false);
-      
     } catch (error) {
       console.error('Error saving NFT:', error);
       toast({
@@ -328,7 +315,6 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
                         value={field.value}
                         onValueChange={(value) => {
                           field.onChange(value);
-                          // Update the currency based on blockchain selection
                           const selectedBlockchain = BLOCKCHAIN_OPTIONS.find(option => option.value === value);
                           if (selectedBlockchain) {
                             form.setValue('currency', selectedBlockchain.symbol.toLowerCase());
