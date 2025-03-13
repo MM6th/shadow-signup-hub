@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Edit, Tag, DollarSign, Music, FileText, Video, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { NFT } from '@/hooks/useNFT';
+import { NFT } from '@/hooks/nft/types';
 import { Tooltip } from '@/components/ui/tooltip';
 import { TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
