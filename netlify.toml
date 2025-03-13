@@ -1,0 +1,8 @@
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# If you're using environment variables, they can be specified here
+# [build.environment]
+#   VITE_API_URL = "your-production-api-url"
