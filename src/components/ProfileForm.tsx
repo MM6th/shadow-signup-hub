@@ -81,13 +81,17 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
     setIsSubmitting(true);
     
     try {
+      // Create the profile data object with proper handling of select values
       const profileData = {
         username,
-        business_type: businessType === "_none" ? null : businessType || null,
-        industry: industry === "_none" ? null : industry || null,
+        // For business_type and industry, use null when empty or "_none" is selected
+        business_type: !businessType || businessType === "_none" ? null : businessType,
+        industry: !industry || industry === "_none" ? null : industry,
         profile_photo_url: profilePhotoUrl,
         updated_at: new Date().toISOString(),
       };
+
+      console.log("Submitting profile data:", profileData);
 
       let query;
       
@@ -97,7 +101,8 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
           .insert({
             id: userId,
             ...profileData,
-            date_of_birth: new Date().toISOString(),
+            // Ensure date_of_birth is included and valid for new profiles
+            date_of_birth: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD
           });
       } else {
         query = supabase
