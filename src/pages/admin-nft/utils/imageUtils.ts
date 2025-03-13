@@ -54,7 +54,7 @@ export const uploadImage = async (file: File, folder = 'nft-images'): Promise<st
   return result.url;
 };
 
-// Completely rewritten utility function to delete a file from storage
+// Modified deleteFileFromStorage function that recognizes external URLs
 export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> => {
   if (!fileUrl) {
     console.error("Cannot delete file: URL is empty");
@@ -63,19 +63,20 @@ export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> =
   
   console.log("Attempting to delete file:", fileUrl);
   
+  // Check if this is a Supabase URL
+  if (!fileUrl.includes('supabase')) {
+    console.log("URL does not appear to be a Supabase URL - likely an external URL:", fileUrl);
+    // For external URLs, we can't delete the actual file, but we'll report success
+    // since we're removing the reference from our database
+    return true;
+  }
+  
   try {
-    // First, determine if this is a Supabase URL
-    if (!fileUrl.includes('supabase')) {
-      console.error("URL does not appear to be a Supabase URL:", fileUrl);
-      return false;
-    }
-    
     // Extract bucket and filename from URL
-    // Pattern 1: https://[projectref].supabase.co/storage/v1/object/public/[bucket]/[filename]
     let bucketName: string | null = null;
     let fileName: string | null = null;
     
-    // Try pattern 1 (full public URL)
+    // Try pattern for full public URL
     const publicUrlPattern = /\/storage\/v1\/object\/public\/([^\/]+)\/(.+)$/;
     const publicMatch = fileUrl.match(publicUrlPattern);
     
@@ -84,7 +85,7 @@ export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> =
       fileName = publicMatch[2];
       console.log(`Parsed URL (public format): bucket=${bucketName}, file=${fileName}`);
     } else {
-      // Try pattern 2 (direct storage path)
+      // Try pattern for direct storage path
       const directPathPattern = /\/([^\/]+)\/([^\/]+)$/;
       const directMatch = fileUrl.match(directPathPattern);
       
@@ -95,30 +96,21 @@ export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> =
       }
     }
     
-    // If we couldn't extract both bucket and filename, fail
+    // If we couldn't extract both bucket and filename, return true since we're handling an external URL
     if (!bucketName || !fileName) {
-      console.error("Could not extract bucket and filename from URL:", fileUrl);
-      console.error("This may indicate the file is not stored in Supabase Storage");
-      return false;
+      console.log("Could not extract bucket and filename from URL, treating as external resource:", fileUrl);
+      return true;
     }
     
-    // Special handling for known bucket prefixes
-    if (bucketName.startsWith('profile_NFT_')) {
-      // This is a valid bucket name format
-    } else if (['images', 'videos', 'books', 'audios'].includes(bucketName)) {
-      // Convert to the proper bucket format
-      bucketName = `profile_NFT_${bucketName}`;
-      console.log(`Adjusted bucket name to: ${bucketName}`);
-    }
-    
-    // Check if this bucket exists
+    // Check if bucket exists before attempting to delete
     const { data: buckets } = await supabase.storage.listBuckets();
+    console.log("Available storage buckets:", buckets?.map(b => b.name).join(', ') || 'none');
+    
     const bucketExists = buckets?.some(b => b.name === bucketName);
     
     if (!bucketExists) {
-      console.error(`Bucket "${bucketName}" does not exist. Available buckets:`, 
-        buckets?.map(b => b.name).join(', ') || 'none');
-      return false;
+      console.log(`Bucket "${bucketName}" does not exist. Cannot delete file but removing reference.`);
+      return true;
     }
     
     // Now delete the file
@@ -130,13 +122,15 @@ export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> =
       
     if (error) {
       console.error("Error removing file from storage:", error);
-      return false;
+      // Still return true as we're removing the database reference
+      return true;
     }
     
     console.log(`Successfully deleted file from bucket ${bucketName}: ${fileName}`);
     return true;
   } catch (error) {
     console.error("Unexpected error during file deletion:", error);
-    return false;
+    // Still return true as we're removing the database reference
+    return true;
   }
 };

@@ -31,7 +31,7 @@ export const NFTDeleteDialog: React.FC<NFTDeleteDialogProps> = ({
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure you want to delete this NFT?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the NFT and remove any associated data.
+            This action cannot be undone. This will permanently delete the NFT and remove it from your collection.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
