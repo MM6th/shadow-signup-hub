@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Plus, Video } from 'lucide-react';
@@ -13,7 +12,22 @@ interface LiveSessionsTabProps {
 
 const LiveSessionsTab: React.FC<LiveSessionsTabProps> = ({ userId }) => {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const { liveSessions, userLiveSession, isLoading } = useLiveSessions();
+  const { liveSessions, userLiveSession, isLoading, fetchUserLiveSession, fetchLiveSessions } = useLiveSessions();
+  
+  useEffect(() => {
+    const refreshData = async () => {
+      await fetchLiveSessions();
+      await fetchUserLiveSession();
+    };
+    
+    refreshData();
+    
+    const interval = setInterval(refreshData, 10000);
+    
+    return () => {
+      clearInterval(interval);
+    };
+  }, [fetchLiveSessions, fetchUserLiveSession]);
 
   return (
     <div>

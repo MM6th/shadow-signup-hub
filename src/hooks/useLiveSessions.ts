@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
@@ -27,7 +27,7 @@ export const useLiveSessions = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const fetchLiveSessions = async () => {
+  const fetchLiveSessions = useCallback(async () => {
     try {
       setIsLoading(true);
       
@@ -66,10 +66,13 @@ export const useLiveSessions = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
-  const fetchUserLiveSession = async () => {
-    if (!user) return;
+  const fetchUserLiveSession = useCallback(async () => {
+    if (!user) {
+      setUserLiveSession(null);
+      return;
+    }
     
     try {
       console.log('Fetching user live session for user:', user.id);
@@ -88,7 +91,7 @@ export const useLiveSessions = () => {
     } catch (error) {
       console.error('Error fetching user live session:', error);
     }
-  };
+  }, [user]);
 
   const startLiveSession = async (title: string) => {
     if (!user) {
@@ -185,10 +188,12 @@ export const useLiveSessions = () => {
       }
       
       console.log('Session ended and archived successfully');
+      
+      // Clear the user live session from state immediately
       setUserLiveSession(null);
       
       // Force a refresh of active sessions
-      fetchLiveSessions();
+      await fetchLiveSessions();
     } catch (error) {
       console.error('Error ending live session:', error);
       throw error;
@@ -210,6 +215,9 @@ export const useLiveSessions = () => {
         { event: '*', schema: 'public', table: 'live_sessions' }, 
         () => {
           fetchLiveSessions();
+          if (user) {
+            fetchUserLiveSession();
+          }
         }
       )
       .subscribe();
@@ -217,7 +225,7 @@ export const useLiveSessions = () => {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, []);
+  }, [fetchLiveSessions, fetchUserLiveSession, user]);
 
   useEffect(() => {
     if (user) {
@@ -225,7 +233,7 @@ export const useLiveSessions = () => {
     } else {
       setUserLiveSession(null);
     }
-  }, [user]);
+  }, [user, fetchUserLiveSession]);
 
   return {
     liveSessions,

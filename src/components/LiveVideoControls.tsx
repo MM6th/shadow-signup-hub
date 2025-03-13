@@ -11,7 +11,7 @@ interface LiveVideoControlsProps {
 }
 
 const LiveVideoControls: React.FC<LiveVideoControlsProps> = ({ roomId }) => {
-  const { userLiveSession, endLiveSession, fetchUserLiveSession } = useLiveSessions();
+  const { userLiveSession, endLiveSession, fetchUserLiveSession, fetchLiveSessions } = useLiveSessions();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -71,6 +71,10 @@ const LiveVideoControls: React.FC<LiveVideoControlsProps> = ({ roomId }) => {
       }
       
       await endLiveSession();
+      
+      // Force refresh of live sessions list and user session status
+      await fetchLiveSessions();
+      await fetchUserLiveSession();
       
       toast({
         title: 'Live Session Ended',
