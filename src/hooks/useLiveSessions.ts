@@ -192,6 +192,11 @@ export const useLiveSessions = () => {
       // Clear the user live session from state immediately
       setUserLiveSession(null);
       
+      // Remove the session from the liveSessions array locally to update UI immediately
+      setLiveSessions(prevSessions => 
+        prevSessions.filter(session => session.id !== userLiveSession.id)
+      );
+      
       // Force a refresh of active sessions
       await fetchLiveSessions();
     } catch (error) {

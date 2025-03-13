@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
@@ -22,7 +23,8 @@ const LiveSessionsTab: React.FC<LiveSessionsTabProps> = ({ userId }) => {
     
     refreshData();
     
-    const interval = setInterval(refreshData, 10000);
+    // Refresh every 5 seconds instead of 10 for more responsive UI updates
+    const interval = setInterval(refreshData, 5000);
     
     return () => {
       clearInterval(interval);
