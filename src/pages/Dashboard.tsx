@@ -1,11 +1,13 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Briefcase, Tag, PenSquare, ShoppingBag, Plus, User } from 'lucide-react';
+import { Briefcase, Tag, PenSquare, ShoppingBag, Plus, User, Film } from 'lucide-react';
 import Button from '@/components/Button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button as ShadcnButton } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import VideoUploader from '@/components/VideoUploader';
 
 const Dashboard: React.FC = () => {
   const { user, profile, isLoading, hasProfile, signOut } = useAuth();
@@ -96,9 +98,10 @@ const Dashboard: React.FC = () => {
             </div>
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
-              <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-6">
+              <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto mb-6">
                 <TabsTrigger value="profile">Profile Details</TabsTrigger>
                 <TabsTrigger value="products">My Products</TabsTrigger>
+                <TabsTrigger value="videos">My Videos</TabsTrigger>
               </TabsList>
               
               <TabsContent value="profile">
@@ -162,12 +165,18 @@ const Dashboard: React.FC = () => {
                 
                 <ProductsList userId={user.id} />
               </TabsContent>
+              
+              <TabsContent value="videos">
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="text-lg font-medium">My Videos</h2>
+                  <div className="text-pi-muted text-sm">Upload videos up to 3GB</div>
+                </div>
+                
+                <VideoUploader userId={user.id} />
+              </TabsContent>
             </Tabs>
             
             <div className="flex justify-end space-x-4 mt-6">
-              <Button variant="outline" onClick={() => navigate('/marketplace')}>
-                Marketplace
-              </Button>
               <Button variant="primary" onClick={signOut}>
                 Sign Out
               </Button>

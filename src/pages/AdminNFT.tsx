@@ -1,298 +1,357 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import Button from '@/components/Button';
-import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
+import { Plus, Edit, Trash2, Image, Package, DollarSign, Tag } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ImagePlus, Image, Plus, ArrowLeft, Trash2, Edit } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
-// Sample NFT collection data
-const SAMPLE_NFTS = [
-  {
-    id: '1',
-    title: 'Cosmic Astrology #01',
-    description: 'Limited edition astrology-themed NFT featuring cosmic elements and zodiac symbols.',
-    price: 0.5,
-    image: 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&q=80&w=1740',
-    status: 'available',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    title: 'Spiritual Guidance #03',
-    description: 'A spiritual journey represented through abstract digital art. Part of the Guidance collection.',
-    price: 0.8,
-    image: 'https://images.unsplash.com/photo-1518640467707-6811f4a6ab73?auto=format&fit=crop&q=80&w=1742',
-    status: 'sold',
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: '3',
-    title: 'Psychic Vision #07',
-    description: 'Representing the third eye and psychic awareness through vibrant digital artwork.',
-    price: 1.2,
-    image: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?auto=format&fit=crop&q=80&w=1740',
-    status: 'available',
-    created_at: new Date(Date.now() - 172800000).toISOString(),
-  }
-];
+// Admin ID for authorization check
+const ADMIN_ID = '3a25fea8-ec60-4e52-ae40-63f2b1ce89d9';
+
+interface NFT {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+  tokenId: string;
+  collection: string;
+  created_at: string;
+}
 
 const AdminNFT: React.FC = () => {
-  const { user, profile } = useAuth();
+  const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [nfts, setNfts] = useState(SAMPLE_NFTS);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isAddingNFT, setIsAddingNFT] = useState(false);
-  const [newNFT, setNewNFT] = useState({
-    title: '',
-    description: '',
-    price: 0,
-    image: ''
-  });
-  
-  // Check if user is admin (This would be replaced with actual admin check logic)
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (!user) return;
-      
-      // This is a placeholder for real admin checking logic
-      // In a real app, you would check against a user_roles table or similar
-      try {
-        // Simulate admin check - in real app, this would query a roles table
-        // For demo purposes, we'll just set the creator of profile as admin
-        setIsAdmin(true);
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
-      }
-    };
-    
-    checkAdminStatus();
-  }, [user]);
-  
-  // If not admin, redirect
-  useEffect(() => {
-    if (user && isAdmin === false) {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to access this page.",
-        variant: "destructive",
-      });
-      navigate('/dashboard');
+  const [nfts, setNfts] = useState<NFT[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentNFT, setCurrentNFT] = useState<Partial<NFT>>({});
+  const [activeTab, setActiveTab] = useState<string>('marketplace');
+
+  // Mock NFT data since we don't have an actual NFT table
+  const mockNFTs: NFT[] = [
+    {
+      id: '1',
+      title: 'Cosmic Wanderer #001',
+      description: 'A unique digital collectible from the Cosmic Wanderers series.',
+      price: 0.5,
+      imageUrl: 'https://images.unsplash.com/photo-1580927752452-89d86da3fa0a',
+      tokenId: '001',
+      collection: 'Cosmic Wanderers',
+      created_at: new Date().toISOString()
+    },
+    {
+      id: '2',
+      title: 'Ethereal Dreams #042',
+      description: 'Part of the Ethereal Dreams collection, this NFT represents the boundary between reality and dreams.',
+      price: 0.75,
+      imageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe',
+      tokenId: '042',
+      collection: 'Ethereal Dreams',
+      created_at: new Date().toISOString()
+    },
+    {
+      id: '3',
+      title: 'Digital Genesis #003',
+      description: 'The beginning of a new digital era captured in this one-of-a-kind NFT.',
+      price: 1.2,
+      imageUrl: 'https://images.unsplash.com/photo-1634986666676-ec9f8facce6a',
+      tokenId: '003',
+      collection: 'Digital Genesis',
+      created_at: new Date().toISOString()
     }
-  }, [user, isAdmin, navigate, toast]);
-  
-  if (!user) {
-    navigate('/');
-    return null;
+  ];
+
+  useEffect(() => {
+    // Load mock NFTs
+    setNfts(mockNFTs);
+  }, []);
+
+  // Check if user is admin
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-dark flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-12 w-12 border-4 border-pi-focus border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-pi-muted">Verifying admin access...</p>
+        </div>
+      </div>
+    );
   }
-  
-  const handleAddNFT = () => {
-    if (!newNFT.title || !newNFT.description || newNFT.price <= 0 || !newNFT.image) {
+
+  // Redirect if not admin
+  if (!user || user.id !== ADMIN_ID) {
+    toast({
+      title: "Access Denied",
+      description: "You do not have permission to view this page.",
+      variant: "destructive",
+    });
+    return <Navigate to="/dashboard" />;
+  }
+
+  const handleCreateNFT = () => {
+    setCurrentNFT({});
+    setIsEditing(false);
+    setIsDialogOpen(true);
+  };
+
+  const handleEditNFT = (nft: NFT) => {
+    setCurrentNFT(nft);
+    setIsEditing(true);
+    setIsDialogOpen(true);
+  };
+
+  const handleDeleteNFT = (id: string) => {
+    // Filter out the deleted NFT
+    setNfts(nfts.filter(nft => nft.id !== id));
+    
+    toast({
+      title: "NFT Deleted",
+      description: "The NFT has been successfully removed.",
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!currentNFT.title || !currentNFT.description || !currentNFT.price) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in all fields and ensure price is greater than 0.",
+        title: "Missing Information",
+        description: "Please fill out all required fields.",
         variant: "destructive",
       });
       return;
     }
     
-    // In a real app, this would save to the database
-    const id = (nfts.length + 1).toString();
-    setNfts([
-      ...nfts,
-      {
-        ...newNFT,
-        id,
-        status: 'available',
+    if (isEditing) {
+      // Update existing NFT
+      setNfts(nfts.map(nft => 
+        nft.id === currentNFT.id ? { ...nft, ...currentNFT } as NFT : nft
+      ));
+      
+      toast({
+        title: "NFT Updated",
+        description: "The NFT has been successfully updated.",
+      });
+    } else {
+      // Create new NFT
+      const newNFT: NFT = {
+        id: Math.random().toString(36).substring(2, 9),
+        title: currentNFT.title || 'Untitled NFT',
+        description: currentNFT.description || 'No description provided',
+        price: currentNFT.price || 0,
+        imageUrl: currentNFT.imageUrl || 'https://via.placeholder.com/300',
+        tokenId: currentNFT.tokenId || Math.floor(Math.random() * 1000).toString().padStart(3, '0'),
+        collection: currentNFT.collection || 'Default Collection',
         created_at: new Date().toISOString()
-      }
-    ]);
+      };
+      
+      setNfts([newNFT, ...nfts]);
+      
+      toast({
+        title: "NFT Created",
+        description: "The NFT has been successfully created.",
+      });
+    }
     
-    setNewNFT({
-      title: '',
-      description: '',
-      price: 0,
-      image: ''
-    });
-    
-    setIsAddingNFT(false);
-    
-    toast({
-      title: "NFT Added",
-      description: "The NFT has been added to the collection.",
-    });
+    setIsDialogOpen(false);
   };
-  
-  const handleDeleteNFT = (id: string) => {
-    setNfts(nfts.filter(nft => nft.id !== id));
-    toast({
-      title: "NFT Removed",
-      description: "The NFT has been removed from the collection.",
-    });
-  };
-  
+
   return (
-    <div className="min-h-screen bg-dark bg-dark-gradient text-white py-10">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-center justify-between">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft size={16} />
-            Back to Dashboard
-          </Button>
-          
-          <h1 className="text-3xl font-elixia text-gradient">NFT Collection Management</h1>
-          
-          <Button 
-            variant="primary" 
-            onClick={() => setIsAddingNFT(!isAddingNFT)}
-            className="flex items-center gap-2"
-          >
-            {isAddingNFT ? 'Cancel' : <><Plus size={16} /> Create NFT</>}
-          </Button>
+    <div className="min-h-screen bg-dark py-12">
+      <div className="container mx-auto px-4 max-w-6xl">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-elixia text-gradient">NFT Management</h1>
+            <p className="text-pi-muted mt-2">
+              Manage your NFT collections and individual assets
+            </p>
+          </div>
+          <div className="flex gap-4">
+            <Button variant="outline" onClick={() => navigate('/dashboard')}>
+              Back to Dashboard
+            </Button>
+            <Button onClick={handleCreateNFT}>
+              <Plus size={16} className="mr-2" /> Create NFT
+            </Button>
+          </div>
         </div>
         
-        {isAddingNFT && (
-          <Card className="glass-card mb-8">
-            <CardHeader>
-              <h2 className="text-xl font-medium">Create New NFT</h2>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="nft-title">Title</Label>
-                    <Input 
-                      id="nft-title" 
-                      value={newNFT.title}
-                      onChange={(e) => setNewNFT({...newNFT, title: e.target.value})}
-                      className="bg-dark-secondary border-white/10"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="nft-price">Price (ETH)</Label>
-                    <Input 
-                      id="nft-price" 
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={newNFT.price}
-                      onChange={(e) => setNewNFT({...newNFT, price: parseFloat(e.target.value)})}
-                      className="bg-dark-secondary border-white/10"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="nft-image">Image URL</Label>
-                    <Input 
-                      id="nft-image" 
-                      value={newNFT.image}
-                      onChange={(e) => setNewNFT({...newNFT, image: e.target.value})}
-                      className="bg-dark-secondary border-white/10"
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <Label htmlFor="nft-description">Description</Label>
-                  <Textarea 
-                    id="nft-description" 
-                    rows={6}
-                    value={newNFT.description}
-                    onChange={(e) => setNewNFT({...newNFT, description: e.target.value})}
-                    className="bg-dark-secondary border-white/10 h-full"
-                  />
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button 
-                variant="primary" 
-                onClick={handleAddNFT}
-              >
-                Add NFT to Collection
-              </Button>
-            </CardFooter>
-          </Card>
-        )}
-        
-        <Card className="glass-card">
-          <CardHeader>
-            <h2 className="text-xl font-medium">NFT Collection</h2>
-            <p className="text-pi-muted">Manage your NFT offerings for the marketplace</p>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Image</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Price (ETH)</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {nfts.map((nft) => (
-                    <TableRow key={nft.id}>
-                      <TableCell>
-                        <div className="h-16 w-16 rounded overflow-hidden bg-dark-secondary flex items-center justify-center">
-                          {nft.image ? (
-                            <img src={nft.image} alt={nft.title} className="h-full w-full object-cover" />
-                          ) : (
-                            <Image className="text-pi-muted" size={24} />
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{nft.title}</TableCell>
-                      <TableCell className="max-w-xs">
-                        <p className="truncate">{nft.description}</p>
-                      </TableCell>
-                      <TableCell>{nft.price.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          nft.status === 'available' 
-                            ? 'bg-green-500/20 text-green-300' 
-                            : 'bg-purple-500/20 text-purple-300'
-                        }`}>
-                          {nft.status === 'available' ? 'Available' : 'Sold'}
+        <div className="glass-card rounded-xl p-6 mb-8">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-6">
+              <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
+              <TabsTrigger value="collections">Collections</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="marketplace" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {nfts.map(nft => (
+                  <div key={nft.id} className="glass-card rounded-lg overflow-hidden border border-white/10">
+                    <div className="h-48 bg-dark-secondary overflow-hidden relative">
+                      <img 
+                        src={nft.imageUrl} 
+                        alt={nft.title} 
+                        className="w-full h-full object-cover transition-transform hover:scale-105"
+                      />
+                    </div>
+                    <div className="p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-medium text-lg">{nft.title}</h3>
+                        <span className="flex items-center bg-dark-accent px-2 py-1 rounded text-sm">
+                          <DollarSign size={14} className="text-amber-400 mr-1" /> 
+                          {nft.price} ETH
                         </span>
-                      </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="sm" className="inline-flex items-center">
+                      </div>
+                      
+                      <p className="text-pi-muted text-sm mb-4 line-clamp-2">
+                        {nft.description}
+                      </p>
+                      
+                      <div className="flex items-center text-xs text-pi-muted mb-4">
+                        <Tag size={14} className="mr-1" />
+                        <span>{nft.collection} #{nft.tokenId}</span>
+                      </div>
+                      
+                      <div className="flex gap-2 justify-end">
+                        <Button variant="outline" size="sm" onClick={() => handleEditNFT(nft)}>
                           <Edit size={14} className="mr-1" /> Edit
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="inline-flex items-center text-red-500 hover:text-red-400"
-                          onClick={() => handleDeleteNFT(nft.id)}
-                        >
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteNFT(nft.id)}>
                           <Trash2 size={14} className="mr-1" /> Delete
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="collections">
+              <div className="text-center py-12">
+                <Package size={48} className="mx-auto text-pi-muted mb-4" />
+                <h3 className="text-xl font-medium mb-2">Collection Management Coming Soon</h3>
+                <p className="text-pi-muted max-w-md mx-auto">
+                  This feature is currently in development. Check back soon for the ability to manage your NFT collections.
+                </p>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="analytics">
+              <div className="text-center py-12">
+                <Package size={48} className="mx-auto text-pi-muted mb-4" />
+                <h3 className="text-xl font-medium mb-2">Analytics Coming Soon</h3>
+                <p className="text-pi-muted max-w-md mx-auto">
+                  This feature is currently in development. Check back soon for detailed NFT analytics.
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
+
+      {/* NFT Form Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="bg-dark-secondary border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle>{isEditing ? 'Edit NFT' : 'Create New NFT'}</DialogTitle>
+            <DialogDescription>
+              {isEditing 
+                ? 'Update the details of your existing NFT' 
+                : 'Fill in the details to create a new NFT'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={currentNFT.title || ''}
+                onChange={(e) => setCurrentNFT({...currentNFT, title: e.target.value})}
+                placeholder="Enter NFT title"
+                className="bg-dark border-gray-700"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={currentNFT.description || ''}
+                onChange={(e) => setCurrentNFT({...currentNFT, description: e.target.value})}
+                placeholder="Enter a description for your NFT"
+                className="bg-dark border-gray-700 min-h-24"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="price">Price (ETH)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={currentNFT.price || ''}
+                  onChange={(e) => setCurrentNFT({...currentNFT, price: parseFloat(e.target.value)})}
+                  placeholder="0.00"
+                  className="bg-dark border-gray-700"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="collection">Collection</Label>
+                <Input
+                  id="collection"
+                  value={currentNFT.collection || ''}
+                  onChange={(e) => setCurrentNFT({...currentNFT, collection: e.target.value})}
+                  placeholder="Collection name"
+                  className="bg-dark border-gray-700"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="imageUrl">Image URL</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="imageUrl"
+                  value={currentNFT.imageUrl || ''}
+                  onChange={(e) => setCurrentNFT({...currentNFT, imageUrl: e.target.value})}
+                  placeholder="https://example.com/image.jpg"
+                  className="bg-dark border-gray-700 flex-1"
+                />
+                <Button type="button" variant="outline" className="flex-shrink-0">
+                  <Image size={16} className="mr-2" /> Browse
+                </Button>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">
+                {isEditing ? 'Update NFT' : 'Create NFT'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
