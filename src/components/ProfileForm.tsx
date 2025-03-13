@@ -10,32 +10,28 @@ import { User } from 'lucide-react';
 import { Profile } from '@/hooks/useProfile';
 
 export const businessTypes = [
-  'Sole Proprietorship',
-  'Limited Liability Company (LLC)',
-  'Corporation',
+  'Sole proprietor',
+  'S Corp',
+  'C Corp',
+  'LLC',
   'Partnership',
-  'Non-profit',
-  'Freelancer',
-  'Other'
+  'Independent Contractor',
+  'P.I.E student'
 ];
 
 export const industries = [
-  'Technology',
-  'Finance',
-  'Healthcare',
-  'Education',
-  'Retail',
-  'Manufacturing',
-  'Entertainment',
-  'Real Estate',
-  'Consulting',
-  'Marketing',
-  'Legal',
-  'Art & Design',
-  'Wellness & Health',
-  'Spirituality',
-  'Astrology',
-  'Other'
+  'Influencer',
+  'Educator',
+  'Astrologer',
+  'Spiritualist',
+  'Gamer',
+  'Sports/Fitness',
+  'Cooking',
+  'Fashion',
+  'Modeling',
+  'Film',
+  'Adult',
+  'Undecided'
 ];
 
 interface ProfileFormProps {
@@ -95,16 +91,14 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
       let query;
       
       if (isCreate) {
-        // Create a new profile
         query = supabase
           .from('profiles')
           .insert({
             id: userId,
             ...profileData,
-            date_of_birth: new Date().toISOString(), // Required field
+            date_of_birth: new Date().toISOString(),
           });
       } else {
-        // Update existing profile
         query = supabase
           .from('profiles')
           .update(profileData)

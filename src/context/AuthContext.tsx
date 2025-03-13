@@ -34,13 +34,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const currentPath = location.pathname;
       
       if (user) {
-        // User is authenticated, redirect to dashboard from public pages
-        if (currentPath === '/' || currentPath === '/create-profile') {
+        // Check if the user has a profile
+        if (!profile && currentPath !== '/create-profile') {
+          // If the user doesn't have a profile and is not already on the create profile page, redirect them
+          navigate('/create-profile');
+        } else if (profile && (currentPath === '/' || currentPath === '/create-profile')) {
+          // If the user has a profile and is on the home or create profile page, redirect to dashboard
           navigate('/dashboard');
         }
       }
     }
-  }, [user, sessionLoading, profileLoading, navigate, location.pathname]);
+  }, [user, profile, sessionLoading, profileLoading, navigate, location.pathname]);
 
   const signIn = async (email: string, password: string) => {
     try {

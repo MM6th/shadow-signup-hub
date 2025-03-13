@@ -8,6 +8,7 @@ import { AuthProvider } from "./context/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import UpdateProfile from "./pages/UpdateProfile";
+import CreateProfile from "./pages/CreateProfile";
 import Dashboard from "./pages/Dashboard";
 import Marketplace from "./pages/Marketplace";
 import CreateProduct from "./pages/CreateProduct";
@@ -56,13 +57,12 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<PublicRoute><Index /></PublicRoute>} />
       <Route path="/update-profile" element={<ProtectedRoute><UpdateProfile /></ProtectedRoute>} />
+      <Route path="/create-profile" element={<ProtectedRoute><CreateProfile /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
       <Route path="/create-product" element={<ProtectedRoute><CreateProduct /></ProtectedRoute>} />
       <Route path="/edit-product/:productId" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
       <Route path="/video-conference/:appointmentId" element={<ProtectedRoute><VideoConferencePage /></ProtectedRoute>} />
-      {/* Add a redirect for the create-profile route to dashboard */}
-      <Route path="/create-profile" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
