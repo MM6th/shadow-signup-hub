@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -204,7 +205,7 @@ export const useNFTOperations = () => {
     
     try {
       setIsLoading(true);
-      console.log("Deleting NFT with ID:", nftId);
+      console.log("Starting deletion process for NFT ID:", nftId);
       
       // First, fetch the NFT to get file information
       const { data: nftData, error: fetchError } = await supabase
@@ -220,29 +221,53 @@ export const useNFTOperations = () => {
       }
       
       const nft = nftData as unknown as NFT;
-      let filesDeletionSuccessful = true;
+      
+      // Track file deletion status
+      const fileDeletionResults = {
+        imageDeleted: false,
+        additionalFileDeleted: true // Default to true as there might not be an additional file
+      };
       
       // Delete the main image if it exists
       if (nft.imageurl) {
-        console.log("Attempting to delete image:", nft.imageurl);
-        const imageDeleted = await deleteFileFromStorage(nft.imageurl);
-        if (!imageDeleted) {
+        console.log("Attempting to delete image file:", nft.imageurl);
+        fileDeletionResults.imageDeleted = await deleteFileFromStorage(nft.imageurl);
+        
+        if (!fileDeletionResults.imageDeleted) {
           console.warn("Failed to delete image file:", nft.imageurl);
-          filesDeletionSuccessful = false;
+        } else {
+          console.log("Successfully deleted image file");
         }
       }
       
       // Delete the additional file if it exists (for non-image content types)
       if (nft.file_url && nft.content_type !== 'image') {
         console.log("Attempting to delete additional file:", nft.file_url);
-        const fileDeleted = await deleteFileFromStorage(nft.file_url);
-        if (!fileDeleted) {
+        fileDeletionResults.additionalFileDeleted = await deleteFileFromStorage(nft.file_url);
+        
+        if (!fileDeletionResults.additionalFileDeleted) {
           console.warn("Failed to delete additional file:", nft.file_url);
-          filesDeletionSuccessful = false;
+        } else {
+          console.log("Successfully deleted additional file");
         }
       }
       
-      // Delete the NFT record from the database
+      // List Supabase buckets for debugging
+      const { data: buckets } = await supabase.storage.listBuckets();
+      console.log("Available storage buckets:", buckets?.map(b => b.name).join(', ') || 'none');
+      
+      // Delete any transactions related to this NFT (if cascade delete is not set up)
+      const { error: txError } = await supabase
+        .from('nft_transactions')
+        .delete()
+        .eq('nft_id', nftId);
+      
+      if (txError) {
+        console.error("Error deleting related transactions:", txError);
+        // Continue with deletion even if this fails
+      }
+      
+      // Finally delete the NFT record from the database
       const { error } = await supabase
         .from('nfts')
         .delete()
@@ -250,31 +275,35 @@ export const useNFTOperations = () => {
         .eq('owner_id', user.id);
       
       if (error) {
-        console.error("Error from Supabase during delete:", error);
+        console.error("Error deleting NFT record:", error);
         throw error;
       }
       
-      console.log("NFT deletion successful, updating local state");
+      console.log("NFT record deleted successfully, updating local state");
       
       // Update the local state to remove the deleted NFT
       setNfts(prevNfts => prevNfts.filter(nft => nft.id !== nftId));
       
       // Provide appropriate feedback based on file deletion success
-      if (!filesDeletionSuccessful) {
+      if (!fileDeletionResults.imageDeleted || !fileDeletionResults.additionalFileDeleted) {
         toast({
           title: 'NFT Deleted with Warnings',
-          description: 'The NFT was removed but there were issues deleting some associated files.',
+          description: 'The NFT was removed from the database, but there were issues deleting some associated files.',
           variant: 'default',
         });
+        
+        console.warn("NFT deletion partially successful - database record removed but file deletion had issues");
+        return true; // Still return true as the NFT record was deleted
       } else {
         toast({
           title: 'NFT Deleted',
           description: 'The NFT has been successfully removed with all associated files',
           variant: 'default',
         });
+        
+        console.log("NFT deletion completely successful");
+        return true;
       }
-      
-      return true;
     } catch (error) {
       console.error('Error deleting NFT:', error);
       toast({

@@ -54,50 +54,75 @@ export const uploadImage = async (file: File, folder = 'nft-images'): Promise<st
   return result.url;
 };
 
-// Improved utility function to delete a file from storage
+// Completely rewritten utility function to delete a file from storage
 export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> => {
+  if (!fileUrl) {
+    console.error("Cannot delete file: URL is empty");
+    return false;
+  }
+  
+  console.log("Attempting to delete file:", fileUrl);
+  
   try {
-    if (!fileUrl) {
-      console.error("Cannot delete file: URL is empty");
+    // First, determine if this is a Supabase URL
+    if (!fileUrl.includes('supabase')) {
+      console.error("URL does not appear to be a Supabase URL:", fileUrl);
       return false;
     }
     
-    console.log("Attempting to delete file:", fileUrl);
+    // Extract bucket and filename from URL
+    // Pattern 1: https://[projectref].supabase.co/storage/v1/object/public/[bucket]/[filename]
+    let bucketName: string | null = null;
+    let fileName: string | null = null;
     
-    // Extract bucket and file name from URL
-    // The URL format is like: https://uhqeuhysxkzptbvxgnvt.supabase.co/storage/v1/object/public/profile_NFT_images/filename.ext
-    const matches = fileUrl.match(/\/public\/([^\/]+)\/([^\/]+)$/);
+    // Try pattern 1 (full public URL)
+    const publicUrlPattern = /\/storage\/v1\/object\/public\/([^\/]+)\/(.+)$/;
+    const publicMatch = fileUrl.match(publicUrlPattern);
     
-    if (!matches || matches.length !== 3) {
-      console.error("Could not parse file URL for deletion, trying alternative pattern:", fileUrl);
-      // Try alternative pattern
-      const altMatches = fileUrl.match(/\/([^\/]+)\/([^\/]+)$/);
-      if (!altMatches || altMatches.length !== 3) {
-        console.error("Could not parse file URL using alternative pattern:", fileUrl);
-        return false;
+    if (publicMatch && publicMatch.length === 3) {
+      bucketName = publicMatch[1];
+      fileName = publicMatch[2];
+      console.log(`Parsed URL (public format): bucket=${bucketName}, file=${fileName}`);
+    } else {
+      // Try pattern 2 (direct storage path)
+      const directPathPattern = /\/([^\/]+)\/([^\/]+)$/;
+      const directMatch = fileUrl.match(directPathPattern);
+      
+      if (directMatch && directMatch.length === 3) {
+        bucketName = directMatch[1];
+        fileName = directMatch[2];
+        console.log(`Parsed URL (direct path): bucket=${bucketName}, file=${fileName}`);
       }
-      
-      const bucketName = altMatches[1];
-      const fileName = altMatches[2];
-      
-      console.log(`Using alternative pattern - Deleting file from storage: bucket=${bucketName}, file=${fileName}`);
-      
-      const { error } = await supabase.storage
-        .from(bucketName)
-        .remove([fileName]);
-        
-      if (error) {
-        console.error("Error removing file from storage:", error);
-        return false;
-      }
-      
-      return true;
     }
     
-    const bucketName = matches[1];
-    const fileName = matches[2];
+    // If we couldn't extract both bucket and filename, fail
+    if (!bucketName || !fileName) {
+      console.error("Could not extract bucket and filename from URL:", fileUrl);
+      console.error("This may indicate the file is not stored in Supabase Storage");
+      return false;
+    }
     
-    console.log(`Deleting file from storage: bucket=${bucketName}, file=${fileName}`);
+    // Special handling for known bucket prefixes
+    if (bucketName.startsWith('profile_NFT_')) {
+      // This is a valid bucket name format
+    } else if (['images', 'videos', 'books', 'audios'].includes(bucketName)) {
+      // Convert to the proper bucket format
+      bucketName = `profile_NFT_${bucketName}`;
+      console.log(`Adjusted bucket name to: ${bucketName}`);
+    }
+    
+    // Check if this bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(b => b.name === bucketName);
+    
+    if (!bucketExists) {
+      console.error(`Bucket "${bucketName}" does not exist. Available buckets:`, 
+        buckets?.map(b => b.name).join(', ') || 'none');
+      return false;
+    }
+    
+    // Now delete the file
+    console.log(`Deleting file from bucket "${bucketName}": ${fileName}`);
     
     const { error } = await supabase.storage
       .from(bucketName)
@@ -111,7 +136,7 @@ export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> =
     console.log(`Successfully deleted file from bucket ${bucketName}: ${fileName}`);
     return true;
   } catch (error) {
-    console.error("Error deleting file:", error);
+    console.error("Unexpected error during file deletion:", error);
     return false;
   }
 };
