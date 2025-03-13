@@ -7,26 +7,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface AppointmentRequest {
-  productId: string;
-  productTitle: string;
-  sellerId: string;
-  buyerId: string;
-  buyerName: string;
-  appointmentDate: string;
-  appointmentTime: string;
-}
-
-interface GetAppointmentsRequest {
-  userId: string;
-  isSeller: boolean;
-}
-
-interface UpdateAppointmentStatusRequest {
-  appointmentId: string;
-  status: 'scheduled' | 'completed' | 'cancelled';
-}
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -34,200 +14,22 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-    
-    if (req.method === "POST") {
-      // Create a new appointment
-      const appointment: AppointmentRequest = await req.json();
-      
-      console.log("Creating appointment:", appointment);
-      
-      // Insert the appointment into the database
-      const { data: appointmentData, error: appointmentError } = await supabaseAdmin
-        .from('appointments')
-        .insert({
-          product_id: appointment.productId,
-          product_title: appointment.productTitle,
-          seller_id: appointment.sellerId,
-          buyer_id: appointment.buyerId,
-          buyer_name: appointment.buyerName,
-          appointment_date: appointment.appointmentDate,
-          appointment_time: appointment.appointmentTime,
-          status: 'scheduled'
-        })
-        .select()
-        .single();
-      
-      if (appointmentError) {
-        console.error("Error creating appointment:", appointmentError);
-        return new Response(
-          JSON.stringify({ 
-            error: appointmentError.message || "Failed to create appointment" 
-          }),
-          { 
-            status: 400, 
-            headers: { 
-              "Content-Type": "application/json",
-              ...corsHeaders 
-            } 
-          }
-        );
-      }
-      
-      return new Response(
-        JSON.stringify({ 
-          message: "Appointment created successfully",
-          appointmentId: appointmentData.id
-        }),
-        { 
-          status: 200, 
-          headers: { 
-            "Content-Type": "application/json",
-            ...corsHeaders 
-          } 
-        }
-      );
-    } else if (req.method === "GET") {
-      // Get appointments for a user
-      const params: GetAppointmentsRequest = await req.json();
-      const { userId, isSeller } = params;
-      
-      if (!userId) {
-        return new Response(
-          JSON.stringify({ error: "Missing userId parameter" }),
-          { 
-            status: 400, 
-            headers: { 
-              "Content-Type": "application/json",
-              ...corsHeaders 
-            } 
-          }
-        );
-      }
-      
-      console.log(`Fetching appointments for user ${userId} (${isSeller ? "seller" : "buyer"})`);
-      
-      // Fetch appointments from the database
-      let query = supabaseAdmin
-        .from('appointments')
-        .select('*');
-        
-      if (isSeller) {
-        query = query.eq('seller_id', userId);
-      } else {
-        query = query.eq('buyer_id', userId);
-      }
-      
-      const { data: appointmentsData, error: appointmentsError } = await query
-        .order('appointment_date', { ascending: true });
-      
-      if (appointmentsError) {
-        console.error("Error fetching appointments:", appointmentsError);
-        return new Response(
-          JSON.stringify({ 
-            error: appointmentsError.message || "Failed to fetch appointments" 
-          }),
-          { 
-            status: 400, 
-            headers: { 
-              "Content-Type": "application/json",
-              ...corsHeaders 
-            } 
-          }
-        );
-      }
-      
-      // Transform data format for the frontend
-      const appointments = appointmentsData.map(apt => ({
-        id: apt.id,
-        productTitle: apt.product_title,
-        customerName: apt.buyer_name,
-        appointmentDate: apt.appointment_date,
-        appointmentTime: apt.appointment_time,
-        status: apt.status
-      }));
-      
-      return new Response(
-        JSON.stringify({ appointments }),
-        { 
-          status: 200, 
-          headers: { 
-            "Content-Type": "application/json",
-            ...corsHeaders 
-          } 
-        }
-      );
-    } else if (req.method === "PATCH") {
-      // Update appointment status
-      const { appointmentId, status }: UpdateAppointmentStatusRequest = await req.json();
-      
-      if (!appointmentId || !status) {
-        return new Response(
-          JSON.stringify({ error: "Missing required parameters" }),
-          { 
-            status: 400, 
-            headers: { 
-              "Content-Type": "application/json",
-              ...corsHeaders 
-            } 
-          }
-        );
-      }
-      
-      console.log(`Updating appointment ${appointmentId} status to ${status}`);
-      
-      const { data, error } = await supabaseAdmin
-        .from('appointments')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', appointmentId)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error("Error updating appointment:", error);
-        return new Response(
-          JSON.stringify({ 
-            error: error.message || "Failed to update appointment" 
-          }),
-          { 
-            status: 400, 
-            headers: { 
-              "Content-Type": "application/json",
-              ...corsHeaders 
-            } 
-          }
-        );
-      }
-      
-      return new Response(
-        JSON.stringify({ 
-          message: "Appointment updated successfully",
-          appointment: data
-        }),
-        { 
-          status: 200, 
-          headers: { 
-            "Content-Type": "application/json",
-            ...corsHeaders 
-          } 
-        }
-      );
-    }
+    const message = "The appointments feature has been removed";
+    console.log(message);
     
     return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
+      JSON.stringify({ 
+        message,
+        status: "removed" 
+      }),
       { 
-        status: 405, 
+        status: 200, 
         headers: { 
           "Content-Type": "application/json",
           ...corsHeaders 
         } 
       }
     );
-    
   } catch (error) {
     console.error("Error in appointments function:", error);
     

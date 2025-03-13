@@ -6,9 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
 
 interface AppointmentSchedulerProps {
   onScheduleSelected?: (date: Date, timeSlot: string) => void;
@@ -25,16 +23,12 @@ const TIME_SLOTS = [
 
 const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({ 
   onScheduleSelected, 
-  productId, 
-  productTitle, 
-  sellerId, 
   onSchedulingComplete 
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -43,57 +37,30 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   const handleTimeSelect = async (timeSlot: string) => {
     setSelectedTimeSlot(timeSlot);
+    setIsSubmitting(true);
     
-    if (selectedDate) {
-      // Call the callback if provided (for backward compatibility)
-      if (onScheduleSelected) {
+    try {
+      if (selectedDate && onScheduleSelected) {
         onScheduleSelected(selectedDate, timeSlot);
-      }
-      
-      // If we have product info, handle the appointment creation
-      if (productId && sellerId && user && productTitle) {
-        try {
-          setIsSubmitting(true);
-          
-          const appointmentData = {
-            product_id: productId,
-            product_title: productTitle,
-            seller_id: sellerId,
-            buyer_id: user.id,
-            buyer_name: user.user_metadata?.full_name || user.email,
-            appointment_date: format(selectedDate, 'yyyy-MM-dd'),
-            appointment_time: timeSlot,
-            status: 'scheduled'
-          };
-          
-          const { data, error } = await supabase
-            .from('appointments')
-            .insert(appointmentData)
-            .select()
-            .single();
-            
-          if (error) throw error;
-          
-          toast({
-            title: "Appointment Scheduled",
-            description: "Your appointment has been successfully scheduled.",
-          });
-          
-          if (onSchedulingComplete) {
-            onSchedulingComplete();
-          }
-          
-        } catch (error: any) {
-          console.error('Error scheduling appointment:', error);
-          toast({
-            title: "Error",
-            description: error.message || "Failed to schedule appointment",
-            variant: "destructive",
-          });
-        } finally {
-          setIsSubmitting(false);
+        
+        toast({
+          title: "Appointment Scheduled",
+          description: "Your appointment has been successfully scheduled.",
+        });
+        
+        if (onSchedulingComplete) {
+          onSchedulingComplete();
         }
       }
+    } catch (error: any) {
+      console.error('Error scheduling appointment:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to schedule appointment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
