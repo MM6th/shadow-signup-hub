@@ -9,8 +9,8 @@ export interface NFT {
   title: string;
   description: string;
   price: number;
-  imageUrl: string;
-  tokenId: string | null;
+  imageurl: string; // Changed from imageUrl to imageurl to match DB column
+  tokenid: string | null; // Changed from tokenId to tokenid to match DB column
   collection: string;
   created_at: string;
   owner_id: string;
@@ -98,7 +98,7 @@ export const useNFT = () => {
     }
   };
 
-  const createNFT = async (nftData: Omit<NFT, 'id' | 'created_at' | 'tokenId' | 'status' | 'owner_id'>) => {
+  const createNFT = async (nftData: Omit<NFT, 'id' | 'created_at' | 'tokenid' | 'status' | 'owner_id'>) => {
     if (!user) {
       toast({
         title: 'Authentication required',
@@ -112,13 +112,14 @@ export const useNFT = () => {
       setIsLoading(true);
       
       // First, store the NFT metadata in our database
+      // Ensure property names match the database column names
       const { data, error } = await supabase
         .from('nfts')
         .insert({
           title: nftData.title,
           description: nftData.description,
           price: nftData.price,
-          imageUrl: nftData.imageUrl,
+          imageurl: nftData.imageurl, // Changed from imageUrl to imageurl
           collection: nftData.collection,
           owner_id: user.id,
           blockchain: nftData.blockchain || 'ethereum',
@@ -218,10 +219,11 @@ export const useNFT = () => {
       const tokenId = Math.floor(Math.random() * 1000000).toString();
       
       // Update the NFT with token ID and set status to minted
+      // Make sure to use 'tokenid' (not 'tokenId') to match the database column
       const { data, error } = await supabase
         .from('nfts')
         .update({ 
-          tokenId, 
+          tokenid: tokenId, // Changed from tokenId to tokenid
           status: 'minted' 
         })
         .eq('id', nftId)
