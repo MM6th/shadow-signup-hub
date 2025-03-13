@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -325,6 +326,7 @@ export const useNFT = () => {
         
       if (error) throw error;
       
+      console.log(`Fetched ${data.length} NFTs for collection "${collectionName}":`, data);
       return data as unknown as NFT[];
     } catch (error) {
       console.error('Error fetching collection NFTs:', error);

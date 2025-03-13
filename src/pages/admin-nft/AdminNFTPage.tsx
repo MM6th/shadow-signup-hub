@@ -46,8 +46,18 @@ export const AdminNFTPage: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      fetchNFTs(user.id);
-      fetchCollections(user.id);
+      // Force a complete refresh of NFTs and collections data
+      fetchNFTs(user.id).then(() => {
+        console.log("NFTs fetched successfully");
+      }).catch(error => {
+        console.error("Error fetching NFTs:", error);
+      });
+      
+      fetchCollections(user.id).then(() => {
+        console.log("Collections fetched successfully");
+      }).catch(error => {
+        console.error("Error fetching collections:", error);
+      });
       
       const mockSalesData = Array.from({ length: 30 }, (_, i) => {
         const date = new Date();
@@ -92,15 +102,25 @@ export const AdminNFTPage: React.FC = () => {
   const viewCollectionDetails = async (collection: NFTCollection) => {
     setSelectedCollection(collection);
     
-    if (!collection.nfts) {
+    try {
+      // Always fetch the latest NFTs for this collection, even if we have them cached
       const collectionNFTs = await getNFTsByCollection(collection.name);
+      console.log(`Fetched ${collectionNFTs.length} NFTs for collection ${collection.name}:`, collectionNFTs);
+      
       setSelectedCollection({
         ...collection,
         nfts: collectionNFTs
       });
+      
+      setIsCollectionDetailsOpen(true);
+    } catch (error) {
+      console.error(`Error fetching NFTs for collection ${collection.name}:`, error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load collection NFTs',
+        variant: 'destructive',
+      });
     }
-    
-    setIsCollectionDetailsOpen(true);
   };
 
   const closeNFTDialog = () => {
@@ -110,10 +130,25 @@ export const AdminNFTPage: React.FC = () => {
 
   const refreshData = async () => {
     if (user) {
-      await Promise.all([
-        fetchNFTs(user.id),
-        fetchCollections(user.id)
-      ]);
+      try {
+        // Ensure we completely refresh all data
+        const [updatedNFTs, updatedCollections] = await Promise.all([
+          fetchNFTs(user.id),
+          fetchCollections(user.id)
+        ]);
+        
+        console.log("Data refreshed successfully:", {
+          nfts: updatedNFTs.length,
+          collections: updatedCollections.length
+        });
+      } catch (error) {
+        console.error("Error refreshing data:", error);
+        toast({
+          title: 'Error',
+          description: 'Failed to refresh data',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
