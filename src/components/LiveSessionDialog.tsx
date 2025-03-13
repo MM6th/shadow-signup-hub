@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLiveSessions } from '@/hooks/useLiveSessions';
+import { useToast } from '@/hooks/use-toast';
 
 interface LiveSessionDialogProps {
   open: boolean;
@@ -16,11 +17,51 @@ const LiveSessionDialog: React.FC<LiveSessionDialogProps> = ({
   onOpenChange 
 }) => {
   const [title, setTitle] = useState('');
+  const [isRequestingPermissions, setIsRequestingPermissions] = useState(false);
   const { startLiveSession, isLoading } = useLiveSessions();
+  const { toast } = useToast();
+
+  // Request camera permissions before starting the session
+  const requestMediaPermissions = async (): Promise<boolean> => {
+    setIsRequestingPermissions(true);
+    
+    try {
+      // First try to access the camera and microphone
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
+      
+      // If we've gotten this far, permissions were granted
+      // Clean up the stream we just created
+      stream.getTracks().forEach(track => track.stop());
+      
+      setIsRequestingPermissions(false);
+      return true;
+    } catch (error) {
+      console.error('Error requesting camera permissions:', error);
+      toast({
+        title: 'Permission Error',
+        description: 'Camera and microphone access is required for live sessions. Please enable permissions and try again.',
+        variant: 'destructive',
+      });
+      
+      setIsRequestingPermissions(false);
+      return false;
+    }
+  };
 
   const handleStartSession = async () => {
     if (!title.trim()) return;
     
+    // First request permissions
+    const permissionsGranted = await requestMediaPermissions();
+    
+    if (!permissionsGranted) {
+      return;
+    }
+    
+    // Then start the session
     const session = await startLiveSession(title);
     
     if (session) {
@@ -65,9 +106,10 @@ const LiveSessionDialog: React.FC<LiveSessionDialogProps> = ({
           <Button 
             type="button" 
             onClick={handleStartSession}
-            disabled={!title.trim() || isLoading}
+            disabled={!title.trim() || isLoading || isRequestingPermissions}
           >
-            {isLoading ? 'Starting...' : 'Go Live'}
+            {isRequestingPermissions ? 'Requesting Permissions...' : 
+             isLoading ? 'Starting...' : 'Go Live'}
           </Button>
         </DialogFooter>
       </DialogContent>

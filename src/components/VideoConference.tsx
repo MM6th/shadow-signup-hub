@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Video, Mic, MicOff, VideoOff, Phone, MessageSquare, Users, Share } from 'lucide-react';
@@ -19,12 +20,14 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   const { toast } = useToast();
   const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [participants, setParticipants] = useState<string[]>([]);
   const [chatMessages, setChatMessages] = useState<Array<{sender: string, message: string}>>([]);
   const [messageInput, setMessageInput] = useState('');
   const [showChat, setShowChat] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -35,15 +38,35 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   useEffect(() => {
     const initWebRTC = async () => {
       try {
+        setIsInitializing(true);
+        console.log('Initializing WebRTC...');
+        
+        // Request camera and microphone permissions
+        console.log('Requesting media devices...');
         const stream = await navigator.mediaDevices.getUserMedia({ 
           video: true, 
           audio: true 
         });
         
+        console.log('Media devices granted!', stream);
+        
+        // Check if we have video tracks
+        const videoTracks = stream.getVideoTracks();
+        console.log('Video tracks:', videoTracks.length > 0 ? 'Available' : 'None available');
+        
+        if (videoTracks.length === 0) {
+          toast({
+            title: "No camera detected",
+            description: "Could not detect a camera on your device.",
+            variant: "destructive",
+          });
+        }
+        
         localStreamRef.current = stream;
         
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
+          console.log('Local video source set');
         }
         
         const configuration = { 
@@ -54,12 +77,14 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
         
         stream.getTracks().forEach(track => {
           if (peerConnectionRef.current) {
+            console.log('Adding track to peer connection:', track.kind);
             peerConnectionRef.current.addTrack(track, stream);
           }
         });
         
         peerConnectionRef.current.ontrack = (event) => {
           if (remoteVideoRef.current && event.streams && event.streams[0]) {
+            console.log('Remote video stream received');
             remoteVideoRef.current.srcObject = event.streams[0];
           }
         };
@@ -98,6 +123,7 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
           })
           .subscribe(async (status) => {
             if (status === 'SUBSCRIBED') {
+              console.log('Subscribed to channel, tracking presence');
               await channel.track({
                 user_id: user?.id || 'anonymous',
                 online_at: new Date().toISOString(),
@@ -113,7 +139,11 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
             }
           });
         
+        setIsInitializing(false);
+        setPermissionError(null);
+        
         return () => {
+          console.log('Cleaning up WebRTC...');
           channel.unsubscribe();
           
           if (peerConnectionRef.current) {
@@ -126,6 +156,15 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
         };
       } catch (error) {
         console.error('Error initializing WebRTC:', error);
+        setIsInitializing(false);
+        
+        // Set a more helpful error message
+        const errorMessage = error instanceof Error 
+          ? error.message 
+          : 'Could not access your camera or microphone';
+        
+        setPermissionError(errorMessage);
+        
         toast({
           title: "Camera/Microphone Error",
           description: "Could not access your camera or microphone. Please check permissions.",
@@ -150,6 +189,7 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
         const audioTrack = audioTracks[0];
         audioTrack.enabled = !audioTrack.enabled;
         setIsMicOn(audioTrack.enabled);
+        console.log('Mic toggled:', audioTrack.enabled);
       }
     }
   };
@@ -161,9 +201,14 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
         const videoTrack = videoTracks[0];
         videoTrack.enabled = !videoTrack.enabled;
         setIsVideoOn(videoTrack.enabled);
-        console.log('Video track enabled:', videoTrack.enabled);
+        console.log('Video track toggled:', videoTrack.enabled);
       } else {
         console.log('No video tracks found');
+        toast({
+          title: "No camera available",
+          description: "Could not detect a camera on your device.",
+          variant: "destructive",
+        });
       }
     } else {
       console.log('No local stream available');
@@ -215,6 +260,40 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
       onEndCall();
     }
   };
+
+  // Show permission error if one exists
+  if (permissionError) {
+    return (
+      <div className="glass-card p-6 flex flex-col items-center justify-center h-full">
+        <div className="text-center space-y-4">
+          <VideoOff size={48} className="mx-auto text-red-500" />
+          <h3 className="text-lg font-medium text-red-400">Camera Permission Error</h3>
+          <p className="text-pi-muted">{permissionError}</p>
+          <p className="text-pi-muted text-sm">
+            Please allow camera and microphone access in your browser settings and reload the page.
+          </p>
+          <Button onClick={handleEndCall} variant="destructive">
+            Return to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (isInitializing) {
+    return (
+      <div className="glass-card p-6 flex flex-col items-center justify-center h-full">
+        <div className="text-center space-y-4">
+          <div className="animate-spin h-10 w-10 border-4 border-pi-focus border-t-transparent rounded-full mx-auto"></div>
+          <p className="text-pi-muted">Initializing camera and microphone...</p>
+          <p className="text-pi-muted text-sm">
+            Please allow camera and microphone access when prompted by your browser.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="glass-card p-4 flex flex-col h-full">

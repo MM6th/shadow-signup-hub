@@ -14,7 +14,6 @@ import { useLiveSessions } from '@/hooks/useLiveSessions';
 import LiveSessionsTab from '@/components/LiveSessionsTab';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import NavigationBar from '@/components/NavigationBar';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -46,7 +45,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-dark">
-      <NavigationBar />
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div className="glass-card p-6 w-full md:w-auto">
@@ -68,22 +66,23 @@ const Dashboard: React.FC = () => {
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="appointments">Appointments</TabsTrigger>
-            <TabsTrigger value="live-sessions">Live Sessions</TabsTrigger>
+        <div className="flex items-center justify-between mb-4">
+          <TabsList>
+            <TabsTrigger value="products" onClick={() => setActiveTab('products')}>Products</TabsTrigger>
+            <TabsTrigger value="appointments" onClick={() => setActiveTab('appointments')}>Appointments</TabsTrigger>
+            <TabsTrigger value="live-sessions" onClick={() => setActiveTab('live-sessions')}>Live Sessions</TabsTrigger>
           </TabsList>
           
+          {activeTab === 'products' && (
+            <Button onClick={() => navigate('/create-product')} size="sm" className="ml-2">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Product
+            </Button>
+          )}
+        </div>
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsContent value="products">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gradient">Your Products</h2>
-              <Button onClick={() => navigate('/create-product')}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Product
-              </Button>
-            </div>
-            
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {isLoading ? (
                 <>
