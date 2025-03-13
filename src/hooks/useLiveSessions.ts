@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,12 +26,10 @@ export const useLiveSessions = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Fetch all active live sessions
   const fetchLiveSessions = async () => {
     try {
       setIsLoading(true);
       
-      // Modified query to avoid using the relationship that doesn't exist
       const { data: sessionsData, error } = await supabase
         .from('live_sessions')
         .select('*')
@@ -41,7 +38,6 @@ export const useLiveSessions = () => {
       
       if (error) throw error;
 
-      // After getting the sessions, fetch the profile data separately for each user_id
       const sessionsWithProfiles = await Promise.all(
         sessionsData.map(async (session) => {
           const { data: profileData, error: profileError } = await supabase
@@ -71,11 +67,11 @@ export const useLiveSessions = () => {
     }
   };
 
-  // Check if current user has an active session
   const fetchUserLiveSession = async () => {
     if (!user) return;
     
     try {
+      console.log('Fetching user live session for user:', user.id);
       const { data, error } = await supabase
         .from('live_sessions')
         .select('*')
@@ -86,13 +82,13 @@ export const useLiveSessions = () => {
       
       if (error) throw error;
       
+      console.log('User live session data:', data);
       setUserLiveSession(data || null);
     } catch (error) {
       console.error('Error fetching user live session:', error);
     }
   };
 
-  // Start a new live session
   const startLiveSession = async (title: string) => {
     if (!user) {
       toast({
@@ -106,7 +102,6 @@ export const useLiveSessions = () => {
     try {
       setIsLoading(true);
       
-      // Generate a unique room ID
       const roomId = `${user.id.substring(0, 8)}-${Date.now()}`;
       
       const { data, error } = await supabase
@@ -129,7 +124,6 @@ export const useLiveSessions = () => {
         description: 'Your live session has started successfully',
       });
       
-      // Navigate to the video conference room
       navigate(`/video-conference/${roomId}`);
       
       return data;
@@ -146,9 +140,11 @@ export const useLiveSessions = () => {
     }
   };
 
-  // End the current live session
   const endLiveSession = async () => {
-    if (!user || !userLiveSession) return;
+    if (!user || !userLiveSession) {
+      console.log('No user or active session to end');
+      return;
+    }
     
     try {
       setIsLoading(true);
@@ -159,41 +155,33 @@ export const useLiveSessions = () => {
           is_active: false,
           ended_at: new Date().toISOString()
         })
-        .eq('id', userLiveSession.id);
+        .eq('id', userLiveSession.id)
+        .eq('user_id', user.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error ending session:', error);
+        throw error;
+      }
       
+      console.log('Session ended successfully');
       setUserLiveSession(null);
       
-      toast({
-        title: 'Live Session Ended',
-        description: 'Your live session has ended',
-      });
-      
-      // Navigate back to dashboard
-      navigate('/dashboard');
+      fetchLiveSessions();
     } catch (error) {
       console.error('Error ending live session:', error);
-      toast({
-        title: 'Failed to end live session',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
-      });
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Join an existing live session
   const joinLiveSession = (roomId: string) => {
     navigate(`/video-conference/${roomId}`);
   };
 
-  // Set up realtime subscription for live sessions
   useEffect(() => {
     fetchLiveSessions();
     
-    // Set up Supabase realtime subscription
     const subscription = supabase
       .channel('live_sessions_changes')
       .on('postgres_changes', 
@@ -209,7 +197,6 @@ export const useLiveSessions = () => {
     };
   }, []);
 
-  // Get the current user's active session
   useEffect(() => {
     if (user) {
       fetchUserLiveSession();

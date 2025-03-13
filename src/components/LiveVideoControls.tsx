@@ -21,14 +21,28 @@ const LiveVideoControls: React.FC<LiveVideoControlsProps> = ({ roomId }) => {
   }, [roomId, fetchUserLiveSession]);
   
   const handleEndSession = async () => {
-    await endLiveSession();
-    
-    toast({
-      title: 'Live Session Ended',
-      description: 'Your live session has been ended successfully',
-    });
-    
-    navigate('/dashboard', { replace: true });
+    try {
+      console.log('Ending live session:', userLiveSession?.id);
+      await endLiveSession();
+      
+      toast({
+        title: 'Live Session Ended',
+        description: 'Your live session has been ended successfully',
+      });
+      
+      // Force a refresh of the session data
+      await fetchUserLiveSession();
+      
+      // Navigate back to dashboard
+      navigate('/dashboard', { replace: true });
+    } catch (error) {
+      console.error('Error ending session:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to end the live session. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
   
   // Only show controls if this is the user's active live session
