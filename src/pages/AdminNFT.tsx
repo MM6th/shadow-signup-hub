@@ -132,10 +132,19 @@ const AdminNFT: React.FC = () => {
       return;
     }
     
-    if (!currentNFT.title || !currentNFT.description || !currentNFT.price || !currentNFT.collection) {
+    if (!currentNFT.title || !currentNFT.description || !currentNFT.price) {
       toast({
         title: 'Missing Information',
         description: 'Please fill out all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (!currentNFT.collection && collections.length > 0) {
+      toast({
+        title: 'Collection Required',
+        description: 'Please select a collection for your NFT',
         variant: 'destructive',
       });
       return;
@@ -155,7 +164,7 @@ const AdminNFT: React.FC = () => {
         description: currentNFT.description,
         price: currentNFT.price,
         imageurl: imageUrl!,
-        collection: currentNFT.collection,
+        collection: currentNFT.collection || 'Uncategorized',
         blockchain: currentNFT.blockchain || 'ethereum'
       });
       
@@ -247,6 +256,20 @@ const AdminNFT: React.FC = () => {
     
     await listNFTForSale(nftId, price);
     fetchNFTs();
+  };
+
+  const handleCreateCollectionFromNFTDialog = () => {
+    setIsNFTDialogOpen(false);
+    
+    setCurrentCollection({});
+    setImageFile(null);
+    setImagePreview(null);
+    setIsCollectionDialogOpen(true);
+  };
+
+  const onCollectionCreated = () => {
+    setIsCollectionDialogOpen(false);
+    setIsNFTDialogOpen(true);
   };
 
   if (authLoading) {
@@ -622,7 +645,18 @@ const AdminNFT: React.FC = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="collection">Collection</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="collection">Collection</Label>
+                <Button 
+                  type="button"
+                  variant="link" 
+                  size="sm" 
+                  className="text-pi-focus h-6 p-0"
+                  onClick={handleCreateCollectionFromNFTDialog}
+                >
+                  <Plus size={14} className="mr-1" /> Create New Collection
+                </Button>
+              </div>
               <select
                 id="collection"
                 value={currentNFT.collection || ''}
@@ -630,10 +664,18 @@ const AdminNFT: React.FC = () => {
                 className="flex h-10 w-full rounded-md border border-input bg-dark px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">Select a collection</option>
+                {collections.length === 0 && (
+                  <option value="Uncategorized">Uncategorized</option>
+                )}
                 {collections.map(collection => (
                   <option key={collection.id} value={collection.name}>{collection.name}</option>
                 ))}
               </select>
+              {collections.length === 0 && (
+                <p className="text-xs text-amber-400 mt-1">
+                  No collections found. Create a collection or your NFT will be marked as "Uncategorized".
+                </p>
+              )}
             </div>
             
             <div className="space-y-2">
@@ -705,7 +747,12 @@ const AdminNFT: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isCollectionDialogOpen} onOpenChange={setIsCollectionDialogOpen}>
+      <Dialog open={isCollectionDialogOpen} onOpenChange={(open) => {
+        setIsCollectionDialogOpen(open);
+        if (!open && isNFTDialogOpen === false) {
+          setTimeout(() => setIsNFTDialogOpen(true), 100);
+        }
+      }}>
         <DialogContent className="bg-dark-secondary border-gray-700 text-white">
           <DialogHeader>
             <DialogTitle>Create New Collection</DialogTitle>
@@ -714,7 +761,54 @@ const AdminNFT: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={handleCollectionSubmit} className="space-y-4">
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            
+            if (!currentCollection.name || !currentCollection.description) {
+              toast({
+                title: 'Missing Information',
+                description: 'Please fill out all required fields',
+                variant: 'destructive',
+              });
+              return;
+            }
+            
+            setIsLoading(true);
+            
+            try {
+              let imageUrl = currentCollection.image_url;
+              if (imageFile) {
+                imageUrl = await uploadImage(imageFile);
+              }
+              
+              await createCollection({
+                name: currentCollection.name,
+                description: currentCollection.description,
+                image_url: imageUrl
+              });
+              
+              await fetchCollections();
+              
+              if (isNFTDialogOpen === false) {
+                onCollectionCreated();
+              } else {
+                setIsCollectionDialogOpen(false);
+              }
+              
+              setCurrentCollection({});
+              setImageFile(null);
+              setImagePreview(null);
+            } catch (error) {
+              console.error('Error saving collection:', error);
+              toast({
+                title: 'Error',
+                description: 'An error occurred while saving the collection',
+                variant: 'destructive',
+              });
+            } finally {
+              setIsLoading(false);
+            }
+          }} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Collection Name</Label>
               <Input
@@ -784,7 +878,12 @@ const AdminNFT: React.FC = () => {
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => setIsCollectionDialogOpen(false)}
+                onClick={() => {
+                  setIsCollectionDialogOpen(false);
+                  if (isNFTDialogOpen === false) {
+                    setTimeout(() => setIsNFTDialogOpen(true), 100);
+                  }
+                }}
                 disabled={isLoading}
               >
                 Cancel
