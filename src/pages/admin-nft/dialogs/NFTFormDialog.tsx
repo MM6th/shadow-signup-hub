@@ -13,8 +13,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { uploadImage } from '../utils/imageUtils';
-import { Info, Plus, Loader2 } from 'lucide-react';
+import { Info, Plus, Loader2, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const BLOCKCHAIN_OPTIONS = [
   { value: 'ethereum', label: 'Ethereum', symbol: 'ETH' },
@@ -60,6 +61,7 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   // Changed from previous implementation - now we'll store all available currencies
   // based on the selected blockchain
@@ -133,6 +135,50 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDeleteNFT = async () => {
+    if (!user || !currentNFT.id) {
+      toast({
+        title: 'Error',
+        description: 'Unable to delete NFT. Missing user or NFT ID.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('nfts')
+        .delete()
+        .eq('id', currentNFT.id)
+        .eq('owner_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'NFT Deleted',
+        description: 'Your NFT has been successfully deleted',
+      });
+      
+      setDeleteDialogOpen(false);
+      setIsOpen(false);
+      
+      // Add a delay before refreshing data to ensure DB consistency
+      setTimeout(() => {
+        refreshData();
+      }, 1000);
+    } catch (error) {
+      console.error('Error deleting NFT:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -232,91 +278,129 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[600px] bg-dark border border-pi-border">
-        <DialogHeader>
-          <DialogTitle className="text-gradient font-elixia text-2xl">
-            {isEditing ? 'Edit NFT' : 'Create New NFT'}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-[600px] bg-dark border border-pi-border">
+          <DialogHeader>
+            <DialogTitle className="text-gradient font-elixia text-2xl">
+              {isEditing ? 'Edit NFT' : 'Create New NFT'}
+            </DialogTitle>
+          </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter NFT title" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Describe your NFT" className="min-h-[120px]" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-6">
                   <FormField
                     control={form.control}
-                    name="price"
+                    name="title"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Price</FormLabel>
+                        <FormLabel>Title</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.000001" 
-                            min="0.000001" 
-                            placeholder="0.00" 
-                            {...field} 
-                          />
+                          <Input placeholder="Enter NFT title" {...field} />
                         </FormControl>
                         <FormMessage />
-                        <FormDescription className="text-xs">
-                          You can enter values as small as 0.000001
-                        </FormDescription>
                       </FormItem>
                     )}
                   />
 
                   <FormField
                     control={form.control}
-                    name="currency"
+                    name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Currency</FormLabel>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Describe your NFT" className="min-h-[120px]" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="price"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Price</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              step="0.000001" 
+                              min="0.000001" 
+                              placeholder="0.00" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                          <FormDescription className="text-xs">
+                            You can enter values as small as 0.000001
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="currency"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Currency</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                            }}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select currency" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {availableCurrencies.map((currency) => (
+                                <SelectItem key={currency.value} value={currency.value}>
+                                  {currency.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="blockchain"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Blockchain</FormLabel>
                         <Select
                           value={field.value}
                           onValueChange={(value) => {
                             field.onChange(value);
+                            const selectedBlockchain = BLOCKCHAIN_OPTIONS.find(option => option.value === value);
+                            if (selectedBlockchain) {
+                              form.setValue('currency', selectedBlockchain.symbol.toLowerCase());
+                            }
                           }}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select currency" />
+                              <SelectValue placeholder="Select blockchain" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {availableCurrencies.map((currency) => (
-                              <SelectItem key={currency.value} value={currency.value}>
-                                {currency.label}
+                            {BLOCKCHAIN_OPTIONS.map((blockchain) => (
+                              <SelectItem key={blockchain.value} value={blockchain.value}>
+                                {blockchain.label}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -325,139 +409,136 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
                       </FormItem>
                     )}
                   />
-                </div>
-              </div>
 
-              <div className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="blockchain"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Blockchain</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          const selectedBlockchain = BLOCKCHAIN_OPTIONS.find(option => option.value === value);
-                          if (selectedBlockchain) {
-                            form.setValue('currency', selectedBlockchain.symbol.toLowerCase());
-                          }
-                        }}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select blockchain" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {BLOCKCHAIN_OPTIONS.map((blockchain) => (
-                            <SelectItem key={blockchain.value} value={blockchain.value}>
-                              {blockchain.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="collection"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex justify-between items-center">
-                        <FormLabel>Collection</FormLabel>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={onCreateCollection}
-                          className="text-xs flex items-center px-2 py-1 h-auto"
-                        >
-                          <Plus size={12} className="mr-1" />
-                          Create New
-                        </Button>
-                      </div>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a collection" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {collections.map((collection) => (
-                            <SelectItem key={collection.name} value={collection.name}>
-                              {collection.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div>
-                  <FormLabel>NFT Image</FormLabel>
-                  <div className="mt-2">
-                    {imagePreview ? (
-                      <div className="relative rounded-lg overflow-hidden w-full h-40">
-                        <img
-                          src={imagePreview}
-                          alt="NFT Preview"
-                          className="w-full h-full object-cover"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="absolute bottom-2 right-2"
-                          onClick={() => {
-                            setImageFile(null);
-                            setImagePreview(null);
-                          }}
-                        >
-                          Change
-                        </Button>
-                      </div>
-                    ) : (
-                      <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-500 rounded-lg h-40 cursor-pointer hover:border-pi-focus">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <span className="text-sm text-pi-muted">Click to upload</span>
+                  <FormField
+                    control={form.control}
+                    name="collection"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex justify-between items-center">
+                          <FormLabel>Collection</FormLabel>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={onCreateCollection}
+                            className="text-xs flex items-center px-2 py-1 h-auto"
+                          >
+                            <Plus size={12} className="mr-1" />
+                            Create New
+                          </Button>
                         </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleImageChange}
-                        />
-                      </label>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a collection" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {collections.map((collection) => (
+                              <SelectItem key={collection.name} value={collection.name}>
+                                {collection.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
                     )}
+                  />
+
+                  <div>
+                    <FormLabel>NFT Image</FormLabel>
+                    <div className="mt-2">
+                      {imagePreview ? (
+                        <div className="relative rounded-lg overflow-hidden w-full h-40">
+                          <img
+                            src={imagePreview}
+                            alt="NFT Preview"
+                            className="w-full h-full object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="absolute bottom-2 right-2"
+                            onClick={() => {
+                              setImageFile(null);
+                              setImagePreview(null);
+                            }}
+                          >
+                            Change
+                          </Button>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-500 rounded-lg h-40 cursor-pointer hover:border-pi-focus">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <span className="text-sm text-pi-muted">Click to upload</span>
+                          </div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleImageChange}
+                          />
+                        </label>
+                      )}
+                    </div>
+                    <p className="text-xs text-pi-muted mt-1">
+                      Upload a high-quality image for your NFT
+                    </p>
                   </div>
-                  <p className="text-xs text-pi-muted mt-1">
-                    Upload a high-quality image for your NFT
-                  </p>
                 </div>
               </div>
-            </div>
 
-            <DialogFooter className="pt-2">
-              <div className="flex items-center space-x-2 ml-auto">
-                <Button type="button" variant="outline" onClick={onClose}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isEditing ? 'Save Changes' : 'Create NFT'}
-                </Button>
-              </div>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              <DialogFooter className="pt-2">
+                <div className="flex items-center space-x-2 ml-auto">
+                  {isEditing && (
+                    <Button 
+                      type="button" 
+                      variant="destructive" 
+                      onClick={() => setDeleteDialogOpen(true)}
+                      className="mr-auto"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete NFT
+                    </Button>
+                  )}
+                  <Button type="button" variant="outline" onClick={onClose}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isEditing ? 'Save Changes' : 'Create NFT'}
+                  </Button>
+                </div>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this NFT?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the NFT and remove any associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteNFT}
+              className="bg-destructive hover:bg-destructive/90"
+              disabled={isLoading}
+            >
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
