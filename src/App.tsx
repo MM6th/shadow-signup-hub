@@ -13,7 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Marketplace from "./pages/Marketplace";
 import CreateProduct from "./pages/CreateProduct";
 import EditProduct from "./pages/EditProduct";
-import AdminNFT from "./pages/AdminNFT";
+import AdminNFT from "./pages/admin-nft"; // Updated import path
 import { useAuth } from "./context/AuthContext";
 
 const queryClient = new QueryClient();
