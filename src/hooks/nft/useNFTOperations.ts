@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -220,8 +221,9 @@ export const useNFTOperations = () => {
       }
       
       const nft = nftData as unknown as NFT;
+      console.log("Found NFT to delete:", nft);
       
-      // Delete the NFT record from the database first - this is the most important part
+      // Delete the NFT record from the database first
       const { error } = await supabase
         .from('nfts')
         .delete()
@@ -233,27 +235,33 @@ export const useNFTOperations = () => {
         throw error;
       }
       
-      console.log("NFT record deleted successfully, updating local state");
+      console.log("NFT database record deleted successfully");
       
       // Update the local state to remove the deleted NFT
       setNfts(prevNfts => prevNfts.filter(nft => nft.id !== nftId));
       
-      // Now try to delete the associated files - we do this after the database deletion
-      // because the file deletion success is less critical
+      // Now try to delete associated files
+      let fileDeleteResults = [];
+      
+      // Delete image file if it exists
       if (nft.imageurl) {
         console.log("Attempting to delete image file:", nft.imageurl);
-        await deleteFileFromStorage(nft.imageurl);
+        const imageDeleted = await deleteFileFromStorage(nft.imageurl);
+        fileDeleteResults.push({ type: 'image', success: imageDeleted });
       }
       
-      // Delete the additional file if it exists (for non-image content types)
+      // Delete additional file if it exists (for non-image content types)
       if (nft.file_url && nft.content_type !== 'image') {
         console.log("Attempting to delete additional file:", nft.file_url);
-        await deleteFileFromStorage(nft.file_url);
+        const fileDeleted = await deleteFileFromStorage(nft.file_url);
+        fileDeleteResults.push({ type: 'file', success: fileDeleted });
       }
+      
+      console.log("File deletion results:", fileDeleteResults);
       
       toast({
         title: 'NFT Deleted',
-        description: 'The NFT has been successfully removed',
+        description: 'The NFT has been successfully removed from your collection',
         variant: 'default',
       });
       

@@ -54,7 +54,7 @@ export const uploadImage = async (file: File, folder = 'nft-images'): Promise<st
   return result.url;
 };
 
-// Modified deleteFileFromStorage function that recognizes external URLs
+// Updated deleteFileFromStorage function to handle URL types
 export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> => {
   if (!fileUrl) {
     console.error("Cannot delete file: URL is empty");
@@ -63,11 +63,10 @@ export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> =
   
   console.log("Attempting to delete file:", fileUrl);
   
-  // Check if this is a Supabase URL
+  // If this is not a Supabase URL, we can't delete it directly
+  // but report success since we're removing the reference from our database
   if (!fileUrl.includes('supabase')) {
-    console.log("URL does not appear to be a Supabase URL - likely an external URL:", fileUrl);
-    // For external URLs, we can't delete the actual file, but we'll report success
-    // since we're removing the reference from our database
+    console.log("URL is from an external source:", fileUrl);
     return true;
   }
   
@@ -83,7 +82,7 @@ export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> =
     if (publicMatch && publicMatch.length === 3) {
       bucketName = publicMatch[1];
       fileName = publicMatch[2];
-      console.log(`Parsed URL (public format): bucket=${bucketName}, file=${fileName}`);
+      console.log(`Parsed Supabase URL: bucket=${bucketName}, file=${fileName}`);
     } else {
       // Try pattern for direct storage path
       const directPathPattern = /\/([^\/]+)\/([^\/]+)$/;
@@ -92,28 +91,28 @@ export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> =
       if (directMatch && directMatch.length === 3) {
         bucketName = directMatch[1];
         fileName = directMatch[2];
-        console.log(`Parsed URL (direct path): bucket=${bucketName}, file=${fileName}`);
+        console.log(`Parsed direct path: bucket=${bucketName}, file=${fileName}`);
       }
     }
     
-    // If we couldn't extract both bucket and filename, return true since we're handling an external URL
+    // If we couldn't extract both bucket and filename, return true as we're just handling the database record
     if (!bucketName || !fileName) {
-      console.log("Could not extract bucket and filename from URL, treating as external resource:", fileUrl);
+      console.log("Could not extract bucket and filename from URL:", fileUrl);
       return true;
     }
     
-    // Check if bucket exists before attempting to delete
+    // List available buckets to help debug
     const { data: buckets } = await supabase.storage.listBuckets();
     console.log("Available storage buckets:", buckets?.map(b => b.name).join(', ') || 'none');
     
     const bucketExists = buckets?.some(b => b.name === bucketName);
     
     if (!bucketExists) {
-      console.log(`Bucket "${bucketName}" does not exist. Cannot delete file but removing reference.`);
+      console.log(`Bucket "${bucketName}" does not exist. Cannot delete file.`);
       return true;
     }
     
-    // Now delete the file
+    // Delete the file from storage
     console.log(`Deleting file from bucket "${bucketName}": ${fileName}`);
     
     const { error } = await supabase.storage
@@ -122,15 +121,13 @@ export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> =
       
     if (error) {
       console.error("Error removing file from storage:", error);
-      // Still return true as we're removing the database reference
-      return true;
+      return false;
     }
     
     console.log(`Successfully deleted file from bucket ${bucketName}: ${fileName}`);
     return true;
   } catch (error) {
     console.error("Unexpected error during file deletion:", error);
-    // Still return true as we're removing the database reference
-    return true;
+    return false;
   }
 };

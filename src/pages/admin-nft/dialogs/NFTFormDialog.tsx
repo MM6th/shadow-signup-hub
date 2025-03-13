@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -307,15 +306,13 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
       };
 
       if (isEditing && currentNFT.id) {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('nfts')
           .update({
             ...nftData,
             owner_id: user.id,
           })
-          .eq('id', currentNFT.id)
-          .select()
-          .single();
+          .eq('id', currentNFT.id);
 
         if (error) throw error;
 
@@ -324,15 +321,13 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
           description: 'Your NFT has been updated successfully',
         });
       } else {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('nfts')
           .insert({
             ...nftData,
             owner_id: user.id,
             status: 'draft',
-          })
-          .select()
-          .single();
+          });
 
         if (error) throw error;
 
@@ -342,14 +337,13 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
         });
       }
 
-      // Reset form, close dialog, and refresh data
+      // Reset form and close dialog
+      form.reset();
       setIsOpen(false);
       
-      // Important: Wait a moment to ensure Supabase has processed the change
-      // before refreshing the data
-      setTimeout(() => {
-        refreshData();
-      }, 1000);
+      // Ensure we perform a full refresh immediately after successful creation/update
+      console.log("NFT saved successfully, triggering data refresh");
+      await refreshData();
       
     } catch (error) {
       console.error('Error saving NFT:', error);

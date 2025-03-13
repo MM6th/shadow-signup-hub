@@ -42,8 +42,7 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
     }
     
     await simulateMintNFT(nftId);
-    // Add a longer delay before refreshing to ensure DB consistency
-    setTimeout(() => refreshData(), 2000);
+    await refreshData();
   };
 
   const handleListNFT = async (nftId: string, price: number) => {
@@ -57,22 +56,21 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
     }
     
     await listNFTForSale(nftId, price);
-    // Add a longer delay before refreshing to ensure DB consistency
-    setTimeout(() => refreshData(), 2000);
+    await refreshData();
   };
 
   const handleDeleteNFT = async (nftId: string) => {
     try {
       console.log("Starting NFT deletion for ID:", nftId);
       const success = await deleteNFT(nftId);
-      console.log("NFT deletion result:", success);
       
       if (success) {
         toast({
           title: 'NFT Deleted',
           description: 'The NFT has been successfully removed',
         });
-        // Ensure we refresh immediately after successful deletion
+        
+        // Force an immediate data refresh
         await refreshData();
       } else {
         toast({

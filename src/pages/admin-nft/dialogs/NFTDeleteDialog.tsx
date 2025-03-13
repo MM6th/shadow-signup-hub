@@ -32,6 +32,7 @@ export const NFTDeleteDialog: React.FC<NFTDeleteDialogProps> = ({
           <AlertDialogTitle>Are you sure you want to delete this NFT?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete the NFT and remove it from your collection.
+            All associated files will also be deleted if they are stored in Supabase.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -42,7 +43,7 @@ export const NFTDeleteDialog: React.FC<NFTDeleteDialogProps> = ({
             disabled={isLoading}
           >
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-            Delete
+            Delete NFT
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
