@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const message = "The appointments feature has been removed";
+    const message = "The appointments feature has been permanently removed";
     console.log(message);
     
     return new Response(
@@ -23,7 +22,7 @@ serve(async (req) => {
         status: "removed" 
       }),
       { 
-        status: 200, 
+        status: 410, // Gone - This resource is no longer available
         headers: { 
           "Content-Type": "application/json",
           ...corsHeaders 
@@ -35,11 +34,10 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ 
-        error: error.message || "An unexpected error occurred",
-        stack: error.stack
+        error: "Service permanently removed",
       }),
       { 
-        status: 500, 
+        status: 410, 
         headers: { 
           "Content-Type": "application/json",
           ...corsHeaders 

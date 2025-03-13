@@ -54,19 +54,48 @@ export const uploadImage = async (file: File, folder = 'nft-images'): Promise<st
   return result.url;
 };
 
-// New utility function to delete a file from storage
+// Improved utility function to delete a file from storage
 export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> => {
   try {
-    // Extract bucket and file name from URL
-    const urlParts = fileUrl.match(/\/([^\/]+)\/([^\/]+)$/);
-    
-    if (!urlParts || urlParts.length !== 3) {
-      console.error("Could not parse file URL for deletion:", fileUrl);
+    if (!fileUrl) {
+      console.error("Cannot delete file: URL is empty");
       return false;
     }
     
-    const bucketName = urlParts[1];
-    const fileName = urlParts[2];
+    console.log("Attempting to delete file:", fileUrl);
+    
+    // Extract bucket and file name from URL
+    // The URL format is like: https://uhqeuhysxkzptbvxgnvt.supabase.co/storage/v1/object/public/profile_NFT_images/filename.ext
+    const matches = fileUrl.match(/\/public\/([^\/]+)\/([^\/]+)$/);
+    
+    if (!matches || matches.length !== 3) {
+      console.error("Could not parse file URL for deletion, trying alternative pattern:", fileUrl);
+      // Try alternative pattern
+      const altMatches = fileUrl.match(/\/([^\/]+)\/([^\/]+)$/);
+      if (!altMatches || altMatches.length !== 3) {
+        console.error("Could not parse file URL using alternative pattern:", fileUrl);
+        return false;
+      }
+      
+      const bucketName = altMatches[1];
+      const fileName = altMatches[2];
+      
+      console.log(`Using alternative pattern - Deleting file from storage: bucket=${bucketName}, file=${fileName}`);
+      
+      const { error } = await supabase.storage
+        .from(bucketName)
+        .remove([fileName]);
+        
+      if (error) {
+        console.error("Error removing file from storage:", error);
+        return false;
+      }
+      
+      return true;
+    }
+    
+    const bucketName = matches[1];
+    const fileName = matches[2];
     
     console.log(`Deleting file from storage: bucket=${bucketName}, file=${fileName}`);
     
@@ -79,6 +108,7 @@ export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> =
       return false;
     }
     
+    console.log(`Successfully deleted file from bucket ${bucketName}: ${fileName}`);
     return true;
   } catch (error) {
     console.error("Error deleting file:", error);
