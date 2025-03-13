@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { User } from 'lucide-react';
@@ -169,10 +170,10 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
   };
   
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 text-white">
       <div className="space-y-4">
         <div className="flex items-center gap-4">
-          <div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-dark-accent bg-dark-secondary flex items-center justify-center">
+          <div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-gray-700 bg-gray-800 flex items-center justify-center">
             {profilePhotoUrl ? (
               <img 
                 src={profilePhotoUrl} 
@@ -180,14 +181,14 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <User className="h-12 w-12 text-pi-muted" />
+              <User className="h-12 w-12 text-gray-400" />
             )}
           </div>
           
           <div>
             <label 
               htmlFor="profile-photo" 
-              className="inline-block cursor-pointer px-4 py-2 bg-dark-secondary hover:bg-dark-accent transition-colors rounded-md text-sm font-medium"
+              className="inline-block cursor-pointer px-4 py-2 bg-gray-700 hover:bg-gray-600 transition-colors rounded-md text-sm font-medium"
             >
               Change Photo
             </label>
@@ -198,41 +199,41 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
               onChange={handlePhotoUpload}
               className="hidden"
             />
-            <p className="text-xs text-pi-muted mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               JPG, PNG or GIF. Maximum size 2MB.
             </p>
           </div>
         </div>
         
-        <Separator className="my-6" />
+        <Separator className="my-6 bg-gray-700" />
         
         <div className="space-y-1">
-          <label htmlFor="username" className="block text-sm font-medium">
+          <Label htmlFor="username" className="block text-sm font-medium text-gray-300">
             Username *
-          </label>
+          </Label>
           <Input
             id="username"
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            className="bg-dark-secondary border-dark-accent"
+            className="bg-gray-700 border-gray-600 text-white placeholder-gray-400"
           />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label htmlFor="business-type" className="block text-sm font-medium">
+            <Label htmlFor="business-type" className="block text-sm font-medium text-gray-300">
               Business Type
-            </label>
+            </Label>
             <Select 
               value={businessType} 
               onValueChange={setBusinessType}
             >
-              <SelectTrigger className="bg-dark-secondary border-dark-accent">
+              <SelectTrigger id="business-type" className="bg-gray-700 border-gray-600 text-white">
                 <SelectValue placeholder="Select business type" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-gray-800 border-gray-700 text-white">
                 <SelectItem value="">None</SelectItem>
                 {businessTypes.map((type) => (
                   <SelectItem key={type} value={type}>
@@ -244,17 +245,17 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
           </div>
           
           <div className="space-y-1">
-            <label htmlFor="industry" className="block text-sm font-medium">
+            <Label htmlFor="industry" className="block text-sm font-medium text-gray-300">
               Industry
-            </label>
+            </Label>
             <Select 
               value={industry} 
               onValueChange={setIndustry}
             >
-              <SelectTrigger className="bg-dark-secondary border-dark-accent">
+              <SelectTrigger id="industry" className="bg-gray-700 border-gray-600 text-white">
                 <SelectValue placeholder="Select industry" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-gray-800 border-gray-700 text-white">
                 {industries.map((ind) => (
                   <SelectItem key={ind} value={ind}>
                     {ind}
@@ -270,7 +271,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
         <Button 
           type="submit" 
           disabled={isSubmitting}
-          className="w-full md:w-auto"
+          className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white"
         >
           {isSubmitting ? (isCreate ? "Creating..." : "Updating...") : (isCreate ? "Create Profile" : "Update Profile")}
         </Button>

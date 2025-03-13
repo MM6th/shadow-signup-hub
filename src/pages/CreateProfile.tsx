@@ -22,28 +22,30 @@ const CreateProfile: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen bg-dark bg-dark-gradient text-pi py-10">
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white py-10">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <Button 
             variant="outline" 
             onClick={() => navigate('/')}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 text-white bg-transparent border-white/20 hover:bg-white/10"
           >
             <ArrowLeft size={16} />
             Back to Home
           </Button>
         </div>
         
-        <Card className="glass-card">
-          <CardHeader>
-            <h1 className="text-3xl font-elixia text-gradient">Create Your Profile</h1>
-            <p className="text-pi-muted">
+        <Card className="bg-gray-800/80 border border-gray-700 shadow-xl text-white">
+          <CardHeader className="border-b border-gray-700 pb-4">
+            <h1 className="text-3xl font-bold text-gradient bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600">
+              Create Your Profile
+            </h1>
+            <p className="text-gray-300 mt-2">
               Complete your profile information to get started with Private Investigation Enterprises.
             </p>
           </CardHeader>
           
-          <CardContent>
+          <CardContent className="pt-6">
             <ProfileForm 
               userId={user.id} 
               profile={null}
