@@ -9,56 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      appointments: {
-        Row: {
-          appointment_date: string
-          appointment_time: string
-          buyer_id: string
-          buyer_name: string
-          created_at: string
-          id: string
-          product_id: string
-          product_title: string
-          seller_id: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          appointment_date: string
-          appointment_time: string
-          buyer_id: string
-          buyer_name: string
-          created_at?: string
-          id?: string
-          product_id: string
-          product_title: string
-          seller_id: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          appointment_date?: string
-          appointment_time?: string
-          buyer_id?: string
-          buyer_name?: string
-          created_at?: string
-          id?: string
-          product_id?: string
-          product_title?: string
-          seller_id?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "appointments_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       products: {
         Row: {
           category: string
@@ -105,11 +55,8 @@ export type Database = {
         Row: {
           business_type: string | null
           created_at: string
-          date_of_birth: string
-          first_name: string | null
           id: string
           industry: string | null
-          last_name: string | null
           profile_photo_url: string | null
           updated_at: string
           username: string
@@ -117,11 +64,8 @@ export type Database = {
         Insert: {
           business_type?: string | null
           created_at?: string
-          date_of_birth: string
-          first_name?: string | null
           id: string
           industry?: string | null
-          last_name?: string | null
           profile_photo_url?: string | null
           updated_at?: string
           username: string
@@ -129,11 +73,8 @@ export type Database = {
         Update: {
           business_type?: string | null
           created_at?: string
-          date_of_birth?: string
-          first_name?: string | null
           id?: string
           industry?: string | null
-          last_name?: string | null
           profile_photo_url?: string | null
           updated_at?: string
           username?: string

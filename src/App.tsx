@@ -13,7 +13,6 @@ import Dashboard from "./pages/Dashboard";
 import Marketplace from "./pages/Marketplace";
 import CreateProduct from "./pages/CreateProduct";
 import EditProduct from "./pages/EditProduct";
-import VideoConferencePage from "./pages/VideoConferencePage";
 import { useAuth } from "./context/AuthContext";
 
 const queryClient = new QueryClient();
@@ -62,7 +61,6 @@ const AppRoutes = () => {
       <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
       <Route path="/create-product" element={<ProtectedRoute><CreateProduct /></ProtectedRoute>} />
       <Route path="/edit-product/:productId" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
-      <Route path="/video-conference/:appointmentId" element={<ProtectedRoute><VideoConferencePage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

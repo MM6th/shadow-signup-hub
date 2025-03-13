@@ -81,12 +81,11 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Create the profile data object with proper handling of select values
+      // Create the profile data object
       const profileData = {
         username,
-        // For business_type and industry, use empty string when selecting "_none"
-        business_type: businessType === "_none" ? "" : businessType,
-        industry: industry === "_none" ? "" : industry,
+        business_type: businessType,
+        industry: industry,
         profile_photo_url: profilePhotoUrl,
         updated_at: new Date().toISOString(),
       };
@@ -101,8 +100,6 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
           .insert({
             id: userId,
             ...profileData,
-            // Ensure date_of_birth is included and valid for new profiles
-            date_of_birth: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD
           });
       } else {
         query = supabase
@@ -236,7 +233,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
                 <SelectValue placeholder="Select business type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="_none">None</SelectItem>
+                <SelectItem value="">None</SelectItem>
                 {businessTypes.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type}
@@ -258,7 +255,6 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
                 <SelectValue placeholder="Select industry" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="_none">None</SelectItem>
                 {industries.map((ind) => (
                   <SelectItem key={ind} value={ind}>
                     {ind}
