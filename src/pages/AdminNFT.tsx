@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -16,10 +15,8 @@ import { useNFT, NFT, NFTCollection } from '@/hooks/useNFT';
 import { useWallet } from '@/hooks/useWallet';
 import { v4 as uuidv4 } from 'uuid';
 
-// Access based on email instead of ID for easier management
 const ADMIN_EMAILS = ['cmooregee@gmail.com'];
 
-// Define the available blockchain options
 const BLOCKCHAIN_OPTIONS = [
   { value: 'ethereum', label: 'Ethereum' },
   { value: 'polygon', label: 'Polygon' },
@@ -27,7 +24,6 @@ const BLOCKCHAIN_OPTIONS = [
 ];
 
 const AdminNFT: React.FC = () => {
-  // Use useUserSession for more reliable auth state
   const { user, isLoading: authLoading } = useUserSession();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -44,29 +40,24 @@ const AdminNFT: React.FC = () => {
     listNFTForSale
   } = useNFT();
   
-  // Dialog states
   const [isNFTDialogOpen, setIsNFTDialogOpen] = useState(false);
   const [isCollectionDialogOpen, setIsCollectionDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
-  // Form states
   const [currentNFT, setCurrentNFT] = useState<Partial<NFT>>({});
   const [currentCollection, setCurrentCollection] = useState<Partial<NFTCollection>>({});
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   
-  // UI states
   const [activeTab, setActiveTab] = useState<string>('marketplace');
   const [isLoading, setIsLoading] = useState(false);
   const [salesData, setSalesData] = useState<{date: string; sales: number}[]>([]);
 
-  // Initialize data
   useEffect(() => {
     if (user) {
       fetchNFTs();
       fetchCollections();
       
-      // Mock analytics data for demonstration
       const mockSalesData = Array.from({ length: 30 }, (_, i) => {
         const date = new Date();
         date.setDate(date.getDate() - (29 - i));
@@ -79,7 +70,6 @@ const AdminNFT: React.FC = () => {
     }
   }, [user]);
 
-  // Handle image change
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -97,7 +87,6 @@ const AdminNFT: React.FC = () => {
     setImagePreview(null);
   };
 
-  // Upload image to Supabase storage
   const uploadImage = async (file: File): Promise<string | null> => {
     try {
       setIsLoading(true);
@@ -131,11 +120,10 @@ const AdminNFT: React.FC = () => {
     }
   };
 
-  // Handle NFT form submission
   const handleNFTSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!imageFile && !currentNFT.imageUrl) {
+    if (!imageFile && !currentNFT.imageurl) {
       toast({
         title: 'Image Required',
         description: 'Please upload an image for your NFT',
@@ -156,27 +144,23 @@ const AdminNFT: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Upload image if there's a new one
-      let imageUrl = currentNFT.imageUrl;
+      let imageUrl = currentNFT.imageurl;
       if (imageFile) {
         imageUrl = await uploadImage(imageFile);
         if (!imageUrl) return;
       }
       
-      // Create or update NFT
       await createNFT({
         title: currentNFT.title,
         description: currentNFT.description,
         price: currentNFT.price,
-        imageUrl: imageUrl!,
+        imageurl: imageUrl!,
         collection: currentNFT.collection,
         blockchain: currentNFT.blockchain || 'ethereum'
       });
       
-      // Refresh NFT list
       fetchNFTs();
       
-      // Close dialog and reset form
       setIsNFTDialogOpen(false);
       setCurrentNFT({});
       setImageFile(null);
@@ -193,7 +177,6 @@ const AdminNFT: React.FC = () => {
     }
   };
 
-  // Handle Collection form submission
   const handleCollectionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -209,23 +192,19 @@ const AdminNFT: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Upload image if there's one
       let imageUrl = currentCollection.image_url;
       if (imageFile) {
         imageUrl = await uploadImage(imageFile);
       }
       
-      // Create collection
       await createCollection({
         name: currentCollection.name,
         description: currentCollection.description,
         image_url: imageUrl
       });
       
-      // Refresh collection list
       fetchCollections();
       
-      // Close dialog and reset form
       setIsCollectionDialogOpen(false);
       setCurrentCollection({});
       setImageFile(null);
@@ -242,7 +221,6 @@ const AdminNFT: React.FC = () => {
     }
   };
 
-  // Handle NFT minting
   const handleMintNFT = async (nftId: string) => {
     if (!wallet.isConnected) {
       toast({
@@ -257,7 +235,6 @@ const AdminNFT: React.FC = () => {
     fetchNFTs();
   };
 
-  // Handle listing NFT
   const handleListNFT = async (nftId: string, price: number) => {
     if (!wallet.isConnected) {
       toast({
@@ -272,7 +249,6 @@ const AdminNFT: React.FC = () => {
     fetchNFTs();
   };
 
-  // Loading state
   if (authLoading) {
     return (
       <div className="min-h-screen bg-dark flex items-center justify-center">
@@ -284,7 +260,6 @@ const AdminNFT: React.FC = () => {
     );
   }
 
-  // Redirect if not admin
   if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
     console.log("Access denied. User email:", user?.email);
     toast({
@@ -334,7 +309,6 @@ const AdminNFT: React.FC = () => {
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
             </TabsList>
             
-            {/* Marketplace Tab */}
             <TabsContent value="marketplace" className="space-y-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-medium">Your NFTs</h2>
@@ -375,7 +349,7 @@ const AdminNFT: React.FC = () => {
                     <div key={nft.id} className="glass-card rounded-lg overflow-hidden border border-white/10">
                       <div className="h-48 bg-dark-secondary overflow-hidden relative">
                         <img 
-                          src={nft.imageUrl} 
+                          src={nft.imageurl} 
                           alt={nft.title} 
                           className="w-full h-full object-cover transition-transform hover:scale-105"
                         />
@@ -403,9 +377,9 @@ const AdminNFT: React.FC = () => {
                         <div className="flex items-center text-xs text-pi-muted mb-4">
                           <Tag size={14} className="mr-1" />
                           <span>{nft.collection}</span>
-                          {nft.tokenId && (
+                          {nft.tokenid && (
                             <span className="ml-2 px-2 py-0.5 bg-dark-secondary rounded-full">
-                              #{nft.tokenId}
+                              #{nft.tokenid}
                             </span>
                           )}
                         </div>
@@ -424,7 +398,7 @@ const AdminNFT: React.FC = () => {
                           <Button variant="outline" size="sm" onClick={() => {
                             setIsEditing(true);
                             setCurrentNFT(nft);
-                            setImagePreview(nft.imageUrl);
+                            setImagePreview(nft.imageurl);
                             setIsNFTDialogOpen(true);
                           }}>
                             <Edit size={14} className="mr-1" /> Edit
@@ -437,7 +411,6 @@ const AdminNFT: React.FC = () => {
               )}
             </TabsContent>
             
-            {/* Collections Tab */}
             <TabsContent value="collections" className="space-y-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-medium">Your Collections</h2>
@@ -498,7 +471,6 @@ const AdminNFT: React.FC = () => {
                             Created: {new Date(collection.created_at).toLocaleDateString()}
                           </span>
                           <Button variant="outline" size="sm" onClick={() => {
-                            // Filter NFTs for this collection
                             const collectionNFTs = nfts.filter(nft => nft.collection === collection.name);
                             toast({
                               title: `${collection.name}`,
@@ -515,7 +487,6 @@ const AdminNFT: React.FC = () => {
               )}
             </TabsContent>
             
-            {/* Analytics Tab */}
             <TabsContent value="analytics">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div className="glass-card p-6 rounded-lg">
@@ -586,7 +557,6 @@ const AdminNFT: React.FC = () => {
         </div>
       </div>
 
-      {/* NFT Creation Dialog */}
       <Dialog open={isNFTDialogOpen} onOpenChange={setIsNFTDialogOpen}>
         <DialogContent className="bg-dark-secondary border-gray-700 text-white max-w-2xl">
           <DialogHeader>
@@ -735,7 +705,6 @@ const AdminNFT: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Collection Creation Dialog */}
       <Dialog open={isCollectionDialogOpen} onOpenChange={setIsCollectionDialogOpen}>
         <DialogContent className="bg-dark-secondary border-gray-700 text-white">
           <DialogHeader>
