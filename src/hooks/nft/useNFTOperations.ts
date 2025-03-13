@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,13 +14,11 @@ export const useNFTOperations = () => {
     try {
       setIsLoading(true);
       
-      // Use the custom query builder for the new nfts table
       let query = supabase.from('nfts').select('*');
       
       if (userId) {
         query = query.eq('owner_id', userId);
       } else if (user) {
-        // If no userId provided but user is logged in, fetch their NFTs
         query = query.eq('owner_id', user.id);
       }
       
@@ -29,7 +26,6 @@ export const useNFTOperations = () => {
       
       if (error) throw error;
       
-      // Explicitly cast the data to NFT[] type
       const typedData = data as unknown as NFT[];
       console.log('Fetched NFTs:', typedData.length, typedData);
       setNfts(typedData);
@@ -60,15 +56,13 @@ export const useNFTOperations = () => {
     try {
       setIsLoading(true);
       
-      // First, store the NFT metadata in our database
-      // Ensure property names match the database column names
       const { data, error } = await supabase
         .from('nfts')
         .insert({
           title: nftData.title,
           description: nftData.description,
           price: nftData.price,
-          imageurl: nftData.imageurl, // Keep for backward compatibility
+          imageurl: nftData.imageurl,
           collection: nftData.collection,
           owner_id: user.id,
           blockchain: nftData.blockchain || 'ethereum',
@@ -88,7 +82,6 @@ export const useNFTOperations = () => {
         description: 'Your NFT has been created successfully and is ready to mint',
       });
       
-      // Return the created NFT
       return data as unknown as NFT;
       
     } catch (error) {
@@ -132,7 +125,7 @@ export const useNFTOperations = () => {
           file_type: nftData.file_type
         })
         .eq('id', nftData.id)
-        .eq('owner_id', user.id) // Security check - user can only update their own NFTs
+        .eq('owner_id', user.id)
         .select()
         .single();
       
@@ -156,24 +149,19 @@ export const useNFTOperations = () => {
     try {
       setIsLoading(true);
       
-      // Update the NFT status to minting
       await supabase
         .from('nfts')
         .update({ status: 'minting' })
         .eq('id', nftId);
       
-      // Simulate blockchain transaction delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Generate a fake token ID
       const tokenId = Math.floor(Math.random() * 1000000).toString();
       
-      // Update the NFT with token ID and set status to minted
-      // Make sure to use 'tokenid' (not 'tokenId') to match the database column
       const { data, error } = await supabase
         .from('nfts')
         .update({ 
-          tokenid: tokenId, // Changed from tokenId to tokenid
+          tokenid: tokenId,
           status: 'minted' 
         })
         .eq('id', nftId)
@@ -187,7 +175,6 @@ export const useNFTOperations = () => {
         description: `Your NFT has been minted with token ID: ${tokenId}`,
       });
       
-      // Immediately update the local NFTs state to reflect the change
       await fetchNFTs(user?.id);
       
       return data as unknown as NFT;
@@ -199,6 +186,48 @@ export const useNFTOperations = () => {
         variant: 'destructive',
       });
       return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteNFT = async (nftId: string) => {
+    if (!user) {
+      toast({
+        title: 'Authentication required',
+        description: 'You must be logged in to delete an NFT',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      const { error } = await supabase
+        .from('nfts')
+        .delete()
+        .eq('id', nftId)
+        .eq('owner_id', user.id);
+      
+      if (error) throw error;
+      
+      setNfts(prevNfts => prevNfts.filter(nft => nft.id !== nftId));
+      
+      toast({
+        title: 'NFT Deleted',
+        description: 'Your NFT has been successfully deleted',
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting NFT:', error);
+      toast({
+        title: 'Failed to delete NFT',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
+      });
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -245,6 +274,7 @@ export const useNFTOperations = () => {
     fetchNFTs,
     createNFT,
     updateNFT,
+    deleteNFT,
     simulateMintNFT,
     listNFTForSale
   };

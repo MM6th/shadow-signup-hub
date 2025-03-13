@@ -23,7 +23,7 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
   onEditNFT,
   refreshData
 }) => {
-  const { simulateMintNFT, listNFTForSale } = useNFT();
+  const { simulateMintNFT, listNFTForSale, deleteNFT } = useNFT();
   const { wallet } = useWallet();
   const { toast } = useToast();
 
@@ -61,6 +61,14 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
     setTimeout(() => refreshData(), 2000);
   };
 
+  const handleDeleteNFT = async (nftId: string) => {
+    const success = await deleteNFT(nftId);
+    if (success) {
+      // Refresh data after deletion
+      setTimeout(() => refreshData(), 1000);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-4">
@@ -91,6 +99,7 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
               onMint={handleMintNFT}
               onList={handleListNFT}
               onEdit={onEditNFT}
+              onDelete={handleDeleteNFT}
             />
           ))}
         </div>
