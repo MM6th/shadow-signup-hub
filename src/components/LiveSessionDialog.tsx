@@ -26,15 +26,21 @@ const LiveSessionDialog: React.FC<LiveSessionDialogProps> = ({
     setIsRequestingPermissions(true);
     
     try {
+      console.log('Requesting camera and microphone permissions...');
       // First try to access the camera and microphone
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: true, 
         audio: true 
       });
       
+      console.log('Permissions granted, stream obtained:', stream);
+      
       // If we've gotten this far, permissions were granted
       // Clean up the stream we just created
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach(track => {
+        console.log('Stopping track:', track.kind);
+        track.stop();
+      });
       
       setIsRequestingPermissions(false);
       return true;
@@ -54,17 +60,23 @@ const LiveSessionDialog: React.FC<LiveSessionDialogProps> = ({
   const handleStartSession = async () => {
     if (!title.trim()) return;
     
+    console.log('Starting session flow...');
+    
     // First request permissions
     const permissionsGranted = await requestMediaPermissions();
     
     if (!permissionsGranted) {
+      console.log('Permissions not granted, stopping session creation');
       return;
     }
+    
+    console.log('Permissions granted, creating session with title:', title);
     
     // Then start the session
     const session = await startLiveSession(title);
     
     if (session) {
+      console.log('Session created successfully:', session);
       // Close the dialog
       onOpenChange(false);
       

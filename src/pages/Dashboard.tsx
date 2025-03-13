@@ -25,7 +25,7 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [fetchProducts]);
 
   if (authLoading) {
     return (
@@ -66,56 +66,58 @@ const Dashboard: React.FC = () => {
           </Button>
         </div>
 
-        <div className="flex items-center justify-between mb-4">
-          <TabsList>
-            <TabsTrigger value="products" onClick={() => setActiveTab('products')}>Products</TabsTrigger>
-            <TabsTrigger value="appointments" onClick={() => setActiveTab('appointments')}>Appointments</TabsTrigger>
-            <TabsTrigger value="live-sessions" onClick={() => setActiveTab('live-sessions')}>Live Sessions</TabsTrigger>
-          </TabsList>
-          
-          {activeTab === 'products' && (
-            <Button onClick={() => navigate('/create-product')} size="sm" className="ml-2">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Product
-            </Button>
-          )}
-        </div>
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsContent value="products">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {isLoading ? (
-                <>
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="glass-card p-4 h-64 animate-pulse" />
-                  ))}
-                </>
-              ) : products.filter(product => product.user_id === user.id).length > 0 ? (
-                products.filter(product => product.user_id === user.id).map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))
-              ) : (
-                <div className="glass-card p-6 text-center">
-                  <h3 className="text-lg font-medium mb-2">No Products Yet</h3>
-                  <p className="text-pi-muted">
-                    Start selling your products by creating one.
-                  </p>
-                  <Button onClick={() => navigate('/create-product')}>
-                    Create Product
-                  </Button>
-                </div>
+        <div className="flex items-center mb-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="flex items-center justify-between">
+              <TabsList>
+                <TabsTrigger value="products">Products</TabsTrigger>
+                <TabsTrigger value="appointments">Appointments</TabsTrigger>
+                <TabsTrigger value="live-sessions">Live Sessions</TabsTrigger>
+              </TabsList>
+              
+              {activeTab === 'products' && (
+                <Button onClick={() => navigate('/create-product')} size="sm" className="ml-2">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Product
+                </Button>
               )}
             </div>
-          </TabsContent>
+          
+            <TabsContent value="products">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {isLoading ? (
+                  <>
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className="glass-card p-4 h-64 animate-pulse" />
+                    ))}
+                  </>
+                ) : products.filter(product => product.user_id === user.id).length > 0 ? (
+                  products.filter(product => product.user_id === user.id).map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))
+                ) : (
+                  <div className="glass-card p-6 text-center">
+                    <h3 className="text-lg font-medium mb-2">No Products Yet</h3>
+                    <p className="text-pi-muted">
+                      Start selling your products by creating one.
+                    </p>
+                    <Button onClick={() => navigate('/create-product')}>
+                      Create Product
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
 
-          <TabsContent value="appointments">
-            <AppointmentManager />
-          </TabsContent>
+            <TabsContent value="appointments">
+              <AppointmentManager />
+            </TabsContent>
 
-          <TabsContent value="live-sessions">
-            <LiveSessionsTab userId={user.id} />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="live-sessions">
+              <LiveSessionsTab userId={user.id} />
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   );
