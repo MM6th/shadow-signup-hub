@@ -1,9 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2, Video } from 'lucide-react';
-import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/context/AuthContext';
 import { useUserSession } from '@/hooks/useUserSession';
@@ -13,6 +13,8 @@ import AppointmentManager from '@/components/AppointmentManager';
 import LiveSessionDialog from '@/components/LiveSessionDialog';
 import { useLiveSessions } from '@/hooks/useLiveSessions';
 import LiveSessionsTab from '@/components/LiveSessionsTab';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -44,12 +46,24 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-dark">
-      <NavBar />
-
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-elixia text-gradient mb-6">
-          Welcome to your Dashboard, {user.username}!
-        </h1>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16 border-2 border-pi-focus">
+              <AvatarImage src={user.user_metadata?.avatar_url} alt={user.email || ''} />
+              <AvatarFallback>{user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-3xl font-elixia text-gradient">
+                Welcome, {user.user_metadata?.username || user.email?.split('@')[0] || 'User'}!
+              </h1>
+              <p className="text-pi-muted">Manage your products, appointments, and live sessions</p>
+            </div>
+          </div>
+          <Button onClick={() => navigate('/marketplace')} className="ml-auto">
+            Go to Marketplace
+          </Button>
+        </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-4">
@@ -74,7 +88,7 @@ const Dashboard: React.FC = () => {
                     <div key={i} className="glass-card p-4 h-64 animate-pulse" />
                   ))}
                 </>
-              ) : products.length > 0 ? (
+              ) : products.filter(product => product.user_id === user.id).length > 0 ? (
                 products.filter(product => product.user_id === user.id).map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))
@@ -93,7 +107,7 @@ const Dashboard: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="appointments">
-            <AppointmentManager userId={user.id} />
+            <AppointmentManager />
           </TabsContent>
 
           <TabsContent value="live-sessions">

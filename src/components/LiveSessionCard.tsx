@@ -9,9 +9,10 @@ import { Video, Radio } from 'lucide-react';
 
 interface LiveSessionCardProps {
   session: LiveSession;
+  isOwner?: boolean;
 }
 
-const LiveSessionCard: React.FC<LiveSessionCardProps> = ({ session }) => {
+const LiveSessionCard: React.FC<LiveSessionCardProps> = ({ session, isOwner = false }) => {
   const { joinLiveSession } = useLiveSessions();
   const timeAgo = formatDistanceToNow(new Date(session.started_at), { addSuffix: true });
   
@@ -42,7 +43,7 @@ const LiveSessionCard: React.FC<LiveSessionCardProps> = ({ session }) => {
             </div>
             
             <p className="text-sm text-gray-500">
-              {session.username || 'Anonymous'}
+              {isOwner ? 'Your session' : (session.username || 'Anonymous')}
             </p>
             
             <p className="text-xs text-gray-400">
@@ -56,7 +57,7 @@ const LiveSessionCard: React.FC<LiveSessionCardProps> = ({ session }) => {
                 onClick={() => joinLiveSession(session.room_id)}
               >
                 <Video className="h-4 w-4 mr-2" />
-                Join Stream
+                {isOwner ? 'Rejoin Stream' : 'Join Stream'}
               </Button>
             </div>
           </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -7,10 +6,11 @@ import { Calendar } from 'lucide-react';
 import AppointmentCard from './AppointmentCard';
 
 interface AppointmentManagerProps {
+  userId?: string;
   isSeller?: boolean;
 }
 
-const AppointmentManager: React.FC<AppointmentManagerProps> = ({ isSeller = false }) => {
+const AppointmentManager: React.FC<AppointmentManagerProps> = ({ userId, isSeller = false }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -27,7 +27,7 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ isSeller = fals
         const { data, error } = await supabase.functions.invoke('appointments', {
           method: 'GET',
           body: { 
-            userId: user.id,
+            userId: userId || user.id,
             isSeller: isSeller
           }
         });
@@ -48,7 +48,7 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ isSeller = fals
     };
     
     fetchAppointments();
-  }, [user, isSeller, toast]);
+  }, [user, userId, isSeller, toast]);
 
   if (isLoading) {
     return (

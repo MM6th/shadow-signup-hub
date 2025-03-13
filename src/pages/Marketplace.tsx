@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,65 +8,71 @@ import ProductCard from "@/components/ProductCard";
 import { useProduct } from "@/hooks/useProduct";
 import { Search, Filter } from 'lucide-react';
 import Footer from "@/components/Footer";
-import NavBar from "@/components/NavBar";
 import LiveSessionCard from '@/components/LiveSessionCard';
 import { useLiveSessions } from '@/hooks/useLiveSessions';
+import { useAuth } from '@/context/AuthContext';
 
-const Marketplace = () => {
+const Marketplace: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { products, isLoading, fetchProducts } = useProduct();
   const { liveSessions } = useLiveSessions();
+  const { user } = useAuth();
   
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'all');
   const [typeFilter, setTypeFilter] = useState(searchParams.get('type') || 'all');
-  
+
   useEffect(() => {
     fetchProducts(searchTerm, categoryFilter, typeFilter);
-  }, [searchTerm, categoryFilter, typeFilter]);
-  
+  }, [searchTerm, categoryFilter, typeFilter, fetchProducts]);
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
-    
     // Update search params
     searchParams.set('search', term);
     setSearchParams(searchParams);
   };
-  
+
   const handleCategoryChange = (value: string) => {
     setCategoryFilter(value);
-    
     // Update search params
     searchParams.set('category', value);
     setSearchParams(searchParams);
   };
-  
+
   const handleTypeChange = (value: string) => {
     setTypeFilter(value);
-    
     // Update search params
     searchParams.set('type', value);
     setSearchParams(searchParams);
   };
-  
+
   return (
     <div className="min-h-screen bg-dark">
-      <NavBar />
-      
-      <div className="bg-pi-base py-12">
+      <div className="bg-gradient-to-b from-dark-secondary to-dark py-12">
         <div className="container mx-auto px-4">
-          <h1 className="text-3xl md:text-5xl font-bold text-white font-elixia text-center">
-            Discover Products
-          </h1>
-          <p className="text-pi-muted text-center mt-4">
-            Explore a wide range of products from our community
-          </p>
-          
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+            <div>
+              <h1 className="text-3xl md:text-5xl font-bold text-white font-elixia">Discover Products</h1>
+              <p className="text-pi-muted mt-4">Explore a wide range of products from our community</p>
+            </div>
+            
+            {user && (
+              <Button 
+                variant="outline" 
+                className="mt-4 md:mt-0"
+                onClick={() => navigate('/dashboard')}
+              >
+                Dashboard
+              </Button>
+            )}
+          </div>
+
           <div className="flex items-center mt-8 max-w-3xl mx-auto">
             <div className="relative w-full">
-              <Input
+              <Input 
                 type="text"
                 placeholder="Search for products..."
                 className="rounded-full pl-12 pr-4 py-3 bg-pi-secondary border-none text-white focus-visible:ring-2 focus-visible:ring-pi-focus"
@@ -81,13 +86,11 @@ const Marketplace = () => {
           </div>
         </div>
       </div>
-      
+
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center space-x-4">
-            <h2 className="text-2xl font-elixia text-gradient">
-              All Products
-            </h2>
+            <h2 className="text-2xl font-elixia text-gradient">All Products</h2>
             
             <div className="flex items-center space-x-2 text-pi-muted">
               <Filter className="h-4 w-4" />
@@ -121,27 +124,30 @@ const Marketplace = () => {
             </div>
           </div>
           
-          <Button variant="outline" onClick={() => navigate('/create-product')}>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/create-product')}
+          >
             Create Product
           </Button>
         </div>
         
         {liveSessions.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-2xl font-elixia text-gradient mb-4">
-              Live Sessions
-            </h2>
+            <h2 className="text-2xl font-elixia text-gradient mb-4">Live Sessions</h2>
+            
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {liveSessions.map((session) => (
-                <LiveSessionCard key={session.id} session={session} />
+                <LiveSessionCard 
+                  key={session.id} 
+                  session={session} 
+                />
               ))}
             </div>
           </div>
         )}
         
-        <h2 className="text-2xl font-elixia text-gradient mb-4">
-          All Products
-        </h2>
+        <h2 className="text-2xl font-elixia text-gradient mb-4">All Products</h2>
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {isLoading ? (

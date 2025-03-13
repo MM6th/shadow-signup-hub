@@ -18,7 +18,7 @@ const LiveVideoControls: React.FC<LiveVideoControlsProps> = ({ roomId }) => {
   // If the room is opened directly, check if it matches user's live session
   useEffect(() => {
     fetchUserLiveSession();
-  }, [roomId]);
+  }, [roomId, fetchUserLiveSession]);
   
   const handleEndSession = async () => {
     await endLiveSession();
@@ -37,7 +37,7 @@ const LiveVideoControls: React.FC<LiveVideoControlsProps> = ({ roomId }) => {
   }
   
   return (
-    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
+    <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
       <div className="bg-red-600 rounded-full px-4 py-2 flex items-center space-x-2 animate-pulse">
         <VideoOff size={16} className="text-white" />
         <span className="text-white text-sm font-medium">LIVE</span>
@@ -45,8 +45,8 @@ const LiveVideoControls: React.FC<LiveVideoControlsProps> = ({ roomId }) => {
       
       <Button 
         variant="destructive"
-        className="mt-4"
         onClick={handleEndSession}
+        size="sm"
       >
         End Live Session
       </Button>
