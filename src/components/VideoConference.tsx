@@ -1,10 +1,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Video, Mic, MicOff, VideoOff, Phone, MessageSquare, Users, Share } from 'lucide-react';
+import { Video, Mic, MicOff, VideoOff, Phone, MessageSquare, Users, Share, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface VideoConferenceProps {
   roomId: string;
@@ -23,10 +25,10 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   const [isInitializing, setIsInitializing] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
+  const [showChat, setShowChat] = useState(true);
   const [participants, setParticipants] = useState<string[]>([]);
   const [chatMessages, setChatMessages] = useState<Array<{sender: string, message: string}>>([]);
   const [messageInput, setMessageInput] = useState('');
-  const [showChat, setShowChat] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -315,50 +317,35 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
       </div>
       
       <div className="flex flex-col md:flex-row gap-4 flex-grow">
-        <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video">
-            <video
-              ref={localVideoRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 text-white text-xs rounded">
-              You {isHost ? '(Host)' : ''}
-            </div>
-          </div>
-          
-          <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video">
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              playsInline
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 text-white text-xs rounded">
-              {isConnected ? 'Remote User' : 'Waiting for connection...'}
-            </div>
+        {/* Left video (user) */}
+        <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video md:w-1/3">
+          <video
+            ref={localVideoRef}
+            autoPlay
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 text-white text-xs rounded">
+            You {isHost ? '(Host)' : ''}
           </div>
         </div>
         
-        {showChat && (
-          <div className="w-full md:w-64 bg-dark-secondary rounded-lg overflow-hidden flex flex-col">
-            <div className="p-3 border-b border-dark-accent flex items-center justify-between">
-              <h4 className="font-medium text-sm">Live Chat</h4>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 w-6 p-0" 
-                onClick={() => setShowChat(false)}
-              >
-                ×
-              </Button>
-            </div>
-            <div 
-              ref={chatContainerRef}
-              className="flex-grow p-3 overflow-y-auto space-y-2 max-h-[200px] md:max-h-none"
+        {/* Chat section (middle) */}
+        <div className="md:w-1/3 bg-dark-secondary rounded-lg overflow-hidden flex flex-col">
+          <div className="p-3 border-b border-dark-accent flex items-center justify-between">
+            <h4 className="font-medium text-sm">Live Chat</h4>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-6 w-6 p-0 md:hidden" 
+              onClick={() => setShowChat(false)}
             >
+              <X size={14} />
+            </Button>
+          </div>
+          <ScrollArea className="flex-grow p-3 h-[200px] md:h-auto">
+            <div ref={chatContainerRef} className="space-y-2">
               {chatMessages.length === 0 ? (
                 <div className="text-center text-pi-muted text-sm py-4">
                   No messages yet
@@ -372,24 +359,37 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
                 ))
               )}
             </div>
-            <div className="p-2 border-t border-dark-accent flex">
-              <input
-                type="text"
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                placeholder="Type a message..."
-                className="bg-dark-accent rounded-l px-2 py-1 text-sm flex-grow"
-              />
-              <button 
-                onClick={sendMessage}
-                className="bg-pi-focus text-white rounded-r px-2 py-1 text-sm"
-              >
-                Send
-              </button>
-            </div>
+          </ScrollArea>
+          <div className="p-2 border-t border-dark-accent flex">
+            <Input
+              value={messageInput}
+              onChange={(e) => setMessageInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+              placeholder="Type a message..."
+              className="bg-dark-accent border-0 rounded-l text-sm flex-grow"
+            />
+            <Button 
+              onClick={sendMessage}
+              size="sm"
+              className="rounded-l-none"
+            >
+              Send
+            </Button>
           </div>
-        )}
+        </div>
+        
+        {/* Right video (participant) */}
+        <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video md:w-1/3">
+          <video
+            ref={remoteVideoRef}
+            autoPlay
+            playsInline
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 text-white text-xs rounded">
+            {isConnected ? 'Remote User' : 'Waiting for connection...'}
+          </div>
+        </div>
       </div>
       
       <div className="flex justify-center space-x-4 mt-4">
@@ -407,14 +407,6 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
           onClick={toggleVideo}
         >
           {isVideoOn ? <Video size={18} /> : <VideoOff size={18} />}
-        </Button>
-        
-        <Button
-          variant="outline"
-          onClick={() => setShowChat(!showChat)}
-          className={showChat ? "bg-pi-focus text-white" : ""}
-        >
-          <MessageSquare size={18} />
         </Button>
         
         <Button

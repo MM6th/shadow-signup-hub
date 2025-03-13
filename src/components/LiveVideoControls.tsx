@@ -28,7 +28,7 @@ const LiveVideoControls: React.FC<LiveVideoControlsProps> = ({ roomId }) => {
       description: 'Your live session has been ended successfully',
     });
     
-    navigate('/dashboard');
+    navigate('/dashboard', { replace: true });
   };
   
   // Only show controls if this is the user's active live session

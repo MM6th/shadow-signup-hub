@@ -61,14 +61,11 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           </div>
-          <Button onClick={() => navigate('/marketplace')} className="ml-auto">
-            Go to Marketplace
-          </Button>
         </div>
 
-        <div className="flex items-center mb-4">
+        <div className="mb-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center mb-4">
               <TabsList>
                 <TabsTrigger value="products">Products</TabsTrigger>
                 <TabsTrigger value="appointments">Appointments</TabsTrigger>
@@ -76,7 +73,7 @@ const Dashboard: React.FC = () => {
               </TabsList>
               
               {activeTab === 'products' && (
-                <Button onClick={() => navigate('/create-product')} size="sm" className="ml-2">
+                <Button onClick={() => navigate('/create-product')} size="sm" className="ml-4">
                   <Plus className="mr-2 h-4 w-4" />
                   Create Product
                 </Button>

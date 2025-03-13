@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -168,6 +169,9 @@ export const useLiveSessions = () => {
         title: 'Live Session Ended',
         description: 'Your live session has ended',
       });
+      
+      // Navigate back to dashboard
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error ending live session:', error);
       toast({
