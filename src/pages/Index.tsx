@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -5,7 +6,6 @@ import { ArrowRight, Check, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
-// Changing import to match component file name case
 import NavBar from '@/components/NavBar'; 
 import AnimatedText from '@/components/AnimatedText';
 import { useAuth } from '@/context/AuthContext';
@@ -100,19 +100,19 @@ const Index: React.FC = () => {
               Our Services
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <div className="glass-card p-6 text-center animate-delayed" style={{ '--delay': '1' }}>
+              <div className="glass-card p-6 text-center animate-delayed" style={{ '--delay': '1' } as React.CSSProperties}>
                 <h3 className="text-xl font-medium text-gradient mb-3">Consultations</h3>
                 <p className="text-pi-muted">
                   Connect with experts for personalized advice and guidance.
                 </p>
               </div>
-              <div className="glass-card p-6 text-center animate-delayed" style={{ '--delay': '2' }}>
+              <div className="glass-card p-6 text-center animate-delayed" style={{ '--delay': '2' } as React.CSSProperties}>
                 <h3 className="text-xl font-medium text-gradient mb-3">Live Sessions</h3>
                 <p className="text-pi-muted">
                   Engage in real-time interactions and collaborative experiences.
                 </p>
               </div>
-              <div className="glass-card p-6 text-center animate-delayed" style={{ '--delay': '3' }}>
+              <div className="glass-card p-6 text-center animate-delayed" style={{ '--delay': '3' } as React.CSSProperties}>
                 <h3 className="text-xl font-medium text-gradient mb-3">Product Marketplace</h3>
                 <p className="text-pi-muted">
                   Discover and sell unique products within our community.
@@ -162,7 +162,7 @@ const Index: React.FC = () => {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={closeAuthModal}
-        mode={authMode}
+        defaultMode={authMode}
       />
 
       <AgeVerificationModal
