@@ -2,17 +2,20 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Briefcase, Tag, PenSquare, ShoppingBag, Plus, User, Film } from 'lucide-react';
+import { Briefcase, Tag, PenSquare, ShoppingBag, Plus, User, Film, Video } from 'lucide-react';
 import Button from '@/components/Button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button as ShadcnButton } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import VideoUploader from '@/components/VideoUploader';
+import VideoConference from '@/components/VideoConference';
 
 const Dashboard: React.FC = () => {
   const { user, profile, isLoading, hasProfile, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
+  const [isLive, setIsLive] = useState(false);
+  const [roomId, setRoomId] = useState<string>('');
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -22,8 +25,64 @@ const Dashboard: React.FC = () => {
     }
   }, [user, isLoading, hasProfile, navigate]);
 
+  // Check if user is currently live streaming
+  useEffect(() => {
+    if (user) {
+      const checkLiveStatus = async () => {
+        const { data } = await supabase
+          .from('live_sessions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .single();
+        
+        if (data) {
+          setIsLive(true);
+          setRoomId(data.room_id);
+        }
+      };
+      
+      checkLiveStatus();
+    }
+  }, [user]);
+
   const handleEditProfile = () => {
     navigate('/update-profile');
+  };
+
+  const startLiveSession = async () => {
+    if (!user) return;
+    
+    const newRoomId = `room_${user.id.substring(0, 8)}_${Date.now()}`;
+    setRoomId(newRoomId);
+    
+    // Record the live session in the database
+    await supabase.from('live_sessions').insert({
+      user_id: user.id,
+      room_id: newRoomId,
+      is_active: true,
+      title: `${profile?.username}'s Live Session`,
+      started_at: new Date().toISOString()
+    });
+    
+    setIsLive(true);
+    setActiveTab('livestream');
+  };
+
+  const endLiveSession = async () => {
+    if (!user || !roomId) return;
+    
+    // Update the session as inactive
+    await supabase
+      .from('live_sessions')
+      .update({ 
+        is_active: false,
+        ended_at: new Date().toISOString()
+      })
+      .eq('user_id', user.id)
+      .eq('room_id', roomId);
+    
+    setIsLive(false);
   };
 
   if (isLoading) {
@@ -94,14 +153,37 @@ const Dashboard: React.FC = () => {
                   <ShoppingBag size={16} />
                   Marketplace
                 </Button>
+                {!isLive ? (
+                  <Button 
+                    variant="primary"
+                    onClick={startLiveSession}
+                    className="flex items-center gap-2"
+                  >
+                    <Video size={16} />
+                    Go Live
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="destructive"
+                    onClick={endLiveSession}
+                    className="flex items-center gap-2"
+                  >
+                    <Video size={16} />
+                    End Live
+                  </Button>
+                )}
               </div>
             </div>
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
-              <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto mb-6">
+              <TabsList className="grid grid-cols-4 w-full max-w-md mx-auto mb-6">
                 <TabsTrigger value="profile">Profile Details</TabsTrigger>
                 <TabsTrigger value="products">My Products</TabsTrigger>
                 <TabsTrigger value="videos">My Videos</TabsTrigger>
+                <TabsTrigger value="livestream">
+                  Live Stream
+                  {isLive && <div className="ml-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>}
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="profile">
@@ -173,6 +255,38 @@ const Dashboard: React.FC = () => {
                 </div>
                 
                 <VideoUploader userId={user.id} />
+              </TabsContent>
+              
+              <TabsContent value="livestream">
+                <div className="mb-6">
+                  <h2 className="text-lg font-medium mb-2">Live Video Stream</h2>
+                  <p className="text-pi-muted mb-4">
+                    {isLive 
+                      ? "You are currently live streaming. Your followers can see and join your stream."
+                      : "Start a live stream to connect with your followers in real-time."}
+                  </p>
+                </div>
+                
+                {isLive && roomId ? (
+                  <div className="mb-4">
+                    <VideoConference 
+                      roomId={roomId} 
+                      isHost={true}
+                      onEndCall={endLiveSession}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-12 glass-card">
+                    <Video size={64} className="mx-auto text-pi-muted mb-4" />
+                    <h3 className="text-xl font-medium mb-2">Start Live Streaming</h3>
+                    <p className="text-pi-muted mb-6 max-w-md mx-auto">
+                      Share your insights, host discussions, or connect with your audience in real-time.
+                    </p>
+                    <ShadcnButton onClick={startLiveSession} className="flex items-center mx-auto">
+                      <Video size={16} className="mr-2" /> Go Live Now
+                    </ShadcnButton>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
             
@@ -272,3 +386,4 @@ const ProductsList = ({ userId }: { userId: string }) => {
 };
 
 export default Dashboard;
+

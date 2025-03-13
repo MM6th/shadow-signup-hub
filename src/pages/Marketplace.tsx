@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, ShoppingCart, Star, QrCode, User, Phone, Video, Shield, Play } from 'lucide-react';
+import { Search, Filter, ShoppingCart, Star, QrCode, User, Phone, Video, Shield, Play, Tv } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -10,6 +9,7 @@ import FeaturedServices from '@/components/FeaturedServices';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import VideoConference from '@/components/VideoConference';
 
 // Admin access email
 const ADMIN_EMAILS = ['cmooregee@gmail.com'];
@@ -23,7 +23,8 @@ const categories = [
   { id: 'subscription', name: 'Subscriptions' },
   { id: 'workshop', name: 'Workshops' },
   { id: 'ebook', name: 'Digital Products' },
-  { id: 'video', name: 'Videos' }
+  { id: 'video', name: 'Videos' },
+  { id: 'livestream', name: 'Live Now' }
 ];
 
 const Marketplace: React.FC = () => {
@@ -38,8 +39,10 @@ const Marketplace: React.FC = () => {
   const [walletAddresses, setWalletAddresses] = useState<Record<string, any[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [videos, setVideos] = useState<any[]>([]);
+  const [liveStreams, setLiveStreams] = useState<any[]>([]);
+  const [selectedLiveStream, setSelectedLiveStream] = useState<any>(null);
+  const [isLiveStreamDialogOpen, setIsLiveStreamDialogOpen] = useState(false);
 
-  // Check if user is admin
   const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
 
   useEffect(() => {
@@ -103,20 +106,45 @@ const Marketplace: React.FC = () => {
     fetchProducts();
   }, [toast, user]);
 
-  // Filter products based on search term and category
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        product.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  // Filter videos based on search term when video category is selected
-  const filteredVideos = videos.filter(video => {
-    if (selectedCategory !== 'all' && selectedCategory !== 'video') return false;
-    return video.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-          (video.description && video.description.toLowerCase().includes(searchTerm.toLowerCase()));
-  });
+  useEffect(() => {
+    const fetchLiveStreams = async () => {
+      try {
+        // Get active live streams
+        const { data: streamsData, error: streamsError } = await supabase
+          .from('live_sessions')
+          .select(`
+            *,
+            profiles:user_id (username, profile_photo_url)
+          `)
+          .eq('is_active', true);
+          
+        if (streamsError) throw streamsError;
+        
+        setLiveStreams(streamsData || []);
+        
+        // Subscribe to live stream changes
+        const channel = supabase
+          .channel('public:live_sessions')
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'live_sessions' 
+          }, payload => {
+            // Refresh live streams when changes occur
+            fetchLiveStreams();
+          })
+          .subscribe();
+          
+        return () => {
+          supabase.removeChannel(channel);
+        };
+      } catch (error) {
+        console.error('Error fetching live streams:', error);
+      }
+    };
+    
+    fetchLiveStreams();
+  }, []);
 
   const handleProductClick = (product: any) => {
     setSelectedProduct(product);
@@ -133,9 +161,38 @@ const Marketplace: React.FC = () => {
     window.open(videoUrl, '_blank');
   };
 
+  const handleJoinLiveStream = (stream: any) => {
+    setSelectedLiveStream(stream);
+    setIsLiveStreamDialogOpen(true);
+  };
+
   const getQRCodeUrl = (text: string) => {
     return `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(text)}&size=200x200&bgcolor=ffffff`;
   };
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        product.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+    return matchesSearch && matchesCategory && selectedCategory !== 'livestream';
+  });
+
+  const filteredVideos = videos.filter(video => {
+    if (selectedCategory !== 'all' && selectedCategory !== 'video') return false;
+    return video.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+          (video.description && video.description.toLowerCase().includes(searchTerm.toLowerCase()));
+  });
+
+  const filteredLiveStreams = liveStreams.filter(stream => {
+    if (selectedCategory !== 'all' && selectedCategory !== 'livestream') return false;
+    
+    // If we have search term, filter by streamer's username
+    if (searchTerm) {
+      return stream.profiles?.username?.toLowerCase().includes(searchTerm.toLowerCase());
+    }
+    
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-dark bg-dark-gradient text-pi py-10">
@@ -200,18 +257,78 @@ const Marketplace: React.FC = () => {
                   className="text-xs"
                 >
                   {category.name}
+                  {category.id === 'livestream' && liveStreams.length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-red-500 rounded-full">
+                      {liveStreams.length}
+                    </span>
+                  )}
                 </Button>
               ))}
             </div>
           </div>
         </div>
 
+        {/* Live Streams Section */}
+        {filteredLiveStreams.length > 0 && (
+          <>
+            <div className="flex items-center gap-3 mb-6">
+              <Tv className="h-6 w-6 text-red-500" />
+              <h2 className="text-2xl font-medium">Live Now</h2>
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              {filteredLiveStreams.map(stream => (
+                <div 
+                  key={stream.id} 
+                  className="glass-card rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-all group"
+                  onClick={() => handleJoinLiveStream(stream)}
+                >
+                  <div className="h-48 bg-dark-secondary overflow-hidden relative">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pi-focus/30 to-dark">
+                      {stream.profiles?.profile_photo_url ? (
+                        <img 
+                          src={stream.profiles.profile_photo_url} 
+                          alt={stream.profiles.username} 
+                          className="w-20 h-20 rounded-full object-cover border-2 border-white"
+                        />
+                      ) : (
+                        <User size={48} className="text-white opacity-50" />
+                      )}
+                    </div>
+                    <div className="absolute top-3 left-3 bg-red-500 text-white text-xs px-2 py-1 rounded flex items-center">
+                      <div className="w-2 h-2 bg-white rounded-full mr-1 animate-pulse"></div>
+                      LIVE
+                    </div>
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="bg-white/20 backdrop-blur-sm rounded-full p-4">
+                        <Play size={48} className="text-white" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-medium text-lg mb-1">{stream.title || `${stream.profiles?.username}'s Live Stream`}</h3>
+                    <p className="text-pi-muted text-sm mb-2">
+                      Hosted by {stream.profiles?.username || 'Unknown Host'}
+                    </p>
+                    <div className="flex items-center text-xs">
+                      <span className="bg-dark-accent text-pi-muted px-2 py-1 rounded-full">
+                        Click to join
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
         {/* Product & Video Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin h-12 w-12 border-4 border-pi-focus rounded-full border-t-transparent"></div>
           </div>
-        ) : filteredProducts.length === 0 && filteredVideos.length === 0 ? (
+        ) : filteredProducts.length === 0 && filteredVideos.length === 0 && filteredLiveStreams.length === 0 ? (
           <div className="glass-card p-12 text-center">
             <ShoppingCart className="h-16 w-16 mx-auto text-pi-muted mb-4" />
             <h2 className="text-2xl font-medium mb-2">No Products Found</h2>
@@ -299,126 +416,44 @@ const Marketplace: React.FC = () => {
 
         {/* Product Detail Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="bg-dark-secondary border-dark-accent max-w-3xl">
-            {selectedProduct && (
-              <>
-                <DialogTitle className="text-2xl font-elixia text-gradient">
-                  {selectedProduct.title}
-                </DialogTitle>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                  <div className="bg-dark rounded-lg overflow-hidden">
-                    <img 
-                      src={selectedProduct.image_url || '/placeholder.svg'} 
-                      alt={selectedProduct.title} 
-                      className="w-full h-64 object-cover"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center mb-2">
-                      <Star className="h-5 w-5 fill-yellow-500 text-yellow-500 mr-1" />
-                      <span className="text-white font-medium">5.0</span>
-                      <span className="text-pi-muted ml-1">(New)</span>
-                    </div>
-                    <DialogDescription className="text-pi mb-4">
-                      {selectedProduct.description}
-                    </DialogDescription>
-                    
-                    <div className="text-2xl font-medium text-white mb-2">
-                      ${selectedProduct.price.toFixed(2)}{selectedProduct.type !== 'tangible' ? '/hr' : ''}
-                    </div>
-                    
-                    {selectedProduct.contact_phone && (
-                      <div className="flex items-center text-pi mb-4">
-                        <Phone className="h-4 w-4 mr-2" />
-                        <span className="text-sm">Contact: {selectedProduct.contact_phone}</span>
-                      </div>
-                    )}
-                    
-                    {/* Payment Options */}
-                    {walletAddresses[selectedProduct.id] && walletAddresses[selectedProduct.id].length > 0 && (
-                      <div className="mb-6">
-                        <h3 className="text-sm font-medium mb-2">Payment Options:</h3>
-                        <div className="space-y-2">
-                          {walletAddresses[selectedProduct.id].map((wallet: any) => (
-                            <div key={wallet.id} className="p-3 rounded bg-dark">
-                              <p className="text-sm font-medium capitalize">{wallet.crypto_type}</p>
-                              <div className="flex items-center">
-                                <code className="text-xs text-gray-400 truncate flex-1">
-                                  {wallet.wallet_address}
-                                </code>
-                                <div className="flex gap-2">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(wallet.wallet_address);
-                                      
-                                      // Record the purchase
-                                      supabase.functions.invoke('send-purchase-confirmation', {
-                                        body: {
-                                          productTitle: selectedProduct.title,
-                                          productPrice: selectedProduct.price,
-                                          walletAddress: wallet.wallet_address,
-                                          cryptoType: wallet.crypto_type,
-                                          contactPhone: selectedProduct.contact_phone || "Not provided"
-                                        },
-                                      });
-                                      
-                                      toast({
-                                        title: "Address copied",
-                                        description: `Send ${selectedProduct.price} ${wallet.crypto_type} to complete your purchase. Contact the seller at ${selectedProduct.contact_phone || "unknown"} after payment.`,
-                                      });
-                                    }}
-                                  >
-                                    Copy
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      window.open(getQRCodeUrl(wallet.wallet_address), '_blank');
-                                    }}
-                                  >
-                                    <QrCode size={16} className="mr-1" />
-                                    QR
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="flex gap-2">
-                      {user && selectedProduct.user_id === user.id ? (
-                        <Button 
-                          className="w-full" 
-                          onClick={() => {
-                            setIsDialogOpen(false);
-                            navigate(`/edit-product/${selectedProduct.id}`);
-                          }}
-                        >
-                          Edit Product
-                        </Button>
-                      ) : (
-                        <Button 
-                          className="w-full" 
-                          onClick={() => setIsDialogOpen(false)}
-                        >
-                          Close
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+          {selectedProduct && (
+            <>
+              <DialogTitle className="text-2xl font-elixia text-gradient">
+                {selectedProduct.title}
+              </DialogTitle>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <div className="bg-dark rounded-lg overflow-hidden">
+                  <img 
+                    src={selectedProduct.image_url || '/placeholder.svg'} 
+                    alt={selectedProduct.title} 
+                    className="w-full h-64 object-cover"
+                  />
                 </div>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
-    </div>
-  );
-};
+                <div>
+                  <div className="flex items-center mb-2">
+                    <Star className="h-5 w-5 fill-yellow-500 text-yellow-500 mr-1" />
+                    <span className="text-white font-medium">5.0</span>
+                    <span className="text-pi-muted ml-1">(New)</span>
+                  </div>
+                  <DialogDescription className="text-pi mb-4">
+                    {selectedProduct.description}
+                  </DialogDescription>
+                  
+                  <div className="text-2xl font-medium text-white mb-2">
+                    ${selectedProduct.price.toFixed(2)}{selectedProduct.type !== 'tangible' ? '/hr' : ''}
+                  </div>
+                  
+                  {selectedProduct.contact_phone && (
+                    <div className="flex items-center text-pi mb-4">
+                      <Phone className="h-4 w-4 mr-2" />
+                      <span className="text-sm">Contact: {selectedProduct.contact_phone}</span>
+                    </div>
+                  )}
+                  
+                  {/* Payment Options */}
+                  {walletAddresses[selectedProduct.id] && walletAddresses[selectedProduct.id].length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-medium mb-2">Payment Options:</h3>
+                      <div className="space-y-2">
+                       
 
-export default Marketplace;
