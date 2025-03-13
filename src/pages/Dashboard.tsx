@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -96,8 +95,6 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             
-            {/* AstrologyMessage component is empty */}
-            
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
               <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-6">
                 <TabsTrigger value="profile">Profile Details</TabsTrigger>
@@ -168,9 +165,6 @@ const Dashboard: React.FC = () => {
             </Tabs>
             
             <div className="flex justify-end space-x-4 mt-6">
-              <Button variant="outline" onClick={() => navigate('/')}>
-                Go to Home
-              </Button>
               <Button variant="outline" onClick={() => navigate('/marketplace')}>
                 Marketplace
               </Button>

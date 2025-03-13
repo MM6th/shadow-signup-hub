@@ -286,7 +286,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
         <Button 
           type="submit" 
           disabled={isSubmitting}
-          className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+          className="w-full md:w-auto bg-pi-focus hover:bg-pi-focus/90 text-white"
         >
           {isSubmitting ? (isCreate ? "Creating..." : "Updating...") : (isCreate ? "Create Profile" : "Update Profile")}
         </Button>
