@@ -168,12 +168,18 @@ const AdminNFT: React.FC = () => {
         blockchain: currentNFT.blockchain || 'ethereum'
       });
       
-      fetchNFTs();
+      await fetchNFTs();
       
       setIsNFTDialogOpen(false);
+      setIsCollectionDialogOpen(false);
       setCurrentNFT({});
       setImageFile(null);
       setImagePreview(null);
+      
+      toast({
+        title: 'NFT Created Successfully',
+        description: 'Your NFT has been added to your collection',
+      });
     } catch (error) {
       console.error('Error saving NFT:', error);
       toast({
@@ -212,12 +218,20 @@ const AdminNFT: React.FC = () => {
         image_url: imageUrl
       });
       
-      fetchCollections();
+      await fetchCollections();
       
       setIsCollectionDialogOpen(false);
       setCurrentCollection({});
       setImageFile(null);
       setImagePreview(null);
+      
+      if (isNFTDialogOpen) {
+      } else {
+        toast({
+          title: 'Collection Created',
+          description: 'Your collection has been created successfully',
+        });
+      }
     } catch (error) {
       console.error('Error saving collection:', error);
       toast({
@@ -798,6 +812,11 @@ const AdminNFT: React.FC = () => {
               setCurrentCollection({});
               setImageFile(null);
               setImagePreview(null);
+              
+              toast({
+                title: 'Collection Created',
+                description: 'Your collection has been created successfully',
+              });
             } catch (error) {
               console.error('Error saving collection:', error);
               toast({
