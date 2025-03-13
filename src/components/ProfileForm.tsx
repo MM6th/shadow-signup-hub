@@ -84,9 +84,9 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
       // Create the profile data object with proper handling of select values
       const profileData = {
         username,
-        // For business_type and industry, use null when empty or "_none" is selected
-        business_type: !businessType || businessType === "_none" ? null : businessType,
-        industry: !industry || industry === "_none" ? null : industry,
+        // For business_type and industry, use empty string when selecting "_none"
+        business_type: businessType === "_none" ? "" : businessType,
+        industry: industry === "_none" ? "" : industry,
         profile_photo_url: profilePhotoUrl,
         updated_at: new Date().toISOString(),
       };
