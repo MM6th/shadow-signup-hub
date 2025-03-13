@@ -1,18 +1,36 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import ProfileForm from '@/components/ProfileForm';
 
 const CreateProfile: React.FC = () => {
-  const { user, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, isLoading } = useAuth();
   const navigate = useNavigate();
   
-  if (!user) {
-    navigate('/');
-    return null;
+  useEffect(() => {
+    if (!isLoading) {
+      if (!user) {
+        navigate('/');
+      } else if (profile) {
+        navigate('/dashboard');
+      }
+    }
+  }, [user, profile, isLoading, navigate]);
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-dark bg-dark-gradient flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-12 w-12 border-4 border-pi-focus border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-pi-muted">Loading your profile...</p>
+        </div>
+      </div>
+    );
   }
+  
+  if (!user || profile) return null;
   
   const handleSuccess = async () => {
     await refreshProfile();

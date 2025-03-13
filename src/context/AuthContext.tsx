@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
@@ -33,10 +34,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const currentPath = location.pathname;
       
       if (user) {
-        if (!profile && currentPath !== '/create-profile') {
-          navigate('/create-profile');
-        } else if (profile && (currentPath === '/' || currentPath === '/create-profile')) {
-          navigate('/dashboard');
+        // User is authenticated
+        if (profile) {
+          // User has a profile
+          if (currentPath === '/' || currentPath === '/create-profile') {
+            navigate('/dashboard');
+          }
+        } else {
+          // User does not have a profile
+          if (currentPath !== '/create-profile') {
+            navigate('/create-profile');
+            toast({
+              title: "Profile needed",
+              description: "Please complete your profile to continue.",
+            });
+          }
         }
       }
     }
