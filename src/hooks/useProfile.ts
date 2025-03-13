@@ -22,13 +22,22 @@ export const useProfile = (userId: string | undefined) => {
     try {
       const { data: profileData, error } = await supabase
         .from('profiles')
-        .select('id, username, profile_photo_url, business_type, industry')
+        .select('*')
         .eq('id', uid)
         .maybeSingle();
         
       if (!error && profileData) {
-        setProfile(profileData as Profile);
-        return profileData as Profile;
+        // Map the database fields to our Profile type
+        const mappedProfile: Profile = {
+          id: profileData.id,
+          username: profileData.username,
+          profile_photo_url: profileData.profile_photo_url,
+          business_type: profileData.business_type,
+          industry: profileData.industry
+        };
+        
+        setProfile(mappedProfile);
+        return mappedProfile;
       } else {
         console.error('Error fetching profile:', error);
         return null;

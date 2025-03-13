@@ -55,19 +55,23 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         try {
           setIsSubmitting(true);
           
-          // Call the Edge Function to create an appointment
-          const { data, error } = await supabase.functions.invoke('appointments', {
-            body: {
-              productId,
-              productTitle,
-              sellerId,
-              buyerId: user.id,
-              buyerName: user.user_metadata?.full_name || user.email,
-              appointmentDate: format(selectedDate, 'yyyy-MM-dd'),
-              appointmentTime: timeSlot
-            },
-          });
+          const appointmentData = {
+            product_id: productId,
+            product_title: productTitle,
+            seller_id: sellerId,
+            buyer_id: user.id,
+            buyer_name: user.user_metadata?.full_name || user.email,
+            appointment_date: format(selectedDate, 'yyyy-MM-dd'),
+            appointment_time: timeSlot,
+            status: 'scheduled'
+          };
           
+          const { data, error } = await supabase
+            .from('appointments')
+            .insert(appointmentData)
+            .select()
+            .single();
+            
           if (error) throw error;
           
           toast({
