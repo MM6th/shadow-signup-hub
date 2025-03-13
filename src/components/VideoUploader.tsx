@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Upload, X, Play, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -113,44 +112,36 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
       const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
       const filePath = `${userId}/${fileName}`;
       
-      // Set up event tracking with XMLHttpRequest
-      const xhr = new XMLHttpRequest();
+      // For progress tracking, split the upload into chunks and track manually
+      setCurrentUploads(prev => ({ ...prev, [fileName]: 0 }));
       
-      // Create upload promise
-      const uploadPromise = new Promise<void>((resolve, reject) => {
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const percent = (event.loaded / event.total) * 100;
-            setUploadProgress(Math.round(percent));
-            setCurrentUploads(prev => ({ ...prev, [fileName]: Math.round(percent) }));
+      // Simple simulation of progress during upload (since Supabase doesn't support progress tracking directly)
+      const progressInterval = setInterval(() => {
+        setCurrentUploads(prev => {
+          const currentProgress = prev[fileName] || 0;
+          // Increment by a small percentage until 90% to simulate progress
+          if (currentProgress < 90) {
+            return { ...prev, [fileName]: currentProgress + 5 };
           }
+          return prev;
         });
-        
-        // Resolve or reject based on upload completion
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
-          } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`));
-          }
-        };
-        
-        xhr.onerror = () => reject(new Error('Upload failed'));
-      });
+      }, 300);
       
-      // Start the upload using Supabase with the custom xhr
+      // Start the upload using Supabase
       const { data, error } = await supabase.storage
         .from('profile_videos')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false,
-          httpRequest: xhr
+          upsert: false
         });
       
-      // Wait for the upload to complete with progress tracking
-      await uploadPromise;
+      // Clear the interval once upload is complete
+      clearInterval(progressInterval);
       
       if (error) throw error;
+      
+      // Set to 100% when complete
+      setCurrentUploads(prev => ({ ...prev, [fileName]: 100 }));
       
       toast({
         title: "Upload successful",
@@ -168,6 +159,11 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
       });
     } finally {
       setUploadProgress(0);
+      // Clear current uploads after a delay to show 100% completion
+      setTimeout(() => {
+        setCurrentUploads({});
+      }, 1000);
+      
       // Clear the file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
