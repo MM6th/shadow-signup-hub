@@ -38,6 +38,7 @@ export const useNFT = () => {
     try {
       setIsLoading(true);
       
+      // Use the custom query builder for the new nfts table
       let query = supabase.from('nfts').select('*');
       
       if (userId) {
@@ -48,8 +49,10 @@ export const useNFT = () => {
       
       if (error) throw error;
       
-      setNfts(data as NFT[]);
-      return data as NFT[];
+      // Explicitly cast the data to NFT[] type
+      const typedData = data as unknown as NFT[];
+      setNfts(typedData);
+      return typedData;
     } catch (error) {
       console.error('Error fetching NFTs:', error);
       toast({
@@ -67,6 +70,7 @@ export const useNFT = () => {
     try {
       setIsLoading(true);
       
+      // Use the custom query builder for the new nft_collections table
       let query = supabase.from('nft_collections').select('*');
       
       if (userId) {
@@ -77,8 +81,10 @@ export const useNFT = () => {
       
       if (error) throw error;
       
-      setCollections(data as NFTCollection[]);
-      return data as NFTCollection[];
+      // Explicitly cast the data to NFTCollection[] type
+      const typedData = data as unknown as NFTCollection[];
+      setCollections(typedData);
+      return typedData;
     } catch (error) {
       console.error('Error fetching collections:', error);
       toast({
@@ -129,7 +135,7 @@ export const useNFT = () => {
       });
       
       // Return the created NFT
-      return data as NFT;
+      return data as unknown as NFT;
       
       // Note: In a real implementation, this is where we would 
       // call a smart contract to mint the NFT on the blockchain
@@ -179,7 +185,7 @@ export const useNFT = () => {
         description: 'Your collection has been created successfully',
       });
       
-      return data as NFTCollection;
+      return data as unknown as NFTCollection;
     } catch (error) {
       console.error('Error creating collection:', error);
       toast({
@@ -229,7 +235,7 @@ export const useNFT = () => {
         description: `Your NFT has been minted with token ID: ${tokenId}`,
       });
       
-      return data as NFT;
+      return data as unknown as NFT;
     } catch (error) {
       console.error('Error minting NFT:', error);
       toast({
@@ -264,7 +270,7 @@ export const useNFT = () => {
         description: `Your NFT has been listed for sale at ${price} ETH`,
       });
       
-      return data as NFT;
+      return data as unknown as NFT;
     } catch (error) {
       console.error('Error listing NFT:', error);
       toast({

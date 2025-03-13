@@ -48,6 +48,116 @@ export type Database = {
         }
         Relationships: []
       }
+      nft_collections: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          name: string
+          owner_id: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          image_url?: string | null
+          name: string
+          owner_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          owner_id?: string
+        }
+        Relationships: []
+      }
+      nft_transactions: {
+        Row: {
+          buyer_id: string | null
+          created_at: string
+          id: string
+          nft_id: string
+          price: number
+          seller_id: string
+          status: string
+          transaction_hash: string | null
+        }
+        Insert: {
+          buyer_id?: string | null
+          created_at?: string
+          id?: string
+          nft_id: string
+          price: number
+          seller_id: string
+          status?: string
+          transaction_hash?: string | null
+        }
+        Update: {
+          buyer_id?: string | null
+          created_at?: string
+          id?: string
+          nft_id?: string
+          price?: number
+          seller_id?: string
+          status?: string
+          transaction_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nft_transactions_nft_id_fkey"
+            columns: ["nft_id"]
+            isOneToOne: false
+            referencedRelation: "nfts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nfts: {
+        Row: {
+          blockchain: string
+          collection: string
+          created_at: string
+          description: string
+          id: string
+          imageurl: string
+          owner_id: string
+          price: number
+          status: string
+          title: string
+          tokenid: string | null
+        }
+        Insert: {
+          blockchain?: string
+          collection: string
+          created_at?: string
+          description: string
+          id?: string
+          imageurl: string
+          owner_id: string
+          price: number
+          status?: string
+          title: string
+          tokenid?: string | null
+        }
+        Update: {
+          blockchain?: string
+          collection?: string
+          created_at?: string
+          description?: string
+          id?: string
+          imageurl?: string
+          owner_id?: string
+          price?: number
+          status?: string
+          title?: string
+          tokenid?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string
