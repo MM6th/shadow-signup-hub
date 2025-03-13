@@ -2,16 +2,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
 import ProfileForm from '@/components/ProfileForm';
 
 const UpdateProfile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile, isLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
-  const { profile, isLoading, refreshProfile } = useProfile(user?.id);
   
   if (isLoading) {
     return (
@@ -66,12 +64,12 @@ const UpdateProfile: React.FC = () => {
               />
             ) : (
               <div className="text-center py-8">
-                <p className="text-pi-muted">Profile not found. Please create a profile first.</p>
+                <p className="text-pi-muted">Profile not found. Creating a new profile is required.</p>
                 <Button 
-                  onClick={() => navigate('/create-profile')}
+                  onClick={() => navigate('/dashboard')}
                   className="mt-4"
                 >
-                  Create Profile
+                  Return to Dashboard
                 </Button>
               </div>
             )}

@@ -57,8 +57,8 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [username, setUsername] = useState(profile?.username || '');
-  const [businessType, setBusinessType] = useState<string | null>(profile?.business_type || null);
-  const [industry, setIndustry] = useState<string | null>(profile?.industry || null);
+  const [businessType, setBusinessType] = useState<string>(profile?.business_type || "");
+  const [industry, setIndustry] = useState<string>(profile?.industry || "");
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(profile?.profile_photo_url || null);
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,8 +87,8 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
     try {
       const profileData = {
         username,
-        business_type: businessType,
-        industry,
+        business_type: businessType || null,
+        industry: industry || null,
         profile_photo_url: profilePhotoUrl,
         updated_at: new Date().toISOString(),
       };
@@ -230,14 +230,15 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
               Business Type
             </label>
             <Select 
-              value={businessType || ''} 
+              value={businessType} 
               onValueChange={setBusinessType}
             >
               <SelectTrigger className="bg-dark-secondary border-dark-accent">
                 <SelectValue placeholder="Select business type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                {/* SelectItem with empty string must have a value prop */}
+                <SelectItem value="_none">None</SelectItem>
                 {businessTypes.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type}
@@ -252,14 +253,15 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
               Industry
             </label>
             <Select 
-              value={industry || ''} 
+              value={industry} 
               onValueChange={setIndustry}
             >
               <SelectTrigger className="bg-dark-secondary border-dark-accent">
                 <SelectValue placeholder="Select industry" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                {/* SelectItem with empty string must have a value prop */}
+                <SelectItem value="_none">None</SelectItem>
                 {industries.map((ind) => (
                   <SelectItem key={ind} value={ind}>
                     {ind}
