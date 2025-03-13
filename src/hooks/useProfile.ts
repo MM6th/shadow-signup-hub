@@ -7,8 +7,8 @@ import { useToast } from '@/hooks/use-toast';
 export type Profile = {
   id: string;
   username: string;
-  first_name: string;
-  last_name: string;
+  first_name?: string; // Making this optional
+  last_name?: string; // Making this optional
   profile_photo_url: string | null;
   date_of_birth: string; // Still needed for database but not shown to user
   business_type: string | null;

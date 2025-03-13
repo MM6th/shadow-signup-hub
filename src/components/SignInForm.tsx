@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import Button from './Button';
@@ -21,7 +22,6 @@ const SignInForm: React.FC<SignInFormProps> = ({ mode, onToggleMode, onClose }) 
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    name: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,23 +69,6 @@ const SignInForm: React.FC<SignInFormProps> = ({ mode, onToggleMode, onClose }) 
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {mode === 'signup' && (
-          <div className="space-y-2">
-            <label htmlFor="name" className="block text-sm font-medium text-pi">
-              Full Name
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg bg-dark-secondary border border-white/10 text-pi placeholder-pi-muted/50 focus:outline-none focus:ring-2 focus:ring-pi-focus/50 transition-all"
-              placeholder="Enter your full name"
-            />
-          </div>
-        )}
-
         <div className="space-y-2">
           <label htmlFor="email" className="block text-sm font-medium text-pi">
             Email Address

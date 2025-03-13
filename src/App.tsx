@@ -35,6 +35,27 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Protected route that requires a profile
+const ProfileRequiredRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, hasProfile, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div className="h-screen w-full flex items-center justify-center bg-dark">
+      <div className="animate-spin h-12 w-12 border-4 border-pi-focus rounded-full border-t-transparent"></div>
+    </div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+  
+  if (!hasProfile) {
+    return <Navigate to="/create-profile" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 // Public route that redirects authenticated users
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, hasProfile, isLoading } = useAuth();
@@ -55,19 +76,38 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const AppRoutes = () => {
-  const { user, hasProfile } = useAuth();
+// Route that only allows users without profiles
+const CreateProfileOnlyRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, hasProfile, isLoading } = useAuth();
   
+  if (isLoading) {
+    return <div className="h-screen w-full flex items-center justify-center bg-dark">
+      <div className="animate-spin h-12 w-12 border-4 border-pi-focus rounded-full border-t-transparent"></div>
+    </div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+  
+  if (hasProfile) {
+    return <Navigate to="/update-profile" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<PublicRoute><Index /></PublicRoute>} />
-      <Route path="/create-profile" element={<ProtectedRoute><CreateProfile /></ProtectedRoute>} />
-      <Route path="/update-profile" element={<ProtectedRoute><UpdateProfile /></ProtectedRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
-      <Route path="/create-product" element={<ProtectedRoute><CreateProduct /></ProtectedRoute>} />
-      <Route path="/edit-product/:productId" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
-      <Route path="/video-conference/:appointmentId" element={<ProtectedRoute><VideoConferencePage /></ProtectedRoute>} />
+      <Route path="/create-profile" element={<CreateProfileOnlyRoute><CreateProfile /></CreateProfileOnlyRoute>} />
+      <Route path="/update-profile" element={<ProfileRequiredRoute><UpdateProfile /></ProfileRequiredRoute>} />
+      <Route path="/dashboard" element={<ProfileRequiredRoute><Dashboard /></ProfileRequiredRoute>} />
+      <Route path="/marketplace" element={<ProfileRequiredRoute><Marketplace /></ProfileRequiredRoute>} />
+      <Route path="/create-product" element={<ProfileRequiredRoute><CreateProduct /></ProfileRequiredRoute>} />
+      <Route path="/edit-product/:productId" element={<ProfileRequiredRoute><EditProduct /></ProfileRequiredRoute>} />
+      <Route path="/video-conference/:appointmentId" element={<ProfileRequiredRoute><VideoConferencePage /></ProfileRequiredRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

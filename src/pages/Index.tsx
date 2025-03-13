@@ -157,7 +157,7 @@ const Index: React.FC = () => {
         <section className="py-20 px-4 bg-dark-secondary">
           <div className="container mx-auto max-w-5xl text-center">
             <h2 className="text-3xl md:text-4xl font-elixia mb-6 text-gradient">
-              Ready to Elevate Your Business?
+              Ready to bring your above below?
             </h2>
             <p className="text-lg text-pi-muted mb-8 max-w-2xl mx-auto">
               Join our platform and unlock a world of opportunities for your services.
