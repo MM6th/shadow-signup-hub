@@ -12,8 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-// Admin ID for authorization check
-const ADMIN_ID = '3a25fea8-ec60-4e52-ae40-63f2b1ce89d9';
+// Access based on email instead of ID for easier management
+const ADMIN_EMAILS = ['cmooregee@gmail.com'];
 
 interface NFT {
   id: string;
@@ -75,7 +75,7 @@ const AdminNFT: React.FC = () => {
     setNfts(mockNFTs);
   }, []);
 
-  // Check if user is admin
+  // Check if user is admin by email
   if (isLoading) {
     return (
       <div className="min-h-screen bg-dark flex items-center justify-center">
@@ -88,7 +88,7 @@ const AdminNFT: React.FC = () => {
   }
 
   // Redirect if not admin
-  if (!user || user.id !== ADMIN_ID) {
+  if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
     toast({
       title: "Access Denied",
       description: "You do not have permission to view this page.",

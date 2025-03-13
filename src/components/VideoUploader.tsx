@@ -1,8 +1,13 @@
+
 import React, { useState, useRef } from 'react';
 import { Upload, X, Play, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 
 interface VideoUploaderProps {
@@ -12,13 +17,27 @@ interface VideoUploaderProps {
 // Max file size: 3GB in bytes
 const MAX_FILE_SIZE = 3 * 1024 * 1024 * 1024;
 
+interface VideoMetadata {
+  title: string;
+  description: string;
+  thumbnail?: File | null;
+}
+
 const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [videos, setVideos] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [currentUploads, setCurrentUploads] = useState<{ [key: string]: number }>({});
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false);
+  const [videoMetadata, setVideoMetadata] = useState<VideoMetadata>({
+    title: '',
+    description: '',
+    thumbnail: null
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   // Fetch existing videos on component mount
@@ -40,7 +59,31 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
       
       // Map the storage objects to our video format
       const videoFiles = data?.filter(item => !item.name.endsWith('/')) || [];
-      setVideos(videoFiles);
+      
+      // Fetch metadata for each video if available
+      const videosWithMetadata = await Promise.all(videoFiles.map(async (video) => {
+        try {
+          const { data: metadataData, error: metadataError } = await supabase
+            .from('video_metadata')
+            .select('*')
+            .eq('video_path', `${userId}/${video.name}`)
+            .single();
+            
+          if (metadataError && metadataError.code !== 'PGRST116') {
+            console.error('Error fetching metadata:', metadataError);
+          }
+          
+          return {
+            ...video,
+            metadata: metadataData || null
+          };
+        } catch (error) {
+          console.error('Error processing video metadata:', error);
+          return video;
+        }
+      }));
+      
+      setVideos(videosWithMetadata);
     } catch (error: any) {
       console.error('Error fetching videos:', error);
       toast({
@@ -67,21 +110,18 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
     setIsDragging(false);
     
     const files = e.dataTransfer.files;
-    handleFiles(files);
+    if (files.length > 0) validateFile(files[0]);
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      handleFiles(e.target.files);
+      validateFile(e.target.files[0]);
     }
   };
   
-  const handleFiles = (files: FileList) => {
+  const validateFile = (file: File) => {
     // Check if there are files
-    if (files.length === 0) return;
-    
-    // Get the file
-    const file = files[0];
+    if (!file) return;
     
     // Validate file type
     if (!file.type.startsWith('video/')) {
@@ -103,39 +143,78 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
       return;
     }
     
-    // Upload the file
-    uploadVideo(file);
+    // Set the selected file and open metadata dialog
+    setSelectedFile(file);
+    setVideoMetadata({
+      title: file.name.split('.')[0].replace(/_/g, ' '), // Default title from filename
+      description: '',
+      thumbnail: null
+    });
+    setIsMetadataDialogOpen(true);
   };
 
-  const uploadVideo = async (file: File) => {
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      
+      // Basic validation for thumbnail (image type, reasonable size)
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid thumbnail type",
+          description: "Please upload an image file for the thumbnail",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit for thumbnails
+        toast({
+          title: "Thumbnail too large",
+          description: "Maximum thumbnail size is 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setVideoMetadata(prev => ({
+        ...prev,
+        thumbnail: file
+      }));
+    }
+  };
+
+  const uploadVideo = async () => {
+    if (!selectedFile) return;
+    
     try {
-      const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      const timestamp = Date.now();
+      const fileName = `${timestamp}_${selectedFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
       const filePath = `${userId}/${fileName}`;
       
-      // For progress tracking, split the upload into chunks and track manually
+      // Start tracking progress
       setCurrentUploads(prev => ({ ...prev, [fileName]: 0 }));
       
-      // Simple simulation of progress during upload (since Supabase doesn't support progress tracking directly)
+      // Use more granular simulation of progress during upload
       const progressInterval = setInterval(() => {
         setCurrentUploads(prev => {
           const currentProgress = prev[fileName] || 0;
-          // Increment by a small percentage until 90% to simulate progress
-          if (currentProgress < 90) {
-            return { ...prev, [fileName]: currentProgress + 5 };
+          // Increment by smaller percentages for smoother simulation
+          if (currentProgress < 95) {
+            return { ...prev, [fileName]: currentProgress + 2 };
           }
           return prev;
         });
-      }, 300);
+      }, 200);
       
-      // Start the upload using Supabase
+      // Upload the video file
       const { data, error } = await supabase.storage
         .from('profile_videos')
-        .upload(filePath, file, {
+        .upload(filePath, selectedFile, {
           cacheControl: '3600',
           upsert: false
         });
       
-      // Clear the interval once upload is complete
+      // Clear the progress simulation interval
       clearInterval(progressInterval);
       
       if (error) throw error;
@@ -143,10 +222,66 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
       // Set to 100% when complete
       setCurrentUploads(prev => ({ ...prev, [fileName]: 100 }));
       
+      // If there's a thumbnail, upload it to the thumbnails bucket
+      let thumbnailUrl = null;
+      if (videoMetadata.thumbnail) {
+        const thumbnailPath = `${userId}/${timestamp}_thumb.${videoMetadata.thumbnail.name.split('.').pop()}`;
+        
+        const { data: thumbData, error: thumbError } = await supabase.storage
+          .from('profile_videos_thumbs')
+          .upload(thumbnailPath, videoMetadata.thumbnail, {
+            cacheControl: '3600',
+            upsert: false
+          });
+          
+        if (thumbError) {
+          console.error('Error uploading thumbnail:', thumbError);
+          toast({
+            title: "Thumbnail upload failed",
+            description: thumbError.message || "Failed to upload thumbnail",
+            variant: "destructive",
+          });
+        } else {
+          thumbnailUrl = supabase.storage
+            .from('profile_videos_thumbs')
+            .getPublicUrl(thumbnailPath).data.publicUrl;
+        }
+      }
+      
+      // Store video metadata in database
+      const { error: metadataError } = await supabase
+        .from('video_metadata')
+        .insert({
+          video_path: filePath,
+          title: videoMetadata.title,
+          description: videoMetadata.description,
+          thumbnail_url: thumbnailUrl,
+          user_id: userId,
+          created_at: new Date().toISOString()
+        });
+        
+      if (metadataError) {
+        console.error('Error saving metadata:', metadataError);
+        toast({
+          title: "Metadata save failed",
+          description: metadataError.message || "Failed to save video information",
+          variant: "destructive",
+        });
+      }
+      
       toast({
         title: "Upload successful",
         description: "Your video has been uploaded",
       });
+      
+      // Reset form and refresh the videos list
+      setSelectedFile(null);
+      setVideoMetadata({
+        title: '',
+        description: '',
+        thumbnail: null
+      });
+      setIsMetadataDialogOpen(false);
       
       // Refresh the videos list
       await fetchUserVideos();
@@ -168,6 +303,9 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+      if (thumbnailInputRef.current) {
+        thumbnailInputRef.current.value = '';
+      }
     }
   };
   
@@ -175,6 +313,13 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
     try {
       const filePath = `${userId}/${fileName}`;
       
+      // First delete the metadata if it exists
+      await supabase
+        .from('video_metadata')
+        .delete()
+        .eq('video_path', filePath);
+      
+      // Then delete the actual video file
       const { error } = await supabase.storage
         .from('profile_videos')
         .remove([filePath]);
@@ -264,10 +409,17 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
                       <Play size={20} className="text-pi-focus" />
                     </div>
                     <div>
-                      <p className="font-medium truncate max-w-[200px]">{video.name}</p>
-                      <p className="text-xs text-pi-muted">
-                        {(video.metadata?.size / (1024 * 1024)).toFixed(2)} MB
+                      <p className="font-medium truncate max-w-[200px]">
+                        {video.metadata?.title || video.name}
                       </p>
+                      <p className="text-xs text-pi-muted">
+                        {(video.metadata?.size / (1024 * 1024)).toFixed(2) || 'Unknown'} MB
+                      </p>
+                      {video.metadata?.description && (
+                        <p className="text-xs text-pi-muted mt-1 line-clamp-1">
+                          {video.metadata.description}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -298,6 +450,81 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
           </div>
         )}
       </div>
+
+      {/* Video Metadata Dialog */}
+      <Dialog open={isMetadataDialogOpen} onOpenChange={setIsMetadataDialogOpen}>
+        <DialogContent className="bg-dark-secondary text-white border-gray-700">
+          <DialogHeader>
+            <DialogTitle>Video Details</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="video-title">Video Title</Label>
+              <Input 
+                id="video-title"
+                value={videoMetadata.title}
+                onChange={(e) => setVideoMetadata(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Enter a title for your video"
+                className="bg-dark border-gray-700"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="video-description">Description</Label>
+              <Textarea 
+                id="video-description"
+                value={videoMetadata.description}
+                onChange={(e) => setVideoMetadata(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Add a description for your video (optional)"
+                className="bg-dark border-gray-700 min-h-[100px]"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="video-thumbnail">Thumbnail (Optional)</Label>
+              <div className="flex gap-2 items-center">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => thumbnailInputRef.current?.click()}
+                  className="w-full"
+                >
+                  <Image size={16} className="mr-2" /> 
+                  {videoMetadata.thumbnail ? 'Change Thumbnail' : 'Upload Thumbnail'}
+                </Button>
+                <input
+                  type="file"
+                  ref={thumbnailInputRef}
+                  onChange={handleThumbnailChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+              </div>
+              {videoMetadata.thumbnail && (
+                <p className="text-xs text-pi-muted mt-2">
+                  Selected: {videoMetadata.thumbnail.name}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsMetadataDialogOpen(false);
+                setSelectedFile(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={uploadVideo} disabled={!videoMetadata.title}>
+              Upload Video
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
