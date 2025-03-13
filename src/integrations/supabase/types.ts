@@ -121,6 +121,7 @@ export type Database = {
           blockchain: string
           collection: string
           created_at: string
+          currency: string | null
           description: string
           id: string
           imageurl: string
@@ -134,6 +135,7 @@ export type Database = {
           blockchain?: string
           collection: string
           created_at?: string
+          currency?: string | null
           description: string
           id?: string
           imageurl: string
@@ -147,6 +149,7 @@ export type Database = {
           blockchain?: string
           collection?: string
           created_at?: string
+          currency?: string | null
           description?: string
           id?: string
           imageurl?: string
