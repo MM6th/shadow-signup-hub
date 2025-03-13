@@ -20,7 +20,7 @@ export const useNFT = () => {
     fetchNFTs: nftOperations.fetchNFTs,
     createNFT: nftOperations.createNFT,
     updateNFT: nftOperations.updateNFT,
-    deleteNFT: nftOperations.deleteNFT, // Add the delete function
+    deleteNFT: nftOperations.deleteNFT,
     simulateMintNFT: nftOperations.simulateMintNFT,
     listNFTForSale: nftOperations.listNFTForSale,
     

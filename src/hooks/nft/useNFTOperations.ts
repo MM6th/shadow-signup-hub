@@ -203,6 +203,7 @@ export const useNFTOperations = () => {
     
     try {
       setIsLoading(true);
+      console.log("Deleting NFT with ID:", nftId);
       
       const { error } = await supabase
         .from('nfts')
@@ -210,14 +211,13 @@ export const useNFTOperations = () => {
         .eq('id', nftId)
         .eq('owner_id', user.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error from Supabase during delete:", error);
+        throw error;
+      }
       
+      console.log("NFT deletion successful, updating local state");
       setNfts(prevNfts => prevNfts.filter(nft => nft.id !== nftId));
-      
-      toast({
-        title: 'NFT Deleted',
-        description: 'Your NFT has been successfully deleted',
-      });
       
       return true;
     } catch (error) {

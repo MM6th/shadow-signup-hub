@@ -39,12 +39,20 @@ export const NFTCard: React.FC<NFTCardProps> = ({ nft, onMint, onList, onEdit, o
 
   const handleDelete = async () => {
     if (onDelete) {
-      await onDelete(nft.id);
-      setIsDeleteDialogOpen(false);
+      setIsActionLoading(true);
+      try {
+        console.log("NFTCard: Calling onDelete for NFT ID:", nft.id);
+        await onDelete(nft.id);
+        console.log("NFTCard: Delete operation completed");
+      } catch (error) {
+        console.error("Error in handleDelete:", error);
+      } finally {
+        setIsActionLoading(false);
+        setIsDeleteDialogOpen(false);
+      }
     }
   };
   
-  // Helper function to render the proper media preview based on content type
   const renderMediaPreview = () => {
     const contentType = nft.content_type || 'image';
     
@@ -114,7 +122,6 @@ export const NFTCard: React.FC<NFTCardProps> = ({ nft, onMint, onList, onEdit, o
     }
   };
   
-  // Function to get the content type icon
   const getContentTypeIcon = () => {
     switch (nft.content_type) {
       case 'video': return <Video size={16} />;

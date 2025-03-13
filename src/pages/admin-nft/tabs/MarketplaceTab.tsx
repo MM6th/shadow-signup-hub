@@ -62,10 +62,32 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
   };
 
   const handleDeleteNFT = async (nftId: string) => {
-    const success = await deleteNFT(nftId);
-    if (success) {
-      // Refresh data after deletion
-      setTimeout(() => refreshData(), 1000);
+    try {
+      console.log("Starting NFT deletion for ID:", nftId);
+      const success = await deleteNFT(nftId);
+      console.log("NFT deletion result:", success);
+      
+      if (success) {
+        toast({
+          title: 'NFT Deleted',
+          description: 'The NFT has been successfully removed',
+        });
+        // Ensure we refresh immediately after successful deletion
+        await refreshData();
+      } else {
+        toast({
+          title: 'Deletion Failed',
+          description: 'The NFT could not be deleted. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error("Error during NFT deletion:", error);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred during deletion',
+        variant: 'destructive',
+      });
     }
   };
 
