@@ -35,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (user) {
         // User is authenticated, redirect to dashboard from public pages
-        if (currentPath === '/') {
+        if (currentPath === '/' || currentPath === '/create-profile') {
           navigate('/dashboard');
         }
       }

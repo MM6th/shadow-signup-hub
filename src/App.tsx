@@ -61,6 +61,8 @@ const AppRoutes = () => {
       <Route path="/create-product" element={<ProtectedRoute><CreateProduct /></ProtectedRoute>} />
       <Route path="/edit-product/:productId" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
       <Route path="/video-conference/:appointmentId" element={<ProtectedRoute><VideoConferencePage /></ProtectedRoute>} />
+      {/* Add a redirect for the create-profile route to dashboard */}
+      <Route path="/create-profile" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
