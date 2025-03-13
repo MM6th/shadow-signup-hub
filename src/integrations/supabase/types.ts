@@ -106,10 +106,10 @@ export type Database = {
           business_type: string | null
           created_at: string
           date_of_birth: string
-          first_name: string
+          first_name: string | null
           id: string
           industry: string | null
-          last_name: string
+          last_name: string | null
           profile_photo_url: string | null
           updated_at: string
           username: string
@@ -118,10 +118,10 @@ export type Database = {
           business_type?: string | null
           created_at?: string
           date_of_birth: string
-          first_name: string
+          first_name?: string | null
           id: string
           industry?: string | null
-          last_name: string
+          last_name?: string | null
           profile_photo_url?: string | null
           updated_at?: string
           username: string
@@ -130,10 +130,10 @@ export type Database = {
           business_type?: string | null
           created_at?: string
           date_of_birth?: string
-          first_name?: string
+          first_name?: string | null
           id?: string
           industry?: string | null
-          last_name?: string
+          last_name?: string | null
           profile_photo_url?: string | null
           updated_at?: string
           username?: string
