@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -149,11 +150,31 @@ export const useLiveSessions = () => {
     try {
       setIsLoading(true);
       
+      // Save the live session data before ending it
+      const sessionData = JSON.stringify(userLiveSession);
+      const timestamp = new Date().toISOString();
+      const filePath = `${user.id}/${userLiveSession.id}-${timestamp}.json`;
+      
+      // Store completed session in the live_sessions bucket
+      const { error: storageError } = await supabase
+        .storage
+        .from('live_sessions')
+        .upload(filePath, sessionData, {
+          contentType: 'application/json',
+          cacheControl: '3600'
+        });
+      
+      if (storageError) {
+        console.error('Error archiving session:', storageError);
+        // Continue with ending the session even if archiving fails
+      }
+      
+      // Update the database record to mark the session as inactive
       const { error } = await supabase
         .from('live_sessions')
         .update({
           is_active: false,
-          ended_at: new Date().toISOString()
+          ended_at: timestamp
         })
         .eq('id', userLiveSession.id)
         .eq('user_id', user.id);
@@ -163,9 +184,10 @@ export const useLiveSessions = () => {
         throw error;
       }
       
-      console.log('Session ended successfully');
+      console.log('Session ended and archived successfully');
       setUserLiveSession(null);
       
+      // Force a refresh of active sessions
       fetchLiveSessions();
     } catch (error) {
       console.error('Error ending live session:', error);

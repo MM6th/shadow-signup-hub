@@ -30,10 +30,7 @@ const LiveVideoControls: React.FC<LiveVideoControlsProps> = ({ roomId }) => {
         description: 'Your live session has been ended successfully',
       });
       
-      // Force a refresh of the session data
-      await fetchUserLiveSession();
-      
-      // Navigate back to dashboard
+      // Navigate back to dashboard 
       navigate('/dashboard', { replace: true });
     } catch (error) {
       console.error('Error ending session:', error);
