@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      live_sessions: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          is_active: boolean
+          room_id: string
+          started_at: string
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean
+          room_id: string
+          started_at?: string
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean
+          room_id?: string
+          started_at?: string
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       nft_collections: {
         Row: {
           created_at: string
