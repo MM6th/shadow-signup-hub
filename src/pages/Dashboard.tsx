@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2, Video } from 'lucide-react';
-import Footer from '@/components/Footer';
 import { useAuth } from '@/context/AuthContext';
 import { useUserSession } from '@/hooks/useUserSession';
 import { useProduct } from '@/hooks/useProduct';
@@ -15,10 +14,11 @@ import { useLiveSessions } from '@/hooks/useLiveSessions';
 import LiveSessionsTab from '@/components/LiveSessionsTab';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import NavigationBar from '@/components/NavigationBar';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isLoading: authLoading } = useUserSession();
+  const { user, profile, isLoading: authLoading } = useAuth();
   const { products, isLoading, fetchProducts } = useProduct();
   const { userLiveSession } = useLiveSessions();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -46,18 +46,21 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-dark">
+      <NavigationBar />
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16 border-2 border-pi-focus">
-              <AvatarImage src={user.user_metadata?.avatar_url} alt={user.email || ''} />
-              <AvatarFallback>{user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-3xl font-elixia text-gradient">
-                Welcome, {user.user_metadata?.username || user.email?.split('@')[0] || 'User'}!
-              </h1>
-              <p className="text-pi-muted">Manage your products, appointments, and live sessions</p>
+          <div className="glass-card p-6 w-full md:w-auto">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16 border-2 border-pi-focus">
+                <AvatarImage src={profile?.profile_photo_url || undefined} alt={profile?.username || 'User'} />
+                <AvatarFallback>{(profile?.username || 'U').charAt(0).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-3xl font-elixia text-gradient">
+                  Welcome, {profile?.username || user.email?.split('@')[0] || 'User'}!
+                </h1>
+                <p className="text-pi-muted">Manage your products, appointments, and live sessions</p>
+              </div>
             </div>
           </div>
           <Button onClick={() => navigate('/marketplace')} className="ml-auto">
@@ -115,8 +118,6 @@ const Dashboard: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
-
-      <Footer />
     </div>
   );
 };

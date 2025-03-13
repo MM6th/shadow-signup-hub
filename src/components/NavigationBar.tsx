@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 
-const Navbar: React.FC = () => {
+const NavigationBar: React.FC = () => {
   const { user } = useAuth();
   
   return (
@@ -39,4 +39,4 @@ const Navbar: React.FC = () => {
   );
 };
 
-export default Navbar;
+export default NavigationBar;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Video, Mic, MicOff, VideoOff, Phone, MessageSquare, Users, Share } from 'lucide-react';
@@ -33,52 +32,40 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   const localStreamRef = useRef<MediaStream | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // Initialize WebRTC
   useEffect(() => {
     const initWebRTC = async () => {
       try {
-        // Get user media
         const stream = await navigator.mediaDevices.getUserMedia({ 
           video: true, 
           audio: true 
         });
         
-        // Save local stream
         localStreamRef.current = stream;
         
-        // Display local video
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
         
-        // Create peer connection
         const configuration = { 
           iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] 
         };
         
         peerConnectionRef.current = new RTCPeerConnection(configuration);
         
-        // Add local tracks to peer connection
         stream.getTracks().forEach(track => {
           if (peerConnectionRef.current) {
             peerConnectionRef.current.addTrack(track, stream);
           }
         });
         
-        // Set up remote stream handling
         peerConnectionRef.current.ontrack = (event) => {
           if (remoteVideoRef.current && event.streams && event.streams[0]) {
             remoteVideoRef.current.srcObject = event.streams[0];
           }
         };
         
-        // In a real app, you would set up signaling here
-        // For now, we'll use Supabase Realtime for simple presence and chat
-        
-        // Set up channel for room communication
         const channel = supabase.channel(`room:${roomId}`);
         
-        // Subscribe to the channel for chat messages
         channel
           .on('broadcast', { event: 'chat' }, (payload) => {
             if (payload.payload && payload.payload.message && payload.payload.sender) {
@@ -99,7 +86,6 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
               description: `Someone has joined the stream`,
             });
             
-            // Update connection status after a new participant joins
             setTimeout(() => {
               setIsConnected(true);
             }, 1000);
@@ -112,13 +98,11 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
           })
           .subscribe(async (status) => {
             if (status === 'SUBSCRIBED') {
-              // Track our presence in the room
               await channel.track({
                 user_id: user?.id || 'anonymous',
                 online_at: new Date().toISOString(),
               });
               
-              // For demo purposes, we'll just set connected after initialization
               setTimeout(() => {
                 setIsConnected(true);
                 toast({
@@ -128,17 +112,14 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
               }, 1000);
             }
           });
-          
-        // Clean up function to remove channel subscription
+        
         return () => {
           channel.unsubscribe();
           
-          // Close peer connection
           if (peerConnectionRef.current) {
             peerConnectionRef.current.close();
           }
           
-          // Stop all tracks in local stream
           if (localStreamRef.current) {
             localStreamRef.current.getTracks().forEach(track => track.stop());
           }
@@ -156,40 +137,42 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     initWebRTC();
   }, [roomId, toast, user]);
   
-  // Scroll chat to bottom when new messages arrive
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [chatMessages]);
   
-  // Toggle microphone
   const toggleMic = () => {
     if (localStreamRef.current) {
-      const audioTrack = localStreamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
+      const audioTracks = localStreamRef.current.getAudioTracks();
+      if (audioTracks.length > 0) {
+        const audioTrack = audioTracks[0];
         audioTrack.enabled = !audioTrack.enabled;
         setIsMicOn(audioTrack.enabled);
       }
     }
   };
   
-  // Toggle video
   const toggleVideo = () => {
     if (localStreamRef.current) {
-      const videoTrack = localStreamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
+      const videoTracks = localStreamRef.current.getVideoTracks();
+      if (videoTracks.length > 0) {
+        const videoTrack = videoTracks[0];
         videoTrack.enabled = !videoTrack.enabled;
         setIsVideoOn(videoTrack.enabled);
+        console.log('Video track enabled:', videoTrack.enabled);
+      } else {
+        console.log('No video tracks found');
       }
+    } else {
+      console.log('No local stream available');
     }
   };
   
-  // Send chat message
   const sendMessage = () => {
     if (!messageInput.trim()) return;
     
-    // Broadcast the message to the channel
     const channel = supabase.channel(`room:${roomId}`);
     channel.send({
       type: 'broadcast',
@@ -200,17 +183,14 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
       }
     });
     
-    // Add message to local state
     setChatMessages(prev => [...prev, {
       sender: 'You',
       message: messageInput
     }]);
     
-    // Clear input
     setMessageInput('');
   };
   
-  // Share the stream link
   const shareStream = () => {
     const shareUrl = `${window.location.origin}/marketplace?join=${roomId}`;
     navigator.clipboard.writeText(shareUrl);
@@ -220,14 +200,11 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     });
   };
   
-  // End call
   const handleEndCall = () => {
-    // Close peer connection
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
     }
     
-    // Stop all tracks in local stream
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
     }
@@ -260,7 +237,6 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
       
       <div className="flex flex-col md:flex-row gap-4 flex-grow">
         <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Local video */}
           <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video">
             <video
               ref={localVideoRef}
@@ -274,7 +250,6 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
             </div>
           </div>
           
-          {/* Remote video */}
           <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video">
             <video
               ref={remoteVideoRef}
@@ -288,7 +263,6 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
           </div>
         </div>
         
-        {/* Chat sidebar */}
         {showChat && (
           <div className="w-full md:w-64 bg-dark-secondary rounded-lg overflow-hidden flex flex-col">
             <div className="p-3 border-b border-dark-accent flex items-center justify-between">

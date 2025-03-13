@@ -16,11 +16,6 @@ export interface LiveSession {
   // For the profiles relation data
   username?: string;
   profile_photo_url?: string;
-  // Keep profiles as optional in case we need to access the raw data
-  profiles?: {
-    username?: string;
-    profile_photo_url?: string;
-  };
 }
 
 export const useLiveSessions = () => {
@@ -36,33 +31,31 @@ export const useLiveSessions = () => {
     try {
       setIsLoading(true);
       
-      const { data, error } = await supabase
+      // Modified query to avoid using the relationship that doesn't exist
+      const { data: sessionsData, error } = await supabase
         .from('live_sessions')
-        .select(`
-          *,
-          profiles:user_id (
-            username,
-            profile_photo_url
-          )
-        `)
+        .select('*')
         .eq('is_active', true)
         .order('started_at', { ascending: false });
       
       if (error) throw error;
 
-      // Transform data to include the profile information at top level
-      const sessionsWithProfiles = data.map(session => {
-        // Extract profile data
-        const profileData = session.profiles as { username?: string; profile_photo_url?: string } | null;
-        
-        return {
-          ...session,
-          username: profileData?.username,
-          profile_photo_url: profileData?.profile_photo_url,
-          // Keep the original profiles data
-          profiles: profileData,
-        } as LiveSession;
-      });
+      // After getting the sessions, fetch the profile data separately for each user_id
+      const sessionsWithProfiles = await Promise.all(
+        sessionsData.map(async (session) => {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('username, profile_photo_url')
+            .eq('id', session.user_id)
+            .maybeSingle();
+          
+          return {
+            ...session,
+            username: profileData?.username || 'Anonymous',
+            profile_photo_url: profileData?.profile_photo_url || null,
+          } as LiveSession;
+        })
+      );
       
       setLiveSessions(sessionsWithProfiles);
     } catch (error) {
