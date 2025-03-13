@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,14 +13,14 @@ export interface LiveSession {
   started_at: string;
   ended_at: string | null;
   created_at: string;
-  // Added explicit type for profiles
+  // For the profiles relation data
+  username?: string;
+  profile_photo_url?: string;
+  // Keep profiles as optional in case we need to access the raw data
   profiles?: {
     username?: string;
     profile_photo_url?: string;
   };
-  // These will be populated from profiles
-  username?: string;
-  profile_photo_url?: string;
 }
 
 export const useLiveSessions = () => {
@@ -53,14 +52,16 @@ export const useLiveSessions = () => {
 
       // Transform data to include the profile information at top level
       const sessionsWithProfiles = data.map(session => {
-        // Make TypeScript happy by checking if profiles exists
-        const profiles = session.profiles as { username?: string; profile_photo_url?: string } | null;
+        // Extract profile data
+        const profileData = session.profiles as { username?: string; profile_photo_url?: string } | null;
         
         return {
           ...session,
-          username: profiles?.username,
-          profile_photo_url: profiles?.profile_photo_url
-        };
+          username: profileData?.username,
+          profile_photo_url: profileData?.profile_photo_url,
+          // Keep the original profiles data
+          profiles: profileData,
+        } as LiveSession;
       });
       
       setLiveSessions(sessionsWithProfiles);

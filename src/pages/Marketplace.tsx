@@ -9,7 +9,7 @@ import ProductCard from "@/components/ProductCard";
 import { useProduct } from "@/hooks/useProduct";
 import { Search, Filter } from 'lucide-react';
 import Footer from "@/components/Footer";
-import Navbar from "@/components/Navbar";
+import NavBar from "@/components/NavBar";
 import LiveSessionCard from '@/components/LiveSessionCard';
 import { useLiveSessions } from '@/hooks/useLiveSessions';
 
@@ -54,7 +54,7 @@ const Marketplace = () => {
   
   return (
     <div className="min-h-screen bg-dark">
-      <Navbar />
+      <NavBar />
       
       <div className="bg-pi-base py-12">
         <div className="container mx-auto px-4">
