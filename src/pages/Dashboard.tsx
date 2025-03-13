@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Plus, Loader2, Video } from 'lucide-react';
+import { Plus, Loader2, Video, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useUserSession } from '@/hooks/useUserSession';
 import { useProduct } from '@/hooks/useProduct';
@@ -60,6 +60,13 @@ const Dashboard: React.FC = () => {
                 <p className="text-pi-muted">Manage your products, appointments, and live sessions</p>
               </div>
             </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <Button onClick={() => navigate('/marketplace')} variant="outline" size="sm">
+              <ShoppingBag className="mr-2 h-4 w-4" />
+              Marketplace
+            </Button>
           </div>
         </div>
 
