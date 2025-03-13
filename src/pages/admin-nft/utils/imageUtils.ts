@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -51,4 +52,36 @@ export const uploadFile = async (file: File, contentType: string): Promise<{url:
 export const uploadImage = async (file: File, folder = 'nft-images'): Promise<string | null> => {
   const result = await uploadFile(file, 'image');
   return result.url;
+};
+
+// New utility function to delete a file from storage
+export const deleteFileFromStorage = async (fileUrl: string): Promise<boolean> => {
+  try {
+    // Extract bucket and file name from URL
+    const urlParts = fileUrl.match(/\/([^\/]+)\/([^\/]+)$/);
+    
+    if (!urlParts || urlParts.length !== 3) {
+      console.error("Could not parse file URL for deletion:", fileUrl);
+      return false;
+    }
+    
+    const bucketName = urlParts[1];
+    const fileName = urlParts[2];
+    
+    console.log(`Deleting file from storage: bucket=${bucketName}, file=${fileName}`);
+    
+    const { error } = await supabase.storage
+      .from(bucketName)
+      .remove([fileName]);
+      
+    if (error) {
+      console.error("Error removing file from storage:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error deleting file:", error);
+    return false;
+  }
 };

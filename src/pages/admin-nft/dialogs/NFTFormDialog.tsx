@@ -173,6 +173,47 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
       
       if (txError) console.error('Error deleting related transactions:', txError);
       
+      // Delete associated files from storage
+      const nft = nftData as unknown as NFT;
+      
+      // Delete image file if it exists
+      if (nft.imageurl) {
+        try {
+          const imagePathMatch = nft.imageurl.match(/\/([^\/]+)\/([^\/]+)$/);
+          if (imagePathMatch && imagePathMatch.length === 3) {
+            const bucketName = imagePathMatch[1];
+            const fileName = imagePathMatch[2];
+            
+            console.log(`Deleting image from storage: bucket=${bucketName}, file=${fileName}`);
+            
+            await supabase.storage
+              .from(bucketName)
+              .remove([fileName]);
+          }
+        } catch (error) {
+          console.error('Error deleting image from storage:', error);
+        }
+      }
+      
+      // Delete additional file if it exists (for non-image content types)
+      if (nft.file_url && nft.content_type !== 'image') {
+        try {
+          const filePathMatch = nft.file_url.match(/\/([^\/]+)\/([^\/]+)$/);
+          if (filePathMatch && filePathMatch.length === 3) {
+            const bucketName = filePathMatch[1];
+            const fileName = filePathMatch[2];
+            
+            console.log(`Deleting file from storage: bucket=${bucketName}, file=${fileName}`);
+            
+            await supabase.storage
+              .from(bucketName)
+              .remove([fileName]);
+          }
+        } catch (error) {
+          console.error('Error deleting file from storage:', error);
+        }
+      }
+      
       // Finally delete the NFT
       const { error } = await supabase
         .from('nfts')

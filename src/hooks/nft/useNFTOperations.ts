@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -205,6 +206,84 @@ export const useNFTOperations = () => {
       setIsLoading(true);
       console.log("Deleting NFT with ID:", nftId);
       
+      // First, fetch the NFT to get file information
+      const { data: nftData, error: fetchError } = await supabase
+        .from('nfts')
+        .select('*')
+        .eq('id', nftId)
+        .eq('owner_id', user.id)
+        .single();
+      
+      if (fetchError) {
+        console.error("Error fetching NFT details:", fetchError);
+        throw fetchError;
+      }
+      
+      const nft = nftData as unknown as NFT;
+      
+      // Delete files from storage based on content type
+      const storageErrors = [];
+      
+      // Delete the main image if it exists
+      if (nft.imageurl) {
+        try {
+          const imagePathMatch = nft.imageurl.match(/\/([^\/]+)\/([^\/]+)$/);
+          if (imagePathMatch && imagePathMatch.length === 3) {
+            const bucketName = imagePathMatch[1];
+            const fileName = imagePathMatch[2];
+            
+            console.log(`Deleting image from storage: bucket=${bucketName}, file=${fileName}`);
+            
+            const { error: storageError } = await supabase.storage
+              .from(bucketName)
+              .remove([fileName]);
+              
+            if (storageError) {
+              console.error("Error removing image from storage:", storageError);
+              storageErrors.push(storageError);
+            }
+          } else {
+            console.warn("Could not parse image URL for deletion:", nft.imageurl);
+          }
+        } catch (storageError) {
+          console.error("Error processing image deletion:", storageError);
+          storageErrors.push(storageError);
+        }
+      }
+      
+      // Delete the additional file if it exists (for non-image content types)
+      if (nft.file_url && nft.content_type !== 'image') {
+        try {
+          const filePathMatch = nft.file_url.match(/\/([^\/]+)\/([^\/]+)$/);
+          if (filePathMatch && filePathMatch.length === 3) {
+            const bucketName = filePathMatch[1];
+            const fileName = filePathMatch[2];
+            
+            console.log(`Deleting file from storage: bucket=${bucketName}, file=${fileName}`);
+            
+            const { error: storageError } = await supabase.storage
+              .from(bucketName)
+              .remove([fileName]);
+              
+            if (storageError) {
+              console.error("Error removing file from storage:", storageError);
+              storageErrors.push(storageError);
+            }
+          } else {
+            console.warn("Could not parse file URL for deletion:", nft.file_url);
+          }
+        } catch (storageError) {
+          console.error("Error processing file deletion:", storageError);
+          storageErrors.push(storageError);
+        }
+      }
+      
+      // If we encountered storage errors but want to continue with database deletion
+      if (storageErrors.length > 0) {
+        console.warn(`Encountered ${storageErrors.length} storage deletion errors, but proceeding with database deletion`);
+      }
+      
+      // Delete the NFT record from the database
       const { error } = await supabase
         .from('nfts')
         .delete()
