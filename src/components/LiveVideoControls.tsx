@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from '@/hooks/use-toast';
 import { useLiveSessions } from '@/hooks/useLiveSessions';
@@ -14,15 +14,62 @@ const LiveVideoControls: React.FC<LiveVideoControlsProps> = ({ roomId }) => {
   const { userLiveSession, endLiveSession, fetchUserLiveSession } = useLiveSessions();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   
   // If the room is opened directly, check if it matches user's live session
   useEffect(() => {
     fetchUserLiveSession();
   }, [roomId, fetchUserLiveSession]);
   
+  // Set up webcam stream
+  useEffect(() => {
+    const initializeMedia = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true, 
+          audio: true 
+        });
+        
+        // Set the stream to local state for reference
+        setLocalStream(stream);
+        
+        // Find video elements on the page and attach stream
+        const localVideo = document.getElementById('local-video') as HTMLVideoElement;
+        if (localVideo) {
+          localVideo.srcObject = stream;
+          console.log('Local video source set successfully');
+        } else {
+          console.warn('Local video element not found');
+        }
+      } catch (error) {
+        console.error('Error accessing camera/microphone:', error);
+        toast({
+          title: 'Media Error',
+          description: 'Could not access your camera or microphone. Please check your permissions.',
+          variant: 'destructive',
+        });
+      }
+    };
+    
+    initializeMedia();
+    
+    return () => {
+      // Cleanup: stop all tracks when component unmounts
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [toast]);
+  
   const handleEndSession = async () => {
     try {
       console.log('Ending live session:', userLiveSession?.id);
+      
+      // Stop all media tracks
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+      
       await endLiveSession();
       
       toast({
