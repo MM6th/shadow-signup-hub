@@ -42,8 +42,8 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
     }
     
     await simulateMintNFT(nftId);
-    // Add a slight delay before refreshing to ensure DB consistency
-    setTimeout(() => refreshData(), 1000);
+    // Add a longer delay before refreshing to ensure DB consistency
+    setTimeout(() => refreshData(), 2000);
   };
 
   const handleListNFT = async (nftId: string, price: number) => {
@@ -57,8 +57,8 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
     }
     
     await listNFTForSale(nftId, price);
-    // Add a slight delay before refreshing to ensure DB consistency
-    setTimeout(() => refreshData(), 1000);
+    // Add a longer delay before refreshing to ensure DB consistency
+    setTimeout(() => refreshData(), 2000);
   };
 
   return (

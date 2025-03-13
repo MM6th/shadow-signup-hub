@@ -12,6 +12,9 @@ interface NFTCardProps {
 }
 
 export const NFTCard: React.FC<NFTCardProps> = ({ nft, onMint, onList, onEdit }) => {
+  // Get the currency symbol in uppercase for display
+  const currencySymbol = nft.currency ? nft.currency.toUpperCase() : 'ETH';
+  
   return (
     <div className="glass-card rounded-lg overflow-hidden border border-white/10">
       <div className="h-48 bg-dark-secondary overflow-hidden relative">
@@ -33,7 +36,7 @@ export const NFTCard: React.FC<NFTCardProps> = ({ nft, onMint, onList, onEdit })
           <h3 className="font-medium text-lg">{nft.title}</h3>
           <span className="flex items-center bg-dark-accent px-2 py-1 rounded text-sm">
             <DollarSign size={14} className="text-amber-400 mr-1" /> 
-            {nft.price} ETH
+            {nft.price} {currencySymbol}
           </span>
         </div>
         
@@ -49,6 +52,12 @@ export const NFTCard: React.FC<NFTCardProps> = ({ nft, onMint, onList, onEdit })
               #{nft.tokenid}
             </span>
           )}
+        </div>
+
+        <div className="text-xs text-pi-muted mb-4">
+          <span className="px-2 py-0.5 bg-dark-secondary rounded-full">
+            {nft.blockchain.charAt(0).toUpperCase() + nft.blockchain.slice(1)}
+          </span>
         </div>
         
         <div className="flex gap-2 justify-end">

@@ -60,7 +60,12 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [currencies, setCurrencies] = useState<{value: string, label: string}[]>([]);
+  
+  // Changed from previous implementation - now we'll store all available currencies
+  // based on the selected blockchain
+  const [availableCurrencies, setAvailableCurrencies] = useState<{value: string, label: string}[]>([
+    { value: 'eth', label: 'ETH' }
+  ]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -74,13 +79,15 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
     },
   });
 
+  // Update available currencies when blockchain changes
   useEffect(() => {
     const blockchain = form.watch('blockchain');
     const selectedBlockchain = BLOCKCHAIN_OPTIONS.find(option => option.value === blockchain);
     
     if (selectedBlockchain) {
-      form.setValue('currency', selectedBlockchain.symbol.toLowerCase());
-      setCurrencies([{ value: selectedBlockchain.symbol.toLowerCase(), label: selectedBlockchain.symbol }]);
+      const currencySymbol = selectedBlockchain.symbol.toLowerCase();
+      form.setValue('currency', currencySymbol);
+      setAvailableCurrencies([{ value: currencySymbol, label: selectedBlockchain.symbol }]);
     }
   }, [form.watch('blockchain')]);
 
@@ -273,9 +280,18 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
                       <FormItem>
                         <FormLabel>Price</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.0001" min="0" placeholder="0.00" {...field} />
+                          <Input 
+                            type="number" 
+                            step="0.000001" 
+                            min="0.000001" 
+                            placeholder="0.00" 
+                            {...field} 
+                          />
                         </FormControl>
                         <FormMessage />
+                        <FormDescription className="text-xs">
+                          You can enter values as small as 0.000001
+                        </FormDescription>
                       </FormItem>
                     )}
                   />
@@ -298,7 +314,7 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {currencies.map((currency) => (
+                            {availableCurrencies.map((currency) => (
                               <SelectItem key={currency.value} value={currency.value}>
                                 {currency.label}
                               </SelectItem>
