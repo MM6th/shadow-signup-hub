@@ -3,6 +3,16 @@
   command = "npm run build"
   publish = "dist"
 
+# Redirects and rewrites for SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# SSL/HTTPS configuration
+[https]
+  force = true
+
 # If you're using environment variables, they can be specified here
 # [build.environment]
 #   VITE_API_URL = "your-production-api-url"
