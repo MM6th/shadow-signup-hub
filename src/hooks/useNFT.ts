@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,14 +9,18 @@ export interface NFT {
   title: string;
   description: string;
   price: number;
-  imageurl: string; // Changed from imageUrl to imageurl to match DB column
-  tokenid: string | null; // Changed from tokenId to tokenid to match DB column
+  imageurl: string; // Original image field
+  tokenid: string | null;
   collection: string;
   created_at: string;
   owner_id: string;
   blockchain: string;
   status: 'draft' | 'minting' | 'minted' | 'listed' | 'sold';
-  currency?: string; // New field for currency type
+  currency?: string;
+  // New fields for multiple content types
+  content_type: 'image' | 'video' | 'book' | 'audio';
+  file_url: string | null;
+  file_type: string | null;
 }
 
 export interface NFTCollection {
@@ -149,12 +154,15 @@ export const useNFT = () => {
           title: nftData.title,
           description: nftData.description,
           price: nftData.price,
-          imageurl: nftData.imageurl, // Changed from imageUrl to imageurl
+          imageurl: nftData.imageurl, // Keep for backward compatibility
           collection: nftData.collection,
           owner_id: user.id,
           blockchain: nftData.blockchain || 'ethereum',
           status: 'draft',
-          currency: nftData.currency || 'eth'
+          currency: nftData.currency || 'eth',
+          content_type: nftData.content_type || 'image',
+          file_url: nftData.file_url || null,
+          file_type: nftData.file_type || null
         })
         .select()
         .single();
@@ -168,10 +176,6 @@ export const useNFT = () => {
       
       // Return the created NFT
       return data as unknown as NFT;
-      
-      // Note: In a real implementation, this is where we would 
-      // call a smart contract to mint the NFT on the blockchain
-      // and then update the tokenId and status in our database
       
     } catch (error) {
       console.error('Error creating NFT:', error);
@@ -208,7 +212,10 @@ export const useNFT = () => {
           imageurl: nftData.imageurl,
           collection: nftData.collection,
           blockchain: nftData.blockchain,
-          currency: nftData.currency || 'eth'
+          currency: nftData.currency || 'eth',
+          content_type: nftData.content_type || 'image',
+          file_url: nftData.file_url,
+          file_type: nftData.file_type
         })
         .eq('id', nftData.id)
         .eq('owner_id', user.id) // Security check - user can only update their own NFTs

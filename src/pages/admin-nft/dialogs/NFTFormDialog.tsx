@@ -12,8 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { uploadImage } from '../utils/imageUtils';
-import { Info, Plus, Loader2, Trash2 } from 'lucide-react';
+import { uploadFile } from '../utils/imageUtils';
+import { Info, Plus, Loader2, Trash2, Upload, FileText, Music, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
@@ -22,6 +22,13 @@ const BLOCKCHAIN_OPTIONS = [
   { value: 'polygon', label: 'Polygon', symbol: 'MATIC' },
   { value: 'solana', label: 'Solana', symbol: 'SOL' },
   { value: 'binance', label: 'Binance Smart Chain', symbol: 'BNB' },
+];
+
+const CONTENT_TYPE_OPTIONS = [
+  { value: 'image', label: 'Image', icon: <Upload className="w-4 h-4 mr-2" /> },
+  { value: 'video', label: 'Video', icon: <Video className="w-4 h-4 mr-2" /> },
+  { value: 'book', label: 'Book', icon: <FileText className="w-4 h-4 mr-2" /> },
+  { value: 'audio', label: 'Audio', icon: <Music className="w-4 h-4 mr-2" /> },
 ];
 
 const formSchema = z.object({
@@ -33,6 +40,7 @@ const formSchema = z.object({
   collection: z.string().min(1, { message: 'Collection is required' }),
   blockchain: z.string().min(1, { message: 'Blockchain is required' }),
   currency: z.string().min(1, { message: 'Currency is required' }),
+  content_type: z.string().min(1, { message: 'Content type is required' }),
 });
 
 interface NFTFormDialogProps {
@@ -59,9 +67,10 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
   const { user } = useUserSession();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [contentType, setContentType] = useState<string>('image');
   
   // Changed from previous implementation - now we'll store all available currencies
   // based on the selected blockchain
@@ -78,6 +87,7 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
       collection: '',
       blockchain: 'ethereum',
       currency: 'eth',
+      content_type: 'image',
     },
   });
 
@@ -103,12 +113,17 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
           collection: currentNFT.collection || '',
           blockchain: currentNFT.blockchain || 'ethereum',
           currency: currentNFT.currency || 'eth',
+          content_type: currentNFT.content_type || 'image',
         });
         
+        setContentType(currentNFT.content_type || 'image');
+        
         if (currentNFT.imageurl) {
-          setImagePreview(currentNFT.imageurl);
+          setMediaPreview(currentNFT.imageurl);
+        } else if (currentNFT.file_url) {
+          setMediaPreview(currentNFT.file_url);
         } else {
-          setImagePreview(null);
+          setMediaPreview(null);
         }
       } else {
         form.reset({
@@ -118,23 +133,34 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
           collection: currentNFT.collection || '',
           blockchain: 'ethereum',
           currency: 'eth',
+          content_type: 'image',
         });
         
-        setImagePreview(null);
+        setContentType('image');
+        setMediaPreview(null);
       }
-      setImageFile(null);
+      setMediaFile(null);
     }
   }, [isOpen, isEditing, currentNFT, form]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setMediaFile(file);
+      
+      const contentTypeVal = form.getValues('content_type') || 'image';
+      
+      // For image and PDF, show preview
+      if (contentTypeVal === 'image' || (contentTypeVal === 'book' && file.type === 'application/pdf')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setMediaPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // For video and audio, just show the filename
+        setMediaPreview(URL.createObjectURL(file));
+      }
     }
   };
 
@@ -150,11 +176,32 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
 
     setIsLoading(true);
     try {
+      // First, check if the NFT is owned by the current user
+      const { data: nftData, error: nftError } = await supabase
+        .from('nfts')
+        .select('*')
+        .eq('id', currentNFT.id)
+        .single();
+      
+      if (nftError) throw nftError;
+      
+      if (nftData.owner_id !== user.id) {
+        throw new Error('You can only delete NFTs that you own');
+      }
+
+      // Delete any transactions related to this NFT (if cascade delete is not set up)
+      const { error: txError } = await supabase
+        .from('nft_transactions')
+        .delete()
+        .eq('nft_id', currentNFT.id);
+      
+      if (txError) console.error('Error deleting related transactions:', txError);
+      
+      // Finally delete the NFT
       const { error } = await supabase
         .from('nfts')
         .delete()
-        .eq('id', currentNFT.id)
-        .eq('owner_id', user.id);
+        .eq('id', currentNFT.id);
 
       if (error) throw error;
 
@@ -193,17 +240,36 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
     }
 
     setIsLoading(true);
-    let imageUrl = currentNFT.imageurl;
+    let fileUrl: string | null = null;
+    let imageUrl: string | null = currentNFT.imageurl || null;
+    let fileType: string | null = null;
 
     try {
-      if (imageFile) {
-        imageUrl = await uploadImage(imageFile);
+      if (mediaFile) {
+        const uploadResult = await uploadFile(mediaFile, values.content_type);
+        
+        if (values.content_type === 'image') {
+          imageUrl = uploadResult.url;
+        } else {
+          fileUrl = uploadResult.url;
+          fileType = uploadResult.fileType;
+        }
       }
 
-      if (!imageUrl) {
+      if (values.content_type === 'image' && !imageUrl) {
         toast({
           title: 'Image required',
           description: 'Please upload an image for your NFT',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (values.content_type !== 'image' && !fileUrl) {
+        toast({
+          title: 'File required',
+          description: `Please upload a ${values.content_type} file for your NFT`,
           variant: 'destructive',
         });
         setIsLoading(false);
@@ -214,10 +280,13 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
         title: values.title,
         description: values.description,
         price: parseFloat(values.price),
-        imageurl: imageUrl,
+        imageurl: imageUrl || '', // Keep for backward compatibility
         collection: values.collection,
         blockchain: values.blockchain,
-        currency: values.currency
+        currency: values.currency,
+        content_type: values.content_type,
+        file_url: fileUrl,
+        file_type: fileType,
       };
 
       if (isEditing && currentNFT.id) {
@@ -275,6 +344,93 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Helper function to render appropriate UI based on content type
+  const renderMediaUploadUI = () => {
+    const selectedContentType = form.watch('content_type');
+
+    // Determine the accept attribute for the file input based on content type
+    let acceptTypes = "image/*";
+    let placeholderText = "Upload an image";
+    let icon = <Upload className="mb-2 text-pi-muted" size={24} />;
+    
+    switch (selectedContentType) {
+      case 'video':
+        acceptTypes = "video/*";
+        placeholderText = "Upload a video file";
+        icon = <Video className="mb-2 text-pi-muted" size={24} />;
+        break;
+      case 'book':
+        acceptTypes = ".pdf,.epub,.mobi";
+        placeholderText = "Upload a document (PDF, EPUB)";
+        icon = <FileText className="mb-2 text-pi-muted" size={24} />;
+        break;
+      case 'audio':
+        acceptTypes = "audio/*";
+        placeholderText = "Upload an audio file";
+        icon = <Music className="mb-2 text-pi-muted" size={24} />;
+        break;
+    }
+
+    return (
+      <div className="mt-1">
+        {mediaPreview ? (
+          <div className="relative rounded-lg overflow-hidden w-full h-40">
+            {selectedContentType === 'image' ? (
+              <img
+                src={mediaPreview}
+                alt="NFT Preview"
+                className="w-full h-full object-cover"
+              />
+            ) : selectedContentType === 'video' ? (
+              <video
+                src={mediaPreview}
+                controls
+                className="w-full h-full object-contain"
+              />
+            ) : selectedContentType === 'audio' ? (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-gray-800">
+                <Music className="h-12 w-12 mb-2 text-pi-muted" />
+                <audio src={mediaPreview} controls className="w-3/4" />
+              </div>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-gray-800">
+                <FileText className="h-12 w-12 mb-2 text-pi-muted" />
+                <p className="text-sm text-pi-muted">
+                  {mediaFile ? mediaFile.name : 'File uploaded'}
+                </p>
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="absolute bottom-2 right-2"
+              onClick={() => {
+                setMediaFile(null);
+                setMediaPreview(null);
+              }}
+            >
+              Change
+            </Button>
+          </div>
+        ) : (
+          <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-500 rounded-lg h-40 cursor-pointer hover:border-pi-focus">
+            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+              {icon}
+              <span className="text-sm text-pi-muted">{placeholderText}</span>
+            </div>
+            <input
+              type="file"
+              accept={acceptTypes}
+              className="hidden"
+              onChange={handleMediaChange}
+            />
+          </label>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -378,6 +534,42 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
                 <div className="space-y-6">
                   <FormField
                     control={form.control}
+                    name="content_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Content Type</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            setContentType(value);
+                            setMediaFile(null);
+                            setMediaPreview(null);
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select content type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {CONTENT_TYPE_OPTIONS.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                <div className="flex items-center">
+                                  {type.icon}
+                                  {type.label}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="blockchain"
                     render={({ field }) => (
                       <FormItem>
@@ -448,44 +640,16 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
                   />
 
                   <div>
-                    <FormLabel>NFT Image</FormLabel>
-                    <div className="mt-2">
-                      {imagePreview ? (
-                        <div className="relative rounded-lg overflow-hidden w-full h-40">
-                          <img
-                            src={imagePreview}
-                            alt="NFT Preview"
-                            className="w-full h-full object-cover"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="absolute bottom-2 right-2"
-                            onClick={() => {
-                              setImageFile(null);
-                              setImagePreview(null);
-                            }}
-                          >
-                            Change
-                          </Button>
-                        </div>
-                      ) : (
-                        <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-500 rounded-lg h-40 cursor-pointer hover:border-pi-focus">
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <span className="text-sm text-pi-muted">Click to upload</span>
-                          </div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleImageChange}
-                          />
-                        </label>
-                      )}
-                    </div>
+                    <FormLabel>NFT Media</FormLabel>
+                    {renderMediaUploadUI()}
                     <p className="text-xs text-pi-muted mt-1">
-                      Upload a high-quality image for your NFT
+                      {form.watch('content_type') === 'image' 
+                        ? 'Upload a high-quality image for your NFT'
+                        : form.watch('content_type') === 'video'
+                        ? 'Upload a video file for your NFT (MP4, WebM recommended)'
+                        : form.watch('content_type') === 'book'
+                        ? 'Upload a document for your NFT (PDF, EPUB recommended)'
+                        : 'Upload an audio file for your NFT (MP3, WAV recommended)'}
                     </p>
                   </div>
                 </div>

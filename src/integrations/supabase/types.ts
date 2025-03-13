@@ -120,9 +120,12 @@ export type Database = {
         Row: {
           blockchain: string
           collection: string
+          content_type: string
           created_at: string
           currency: string | null
           description: string
+          file_type: string | null
+          file_url: string | null
           id: string
           imageurl: string
           owner_id: string
@@ -134,9 +137,12 @@ export type Database = {
         Insert: {
           blockchain?: string
           collection: string
+          content_type?: string
           created_at?: string
           currency?: string | null
           description: string
+          file_type?: string | null
+          file_url?: string | null
           id?: string
           imageurl: string
           owner_id: string
@@ -148,9 +154,12 @@ export type Database = {
         Update: {
           blockchain?: string
           collection?: string
+          content_type?: string
           created_at?: string
           currency?: string | null
           description?: string
+          file_type?: string | null
+          file_url?: string | null
           id?: string
           imageurl?: string
           owner_id?: string

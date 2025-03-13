@@ -1,81 +1,216 @@
 
-import React from 'react';
-import { DollarSign, Tag, Edit } from 'lucide-react';
+import React, { useState } from 'react';
+import { Edit, Tag, DollarSign, Music, FileText, Video, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { NFT } from '@/hooks/useNFT';
+import { Tooltip } from '@/components/ui/tooltip';
+import { TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface NFTCardProps {
   nft: NFT;
-  onMint: (id: string) => void;
-  onList: (id: string, price: number) => void;
+  onMint: (id: string) => Promise<void>;
+  onList: (id: string, price: number) => Promise<void>;
   onEdit: (nft: NFT) => void;
 }
 
 export const NFTCard: React.FC<NFTCardProps> = ({ nft, onMint, onList, onEdit }) => {
-  // Get the currency symbol in uppercase for display
-  const currencySymbol = nft.currency ? nft.currency.toUpperCase() : 'ETH';
+  const [isActionLoading, setIsActionLoading] = useState(false);
+
+  const handleMint = async () => {
+    setIsActionLoading(true);
+    try {
+      await onMint(nft.id);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleList = async () => {
+    setIsActionLoading(true);
+    try {
+      await onList(nft.id, nft.price);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
   
+  // Helper function to render the proper media preview based on content type
+  const renderMediaPreview = () => {
+    const contentType = nft.content_type || 'image';
+    
+    switch (contentType) {
+      case 'video':
+        return (
+          <div className="relative w-full h-48 overflow-hidden rounded-t-lg bg-gray-900 flex items-center justify-center">
+            {nft.file_url ? (
+              <video 
+                src={nft.file_url} 
+                className="w-full h-full object-cover" 
+                controls
+              />
+            ) : (
+              <div className="flex flex-col items-center">
+                <Video size={40} className="text-gray-400 mb-2" />
+                <span className="text-sm text-gray-400">Video NFT</span>
+              </div>
+            )}
+          </div>
+        );
+      
+      case 'book':
+        return (
+          <div className="relative w-full h-48 overflow-hidden rounded-t-lg bg-gray-900 flex items-center justify-center">
+            {nft.imageurl ? (
+              <img 
+                src={nft.imageurl} 
+                alt={nft.title} 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="flex flex-col items-center">
+                <FileText size={40} className="text-gray-400 mb-2" />
+                <span className="text-sm text-gray-400">Document NFT</span>
+                {nft.file_type && <span className="text-xs text-gray-500">{nft.file_type.toUpperCase()}</span>}
+              </div>
+            )}
+          </div>
+        );
+      
+      case 'audio':
+        return (
+          <div className="relative w-full h-48 overflow-hidden rounded-t-lg bg-gray-900 flex flex-col items-center justify-center">
+            <Music size={40} className="text-gray-400 mb-3" />
+            <span className="text-sm text-gray-400 mb-2">Audio NFT</span>
+            {nft.file_url && (
+              <audio 
+                src={nft.file_url} 
+                controls 
+                className="w-4/5 mt-2"
+              />
+            )}
+          </div>
+        );
+      
+      default: // image
+        return (
+          <div className="relative w-full h-48 overflow-hidden rounded-t-lg">
+            <img 
+              src={nft.imageurl || '/placeholder.svg'} 
+              alt={nft.title} 
+              className="w-full h-full object-cover"
+            />
+          </div>
+        );
+    }
+  };
+  
+  // Function to get the content type icon
+  const getContentTypeIcon = () => {
+    switch (nft.content_type) {
+      case 'video': return <Video size={16} />;
+      case 'book': return <FileText size={16} />;
+      case 'audio': return <Music size={16} />;
+      default: return <Image size={16} />;
+    }
+  };
+
   return (
-    <div className="glass-card rounded-lg overflow-hidden border border-white/10">
-      <div className="h-48 bg-dark-secondary overflow-hidden relative">
-        <img 
-          src={nft.imageurl} 
-          alt={nft.title} 
-          className="w-full h-full object-cover transition-transform hover:scale-105"
-        />
-        <div className="absolute top-2 right-2 px-2 py-1 rounded text-xs font-medium bg-black/50">
-          {nft.status === 'draft' && 'Draft'}
-          {nft.status === 'minting' && 'Minting...'}
-          {nft.status === 'minted' && 'Minted'}
-          {nft.status === 'listed' && 'Listed'}
-          {nft.status === 'sold' && 'Sold'}
+    <Card className="bg-dark border border-gray-800 overflow-hidden hover:border-pi-focus transition-all duration-300">
+      {renderMediaPreview()}
+      
+      <CardHeader className="p-4 pb-0">
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="text-lg font-semibold text-white truncate">{nft.title}</h3>
+            <p className="text-xs text-gray-400">{nft.collection}</p>
+          </div>
+          <div className="flex space-x-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="bg-gray-800 p-1 rounded-sm">
+                    {getContentTypeIcon()}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{nft.content_type.charAt(0).toUpperCase() + nft.content_type.slice(1)} NFT</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="bg-gray-800 p-1 rounded-sm">
+                    <Tag size={16} />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Status: {nft.status}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
-      </div>
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="font-medium text-lg">{nft.title}</h3>
-          <span className="flex items-center bg-dark-accent px-2 py-1 rounded text-sm">
-            <DollarSign size={14} className="text-amber-400 mr-1" /> 
-            {nft.price} {currencySymbol}
-          </span>
-        </div>
-        
-        <p className="text-pi-muted text-sm mb-4 line-clamp-2">
+      </CardHeader>
+      
+      <CardContent className="p-4 pt-2">
+        <p className="text-xs text-gray-400 mb-2 line-clamp-2 h-10">
           {nft.description}
         </p>
-        
-        <div className="flex items-center text-xs text-pi-muted mb-4">
-          <Tag size={14} className="mr-1" />
-          <span>{nft.collection}</span>
-          {nft.tokenid && (
-            <span className="ml-2 px-2 py-0.5 bg-dark-secondary rounded-full">
-              #{nft.tokenid}
-            </span>
-          )}
-        </div>
-
-        <div className="text-xs text-pi-muted mb-4">
-          <span className="px-2 py-0.5 bg-dark-secondary rounded-full">
-            {nft.blockchain.charAt(0).toUpperCase() + nft.blockchain.slice(1)}
-          </span>
-        </div>
-        
-        <div className="flex gap-2 justify-end">
-          {nft.status === 'draft' && (
-            <Button variant="outline" size="sm" onClick={() => onMint(nft.id)}>
-              Mint NFT
-            </Button>
-          )}
-          {nft.status === 'minted' && (
-            <Button variant="outline" size="sm" onClick={() => onList(nft.id, nft.price)}>
-              List for Sale
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={() => onEdit(nft)}>
-            <Edit size={14} className="mr-1" /> Edit
+        <div className="flex justify-between items-center">
+          <div className="flex items-center">
+            <DollarSign size={14} className="text-green-400 mr-1" />
+            <span className="text-white font-medium">{nft.price}</span>
+            <span className="text-gray-400 ml-1 uppercase text-xs">{nft.currency}</span>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 px-2" 
+            onClick={() => onEdit(nft)}
+          >
+            <Edit size={14} className="mr-1" />
+            Edit
           </Button>
         </div>
-      </div>
-    </div>
+      </CardContent>
+      
+      <CardFooter className="p-4 pt-0 flex-col">
+        {nft.status === 'draft' && (
+          <Button 
+            onClick={handleMint} 
+            disabled={isActionLoading}
+            className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600"
+          >
+            {isActionLoading ? 'Minting...' : 'Mint NFT'}
+          </Button>
+        )}
+        
+        {nft.status === 'minted' && (
+          <Button 
+            onClick={handleList} 
+            disabled={isActionLoading}
+            variant="outline"
+            className="w-full border-green-500 text-green-400 hover:bg-green-500/10"
+          >
+            {isActionLoading ? 'Listing...' : 'List for Sale'}
+          </Button>
+        )}
+        
+        {nft.status === 'listed' && (
+          <div className="text-center w-full py-2 px-4 bg-green-500/20 rounded-md text-green-400 text-sm">
+            Listed for Sale
+          </div>
+        )}
+        
+        {nft.status === 'sold' && (
+          <div className="text-center w-full py-2 px-4 bg-blue-500/20 rounded-md text-blue-400 text-sm">
+            Sold
+          </div>
+        )}
+      </CardFooter>
+    </Card>
   );
 };
