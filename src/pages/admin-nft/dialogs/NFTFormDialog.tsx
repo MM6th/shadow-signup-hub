@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Image } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,11 +11,26 @@ import { useNFT, NFT, NFTCollection } from '@/hooks/useNFT';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserSession } from '@/hooks/useUserSession';
 import { v4 as uuidv4 } from 'uuid';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const BLOCKCHAIN_OPTIONS = [
   { value: 'ethereum', label: 'Ethereum' },
   { value: 'polygon', label: 'Polygon' },
   { value: 'solana', label: 'Solana' },
+  { value: 'binance', label: 'Binance Smart Chain' },
+];
+
+const CURRENCY_OPTIONS = [
+  { value: 'eth', label: 'ETH' },
+  { value: 'matic', label: 'MATIC' },
+  { value: 'sol', label: 'SOL' },
+  { value: 'bnb', label: 'BNB' },
 ];
 
 interface NFTFormDialogProps {
@@ -43,9 +58,35 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialNFT.imageurl || null);
   const [isLoading, setIsLoading] = useState(false);
+  const [currency, setCurrency] = useState<string>(initialNFT.currency || 'eth');
   const { toast } = useToast();
   const { user } = useUserSession();
-  const { createNFT } = useNFT();
+  const { createNFT, updateNFT } = useNFT();
+
+  // Set form data whenever initialNFT changes (when editing)
+  useEffect(() => {
+    if (isEditing && initialNFT) {
+      setCurrentNFT(initialNFT);
+      setImagePreview(initialNFT.imageurl || null);
+      setCurrency(initialNFT.currency || getDefaultCurrencyForBlockchain(initialNFT.blockchain || 'ethereum'));
+    }
+  }, [isEditing, initialNFT]);
+
+  const getDefaultCurrencyForBlockchain = (blockchain: string): string => {
+    switch (blockchain) {
+      case 'ethereum': return 'eth';
+      case 'polygon': return 'matic';
+      case 'solana': return 'sol';
+      case 'binance': return 'bnb';
+      default: return 'eth';
+    }
+  };
+
+  const handleBlockchainChange = (value: string) => {
+    const newCurrency = getDefaultCurrencyForBlockchain(value);
+    setCurrentNFT({...currentNFT, blockchain: value});
+    setCurrency(newCurrency);
+  };
 
   const uploadImage = async (file: File): Promise<string | null> => {
     try {
@@ -136,24 +177,45 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
         if (!imageUrl) return;
       }
       
-      await createNFT({
-        title: currentNFT.title!,
-        description: currentNFT.description!,
-        price: currentNFT.price!,
-        imageurl: imageUrl!,
-        collection: currentNFT.collection || 'Uncategorized',
-        blockchain: currentNFT.blockchain || 'ethereum'
-      });
+      if (isEditing && currentNFT.id) {
+        // Update existing NFT
+        await updateNFT({
+          id: currentNFT.id,
+          title: currentNFT.title!,
+          description: currentNFT.description!,
+          price: currentNFT.price!,
+          imageurl: imageUrl!,
+          collection: currentNFT.collection || 'Uncategorized',
+          blockchain: currentNFT.blockchain || 'ethereum',
+          currency: currency
+        });
+        
+        toast({
+          title: 'NFT Updated Successfully',
+          description: 'Your NFT has been updated',
+        });
+      } else {
+        // Create new NFT
+        await createNFT({
+          title: currentNFT.title!,
+          description: currentNFT.description!,
+          price: currentNFT.price!,
+          imageurl: imageUrl!,
+          collection: currentNFT.collection || 'Uncategorized',
+          blockchain: currentNFT.blockchain || 'ethereum',
+          currency: currency
+        });
+        
+        toast({
+          title: 'NFT Created Successfully',
+          description: 'Your NFT has been added to your collection',
+        });
+      }
       
       await refreshData();
-      
       setIsOpen(false);
       onClose();
       
-      toast({
-        title: 'NFT Created Successfully',
-        description: 'Your NFT has been added to your collection',
-      });
     } catch (error) {
       console.error('Error saving NFT:', error);
       toast({
@@ -203,31 +265,53 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="price">Price (ETH)</Label>
-              <Input
-                id="price"
-                type="number"
-                min="0"
-                step="0.01"
-                value={currentNFT.price || ''}
-                onChange={(e) => setCurrentNFT({...currentNFT, price: parseFloat(e.target.value)})}
-                placeholder="0.00"
-                className="bg-dark border-gray-700"
-              />
+              <Label htmlFor="price">Price</Label>
+              <div className="flex space-x-2">
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={currentNFT.price || ''}
+                  onChange={(e) => setCurrentNFT({...currentNFT, price: parseFloat(e.target.value)})}
+                  placeholder="0.00"
+                  className="bg-dark border-gray-700 flex-1"
+                />
+                <Select 
+                  value={currency} 
+                  onValueChange={setCurrency}
+                >
+                  <SelectTrigger className="w-24 bg-dark">
+                    <SelectValue placeholder="ETH" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCY_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="blockchain">Blockchain</Label>
-              <select
-                id="blockchain"
+              <Select
                 value={currentNFT.blockchain || 'ethereum'}
-                onChange={(e) => setCurrentNFT({...currentNFT, blockchain: e.target.value})}
-                className="flex h-10 w-full rounded-md border border-input bg-dark px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                onValueChange={handleBlockchainChange}
               >
-                {BLOCKCHAIN_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
+                <SelectTrigger id="blockchain" className="bg-dark">
+                  <SelectValue placeholder="Select blockchain" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BLOCKCHAIN_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           

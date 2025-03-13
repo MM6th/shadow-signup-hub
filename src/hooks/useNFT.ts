@@ -16,6 +16,7 @@ export interface NFT {
   owner_id: string;
   blockchain: string;
   status: 'draft' | 'minting' | 'minted' | 'listed' | 'sold';
+  currency?: string; // New field for currency type
 }
 
 export interface NFTCollection {
@@ -153,7 +154,8 @@ export const useNFT = () => {
           collection: nftData.collection,
           owner_id: user.id,
           blockchain: nftData.blockchain || 'ethereum',
-          status: 'draft'
+          status: 'draft',
+          currency: nftData.currency || 'eth'
         })
         .select()
         .single();
@@ -176,6 +178,51 @@ export const useNFT = () => {
       console.error('Error creating NFT:', error);
       toast({
         title: 'Failed to create NFT',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateNFT = async (nftData: Partial<NFT> & { id: string }) => {
+    if (!user) {
+      toast({
+        title: 'Authentication required',
+        description: 'You must be logged in to update an NFT',
+        variant: 'destructive',
+      });
+      return null;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('nfts')
+        .update({
+          title: nftData.title,
+          description: nftData.description,
+          price: nftData.price,
+          imageurl: nftData.imageurl,
+          collection: nftData.collection,
+          blockchain: nftData.blockchain,
+          currency: nftData.currency || 'eth'
+        })
+        .eq('id', nftData.id)
+        .eq('owner_id', user.id) // Security check - user can only update their own NFTs
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return data as unknown as NFT;
+    } catch (error) {
+      console.error('Error updating NFT:', error);
+      toast({
+        title: 'Failed to update NFT',
         description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: 'destructive',
       });
@@ -348,6 +395,7 @@ export const useNFT = () => {
     fetchNFTs,
     fetchCollections,
     createNFT,
+    updateNFT,
     createCollection,
     simulateMintNFT,
     listNFTForSale,

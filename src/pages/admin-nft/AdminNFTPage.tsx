@@ -79,7 +79,7 @@ export const AdminNFTPage: React.FC = () => {
 
   const handleEditNFT = (nft: NFT) => {
     setIsEditing(true);
-    setCurrentNFT(nft);
+    setCurrentNFT({...nft});
     setIsNFTDialogOpen(true);
   };
 
