@@ -23,7 +23,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, session, isLoading: sessionLoading } = useUserSession();
+  const { user, session, isLoading: sessionLoading, clearSession } = useUserSession();
   const { profile, isLoading: profileLoading, refreshProfile } = useProfile(user?.id);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -90,11 +90,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await supabase.auth.signOut();
       
+      // Clear the local session state
+      clearSession();
+      
       toast({
         title: "Signed out",
         description: "You have been signed out successfully.",
       });
-      navigate('/');
+      
+      // Force navigate to home page
+      window.location.href = '/';
     } catch (error: any) {
       toast({
         title: "Sign out failed",

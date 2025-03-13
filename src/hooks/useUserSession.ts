@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 
@@ -34,6 +34,11 @@ export const useUserSession = () => {
     };
   }, []);
 
-  return { user, session, isLoading };
-};
+  // Add a function to clear session data when signing out
+  const clearSession = useCallback(() => {
+    setUser(null);
+    setSession(null);
+  }, []);
 
+  return { user, session, isLoading, clearSession };
+};
