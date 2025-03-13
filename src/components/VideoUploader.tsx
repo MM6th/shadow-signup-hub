@@ -1,6 +1,5 @@
-
 import React, { useState, useRef } from 'react';
-import { Upload, X, Play, AlertCircle } from 'lucide-react';
+import { Upload, X, Play, AlertCircle, Image } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -198,13 +197,13 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
       const progressInterval = setInterval(() => {
         setCurrentUploads(prev => {
           const currentProgress = prev[fileName] || 0;
-          // Increment by smaller percentages for smoother simulation
-          if (currentProgress < 95) {
-            return { ...prev, [fileName]: currentProgress + 2 };
+          // Incrementing by smaller amounts and ensuring we reach 100%
+          if (currentProgress < 98) {
+            return { ...prev, [fileName]: currentProgress + 1 };
           }
           return prev;
         });
-      }, 200);
+      }, 150); // More frequent updates
       
       // Upload the video file
       const { data, error } = await supabase.storage

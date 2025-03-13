@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useUserSession } from '@/hooks/useUserSession';
 
 // Access based on email instead of ID for easier management
 const ADMIN_EMAILS = ['cmooregee@gmail.com'];
@@ -27,7 +28,8 @@ interface NFT {
 }
 
 const AdminNFT: React.FC = () => {
-  const { user, isLoading } = useAuth();
+  // Use useUserSession for more reliable auth state
+  const { user, isLoading } = useUserSession();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [nfts, setNfts] = useState<NFT[]>([]);
@@ -73,7 +75,13 @@ const AdminNFT: React.FC = () => {
   useEffect(() => {
     // Load mock NFTs
     setNfts(mockNFTs);
-  }, []);
+    
+    // Debug log to check user email
+    if (user) {
+      console.log("Current user email:", user.email);
+      console.log("Is admin?", ADMIN_EMAILS.includes(user.email || ''));
+    }
+  }, [user]);
 
   // Check if user is admin by email
   if (isLoading) {
@@ -89,6 +97,7 @@ const AdminNFT: React.FC = () => {
 
   // Redirect if not admin
   if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
+    console.log("Access denied. User email:", user?.email);
     toast({
       title: "Access Denied",
       description: "You do not have permission to view this page.",
