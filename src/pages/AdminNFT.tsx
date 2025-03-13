@@ -37,12 +37,15 @@ const AdminNFT: React.FC = () => {
     createNFT,
     createCollection,
     simulateMintNFT,
-    listNFTForSale
+    listNFTForSale,
+    getNFTsByCollection
   } = useNFT();
   
   const [isNFTDialogOpen, setIsNFTDialogOpen] = useState(false);
   const [isCollectionDialogOpen, setIsCollectionDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [selectedCollection, setSelectedCollection] = useState<NFTCollection | null>(null);
+  const [isCollectionDetailsOpen, setIsCollectionDetailsOpen] = useState(false);
   
   const [currentNFT, setCurrentNFT] = useState<Partial<NFT>>({});
   const [currentCollection, setCurrentCollection] = useState<Partial<NFTCollection>>({});
@@ -55,8 +58,8 @@ const AdminNFT: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      fetchNFTs();
-      fetchCollections();
+      fetchNFTs(user.id);
+      fetchCollections(user.id);
       
       const mockSalesData = Array.from({ length: 30 }, (_, i) => {
         const date = new Date();
@@ -168,7 +171,10 @@ const AdminNFT: React.FC = () => {
         blockchain: currentNFT.blockchain || 'ethereum'
       });
       
-      await fetchNFTs();
+      await Promise.all([
+        fetchNFTs(user?.id),
+        fetchCollections(user?.id)
+      ]);
       
       setIsNFTDialogOpen(false);
       setIsCollectionDialogOpen(false);
@@ -220,7 +226,12 @@ const AdminNFT: React.FC = () => {
       
       await fetchCollections();
       
-      setIsCollectionDialogOpen(false);
+      if (isNFTDialogOpen === false) {
+        onCollectionCreated();
+      } else {
+        setIsCollectionDialogOpen(false);
+      }
+      
       setCurrentCollection({});
       setImageFile(null);
       setImagePreview(null);
@@ -284,6 +295,20 @@ const AdminNFT: React.FC = () => {
   const onCollectionCreated = () => {
     setIsCollectionDialogOpen(false);
     setIsNFTDialogOpen(true);
+  };
+
+  const viewCollectionDetails = async (collection: NFTCollection) => {
+    setSelectedCollection(collection);
+    
+    if (!collection.nfts) {
+      const collectionNFTs = await getNFTsByCollection(collection.name);
+      setSelectedCollection({
+        ...collection,
+        nfts: collectionNFTs
+      });
+    }
+    
+    setIsCollectionDetailsOpen(true);
   };
 
   if (authLoading) {
@@ -496,6 +521,11 @@ const AdminNFT: React.FC = () => {
                             <Package size={48} className="text-pi-muted" />
                           </div>
                         )}
+                        {collection.nfts && collection.nfts.length > 0 && (
+                          <div className="absolute top-2 right-2 px-2 py-1 rounded text-xs font-medium bg-black/50">
+                            {collection.nfts.length} NFT{collection.nfts.length !== 1 ? 's' : ''}
+                          </div>
+                        )}
                       </div>
                       <div className="p-4">
                         <h3 className="font-medium text-lg mb-2">{collection.name}</h3>
@@ -507,13 +537,7 @@ const AdminNFT: React.FC = () => {
                           <span className="text-xs text-pi-muted">
                             Created: {new Date(collection.created_at).toLocaleDateString()}
                           </span>
-                          <Button variant="outline" size="sm" onClick={() => {
-                            const collectionNFTs = nfts.filter(nft => nft.collection === collection.name);
-                            toast({
-                              title: `${collection.name}`,
-                              description: `Contains ${collectionNFTs.length} NFTs`,
-                            });
-                          }}>
+                          <Button variant="outline" size="sm" onClick={() => viewCollectionDetails(collection)}>
                             View Details
                           </Button>
                         </div>
@@ -921,6 +945,72 @@ const AdminNFT: React.FC = () => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCollectionDetailsOpen} onOpenChange={setIsCollectionDetailsOpen}>
+        <DialogContent className="bg-dark-secondary border-gray-700 text-white max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>{selectedCollection?.name}</DialogTitle>
+            <DialogDescription>
+              {selectedCollection?.description}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="mt-4">
+            <h3 className="text-lg font-medium mb-4">NFTs in this Collection</h3>
+            
+            {selectedCollection?.nfts?.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-pi-muted">No NFTs in this collection yet.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                {selectedCollection?.nfts?.map(nft => (
+                  <div key={nft.id} className="glass-card rounded-lg overflow-hidden border border-white/10 flex">
+                    <div className="w-1/3 bg-dark-secondary overflow-hidden">
+                      <img 
+                        src={nft.imageurl} 
+                        alt={nft.title} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="p-3 w-2/3">
+                      <h4 className="font-medium text-base mb-1">{nft.title}</h4>
+                      <p className="text-pi-muted text-xs mb-2 line-clamp-2">
+                        {nft.description}
+                      </p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-amber-400">{nft.price} ETH</span>
+                        <span className="text-xs bg-dark px-2 py-1 rounded-full">
+                          {nft.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setIsCollectionDetailsOpen(false)}
+            >
+              Close
+            </Button>
+            <Button 
+              onClick={() => {
+                setIsNFTDialogOpen(true);
+                setCurrentNFT({ collection: selectedCollection?.name });
+                setIsCollectionDetailsOpen(false);
+              }}
+            >
+              <Plus size={16} className="mr-2" /> Add NFT to Collection
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

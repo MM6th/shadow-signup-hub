@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +24,7 @@ export interface NFTCollection {
   owner_id: string;
   created_at: string;
   image_url: string | null;
+  nfts?: NFT[]; // Added to store NFTs in this collection
 }
 
 export const useNFT = () => {
@@ -43,6 +43,9 @@ export const useNFT = () => {
       
       if (userId) {
         query = query.eq('owner_id', userId);
+      } else if (user) {
+        // If no userId provided but user is logged in, fetch their NFTs
+        query = query.eq('owner_id', user.id);
       }
       
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -51,6 +54,7 @@ export const useNFT = () => {
       
       // Explicitly cast the data to NFT[] type
       const typedData = data as unknown as NFT[];
+      console.log('Fetched NFTs:', typedData.length, typedData);
       setNfts(typedData);
       return typedData;
     } catch (error) {
@@ -75,6 +79,9 @@ export const useNFT = () => {
       
       if (userId) {
         query = query.eq('owner_id', userId);
+      } else if (user) {
+        // If no userId provided but user is logged in, fetch their collections
+        query = query.eq('owner_id', user.id);
       }
       
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -83,8 +90,30 @@ export const useNFT = () => {
       
       // Explicitly cast the data to NFTCollection[] type
       const typedData = data as unknown as NFTCollection[];
-      setCollections(typedData);
-      return typedData;
+      
+      // After getting collections, let's get the NFTs for each collection
+      const collectionsWithNFTs = await Promise.all(
+        typedData.map(async (collection) => {
+          const { data: collectionNFTs, error: nftError } = await supabase
+            .from('nfts')
+            .select('*')
+            .eq('collection', collection.name)
+            .order('created_at', { ascending: false });
+            
+          if (nftError) {
+            console.error('Error fetching collection NFTs:', nftError);
+            return { ...collection, nfts: [] };
+          }
+          
+          return {
+            ...collection,
+            nfts: collectionNFTs as unknown as NFT[]
+          };
+        })
+      );
+      
+      setCollections(collectionsWithNFTs);
+      return collectionsWithNFTs;
     } catch (error) {
       console.error('Error fetching collections:', error);
       toast({
@@ -200,8 +229,6 @@ export const useNFT = () => {
     }
   };
 
-  // For demonstration purposes - in a real implementation,
-  // this would interact with blockchain via web3 libraries
   const simulateMintNFT = async (nftId: string) => {
     try {
       setIsLoading(true);
@@ -286,6 +313,32 @@ export const useNFT = () => {
     }
   };
 
+  const getNFTsByCollection = async (collectionName: string) => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('nfts')
+        .select('*')
+        .eq('collection', collectionName)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      return data as unknown as NFT[];
+    } catch (error) {
+      console.error('Error fetching collection NFTs:', error);
+      toast({
+        title: 'Failed to load collection NFTs',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
+      });
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     nfts,
     collections,
@@ -295,6 +348,7 @@ export const useNFT = () => {
     createNFT,
     createCollection,
     simulateMintNFT,
-    listNFTForSale
+    listNFTForSale,
+    getNFTsByCollection
   };
 };
