@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { NFT, NFTCollection } from '@/hooks/useNFT';
@@ -13,35 +12,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { uploadFile } from '../utils/imageUtils';
-import { Info, Plus, Loader2, Trash2, Upload, FileText, Music, Video } from 'lucide-react';
+import { Info, Plus, Loader2, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-
-const BLOCKCHAIN_OPTIONS = [
-  { value: 'ethereum', label: 'Ethereum', symbol: 'ETH' },
-  { value: 'polygon', label: 'Polygon', symbol: 'MATIC' },
-  { value: 'solana', label: 'Solana', symbol: 'SOL' },
-  { value: 'binance', label: 'Binance Smart Chain', symbol: 'BNB' },
-];
-
-const CONTENT_TYPE_OPTIONS = [
-  { value: 'image', label: 'Image', icon: <Upload className="w-4 h-4 mr-2" /> },
-  { value: 'video', label: 'Video', icon: <Video className="w-4 h-4 mr-2" /> },
-  { value: 'book', label: 'Book', icon: <FileText className="w-4 h-4 mr-2" /> },
-  { value: 'audio', label: 'Audio', icon: <Music className="w-4 h-4 mr-2" /> },
-];
-
-const formSchema = z.object({
-  title: z.string().min(3, { message: 'Title must be at least 3 characters' }),
-  description: z.string().min(10, { message: 'Description must be at least 10 characters' }),
-  price: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
-    message: 'Price must be a positive number',
-  }),
-  collection: z.string().min(1, { message: 'Collection is required' }),
-  blockchain: z.string().min(1, { message: 'Blockchain is required' }),
-  currency: z.string().min(1, { message: 'Currency is required' }),
-  content_type: z.string().min(1, { message: 'Content type is required' }),
-});
+import { NFTDeleteDialog } from './NFTDeleteDialog';
+import { NFTMediaPreview } from '../components/NFTMediaPreview';
+import { BLOCKCHAIN_OPTIONS, CONTENT_TYPE_OPTIONS } from '../constants/nftFormConstants';
+import { nftFormSchema, NFTFormData } from '../schemas/nftFormSchema';
 
 interface NFTFormDialogProps {
   isOpen: boolean;
@@ -78,8 +54,8 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
     { value: 'eth', label: 'ETH' }
   ]);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<NFTFormData>({
+    resolver: zodResolver(nftFormSchema),
     defaultValues: {
       title: '',
       description: '',
@@ -229,7 +205,7 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
     }
   };
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: NFTFormData) => {
     if (!user) {
       toast({
         title: 'Authentication required',
@@ -344,93 +320,6 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Helper function to render appropriate UI based on content type
-  const renderMediaUploadUI = () => {
-    const selectedContentType = form.watch('content_type');
-
-    // Determine the accept attribute for the file input based on content type
-    let acceptTypes = "image/*";
-    let placeholderText = "Upload an image";
-    let icon = <Upload className="mb-2 text-pi-muted" size={24} />;
-    
-    switch (selectedContentType) {
-      case 'video':
-        acceptTypes = "video/*";
-        placeholderText = "Upload a video file";
-        icon = <Video className="mb-2 text-pi-muted" size={24} />;
-        break;
-      case 'book':
-        acceptTypes = ".pdf,.epub,.mobi";
-        placeholderText = "Upload a document (PDF, EPUB)";
-        icon = <FileText className="mb-2 text-pi-muted" size={24} />;
-        break;
-      case 'audio':
-        acceptTypes = "audio/*";
-        placeholderText = "Upload an audio file";
-        icon = <Music className="mb-2 text-pi-muted" size={24} />;
-        break;
-    }
-
-    return (
-      <div className="mt-1">
-        {mediaPreview ? (
-          <div className="relative rounded-lg overflow-hidden w-full h-40">
-            {selectedContentType === 'image' ? (
-              <img
-                src={mediaPreview}
-                alt="NFT Preview"
-                className="w-full h-full object-cover"
-              />
-            ) : selectedContentType === 'video' ? (
-              <video
-                src={mediaPreview}
-                controls
-                className="w-full h-full object-contain"
-              />
-            ) : selectedContentType === 'audio' ? (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-gray-800">
-                <Music className="h-12 w-12 mb-2 text-pi-muted" />
-                <audio src={mediaPreview} controls className="w-3/4" />
-              </div>
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-gray-800">
-                <FileText className="h-12 w-12 mb-2 text-pi-muted" />
-                <p className="text-sm text-pi-muted">
-                  {mediaFile ? mediaFile.name : 'File uploaded'}
-                </p>
-              </div>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="absolute bottom-2 right-2"
-              onClick={() => {
-                setMediaFile(null);
-                setMediaPreview(null);
-              }}
-            >
-              Change
-            </Button>
-          </div>
-        ) : (
-          <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-500 rounded-lg h-40 cursor-pointer hover:border-pi-focus">
-            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-              {icon}
-              <span className="text-sm text-pi-muted">{placeholderText}</span>
-            </div>
-            <input
-              type="file"
-              accept={acceptTypes}
-              className="hidden"
-              onChange={handleMediaChange}
-            />
-          </label>
-        )}
-      </div>
-    );
   };
 
   return (
@@ -641,7 +530,16 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
 
                   <div>
                     <FormLabel>NFT Media</FormLabel>
-                    {renderMediaUploadUI()}
+                    <NFTMediaPreview 
+                      contentType={form.watch('content_type')}
+                      mediaPreview={mediaPreview}
+                      mediaFile={mediaFile}
+                      onRemoveMedia={() => {
+                        setMediaFile(null);
+                        setMediaPreview(null);
+                      }}
+                      onMediaChange={handleMediaChange}
+                    />
                     <p className="text-xs text-pi-muted mt-1">
                       {form.watch('content_type') === 'image' 
                         ? 'Upload a high-quality image for your NFT'
@@ -682,27 +580,12 @@ export const NFTFormDialog: React.FC<NFTFormDialogProps> = ({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to delete this NFT?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the NFT and remove any associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteNFT}
-              className="bg-destructive hover:bg-destructive/90"
-              disabled={isLoading}
-            >
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <NFTDeleteDialog
+        isOpen={deleteDialogOpen}
+        setIsOpen={setDeleteDialogOpen}
+        onDelete={handleDeleteNFT}
+        isLoading={isLoading}
+      />
     </>
   );
 };
