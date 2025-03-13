@@ -19,7 +19,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
   defaultMode = 'signin'
 }) => {
   const [mode, setMode] = useState<'signin' | 'signup'>(defaultMode);
-  const { user, hasProfile } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,21 +31,13 @@ const AuthModal: React.FC<AuthModalProps> = ({
     // If user is authenticated and modal is open, close it and redirect
     if (user && isOpen) {
       onClose();
-      if (!hasProfile) {
-        navigate('/create-profile');
-        toast({
-          title: "Profile needed",
-          description: "Please complete your profile to continue.",
-        });
-      } else {
-        navigate('/dashboard');
-        toast({
-          title: "Welcome back",
-          description: "You've been redirected to your dashboard.",
-        });
-      }
+      navigate('/dashboard');
+      toast({
+        title: "Welcome",
+        description: "You've been signed in successfully.",
+      });
     }
-  }, [user, isOpen, onClose, navigate, hasProfile]);
+  }, [user, isOpen, onClose, navigate]);
 
   const toggleMode = () => {
     setMode(mode === 'signin' ? 'signup' : 'signin');
