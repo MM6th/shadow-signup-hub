@@ -9,36 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      live_sessions: {
+      appointments: {
         Row: {
+          appointment_time: string
+          buyer_id: string
+          buyer_name: string
           created_at: string
-          ended_at: string | null
           id: string
-          is_active: boolean
-          room_id: string
-          started_at: string
-          title: string | null
-          user_id: string
+          product_id: string
+          product_title: string
+          seller_id: string
+          status: string
+          updated_at: string
         }
         Insert: {
+          appointment_time: string
+          buyer_id: string
+          buyer_name: string
           created_at?: string
-          ended_at?: string | null
           id?: string
-          is_active?: boolean
-          room_id: string
-          started_at?: string
-          title?: string | null
-          user_id: string
+          product_id: string
+          product_title: string
+          seller_id: string
+          status?: string
+          updated_at?: string
         }
         Update: {
+          appointment_time?: string
+          buyer_id?: string
+          buyer_name?: string
           created_at?: string
-          ended_at?: string | null
           id?: string
-          is_active?: boolean
-          room_id?: string
-          started_at?: string
-          title?: string | null
-          user_id?: string
+          product_id?: string
+          product_title?: string
+          seller_id?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -114,12 +120,8 @@ export type Database = {
         Row: {
           blockchain: string
           collection: string
-          content_type: string
           created_at: string
-          currency: string | null
           description: string
-          file_type: string | null
-          file_url: string | null
           id: string
           imageurl: string
           owner_id: string
@@ -131,12 +133,8 @@ export type Database = {
         Insert: {
           blockchain?: string
           collection: string
-          content_type?: string
           created_at?: string
-          currency?: string | null
           description: string
-          file_type?: string | null
-          file_url?: string | null
           id?: string
           imageurl: string
           owner_id: string
@@ -148,12 +146,8 @@ export type Database = {
         Update: {
           blockchain?: string
           collection?: string
-          content_type?: string
           created_at?: string
-          currency?: string | null
           description?: string
-          file_type?: string | null
-          file_url?: string | null
           id?: string
           imageurl?: string
           owner_id?: string

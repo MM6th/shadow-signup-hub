@@ -13,8 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Marketplace from "./pages/Marketplace";
 import CreateProduct from "./pages/CreateProduct";
 import EditProduct from "./pages/EditProduct";
-import AdminNFT from "./pages/admin-nft"; // Updated import path
-import VideoConference from "./pages/VideoConference";
+import AdminNFT from "./pages/AdminNFT";
 import { useAuth } from "./context/AuthContext";
 
 const queryClient = new QueryClient();
@@ -64,7 +63,6 @@ const AppRoutes = () => {
       <Route path="/create-product" element={<ProtectedRoute><CreateProduct /></ProtectedRoute>} />
       <Route path="/edit-product/:productId" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
       <Route path="/admin-nft" element={<ProtectedRoute><AdminNFT /></ProtectedRoute>} />
-      <Route path="/video-conference/:roomId" element={<ProtectedRoute><VideoConference /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -1,173 +1,202 @@
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowRight, Check, ChevronDown } from 'lucide-react';
-import { motion } from 'framer-motion';
-import Footer from '@/components/Footer';
-import AuthModal from '@/components/AuthModal';
-import NavBar from '@/components/NavBar'; 
-import AnimatedText from '@/components/AnimatedText';
-import { useAuth } from '@/context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import AgeVerificationModal from '@/components/AgeVerificationModal';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Star, Wallet } from 'lucide-react';
+import NavBar from '../components/NavBar';
+import Footer from '../components/Footer';
+import Button from '../components/Button';
+import AnimatedText from '../components/AnimatedText';
+import FeaturedServices from '../components/FeaturedServices';
+import AuthModal from '../components/AuthModal';
+import AgeVerificationModal from '../components/AgeVerificationModal';
+import { useSellerReviews } from '../hooks/useReviews';
+import { supabase } from '@/integrations/supabase/client';
+
+const ADMIN_ID = '3a25fea8-ec60-4e52-ae40-63f2b1ce89d9'; // Admin user ID
 
 const Index: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-  const [isAgeModalOpen, setIsAgeModalOpen] = useState(false);
-  const { user, isLoading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const hasVerifiedAge = localStorage.getItem('ageVerified');
-    if (!hasVerifiedAge) {
-      setIsAgeModalOpen(true);
-    }
-  }, []);
-
-  const handleAgeVerification = () => {
-    localStorage.setItem('ageVerified', 'true');
-    setIsAgeModalOpen(false);
-  };
-
-  const openAuthModal = (mode: 'signin' | 'signup') => {
-    setAuthMode(mode);
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
+  const { reviews, isLoading, averageRating, totalReviews } = useSellerReviews(ADMIN_ID);
+  
+  const handleOpenAuthModal = (mode: 'signin' | 'signup') => {
+    setAuthModalMode(mode);
     setIsAuthModalOpen(true);
   };
 
-  const closeAuthModal = () => {
-    setIsAuthModalOpen(false);
-  };
-
-  useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
-    }
-  }, [user, navigate]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-dark flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin h-12 w-12 border-4 border-pi-focus border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-pi-muted">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  // Get rounded rating for display (e.g., 4.7 -> 5)
+  const displayRating = Math.round(averageRating);
 
   return (
-    <div className="min-h-screen bg-dark">
-      <NavBar onOpenAuthModal={openAuthModal} />
-
-      <main className="relative">
-        <section className="py-24 md:py-32 bg-gradient-to-b from-dark-secondary to-dark overflow-hidden">
-          <div className="container mx-auto px-4">
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              <div className="order-2 md:order-1">
-                <AnimatedText
-                  text="Empowering Creators, Connecting Communities"
-                  className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6"
-                />
-                <p className="text-pi-muted text-lg mb-8">
-                  Join a vibrant ecosystem where creators thrive and communities flourish.
-                  Discover new opportunities, collaborate with like-minded individuals,
-                  and bring your ideas to life.
+    <div className="min-h-screen flex flex-col bg-dark">
+      <AgeVerificationModal />
+      
+      <NavBar onOpenAuthModal={handleOpenAuthModal} />
+      
+      <div className="flex-1">
+        {/* Hero section */}
+        <section className="relative pt-20 pb-32 bg-dark-gradient px-4">
+          <div className="container mx-auto max-w-6xl">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div>
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-elixia mb-6 text-white">
+                  <AnimatedText text="Private Investigation" permanent={true} />
+                  <span className="block text-gradient mt-2">
+                    <AnimatedText text="Enterprises" delay={0.5} permanent={true} />
+                  </span>
+                </h1>
+                
+                <p className="text-lg md:text-xl text-pi-muted mb-8 max-w-xl leading-relaxed">
+                  Discover a digital ecosystem where entrepreneurs, influencers, and knowledge workers
+                  connect, collaborate, and create new economic opportunities.
                 </p>
-                <Button size="lg" onClick={() => openAuthModal('signup')}>
-                  Get Started <ArrowRight className="ml-2" />
-                </Button>
+                
+                {/* Crypto-only banner */}
+                <div className="bg-gradient-to-r from-amber-500/20 to-amber-700/20 border border-amber-500/30 rounded-lg p-4 mb-8">
+                  <div className="flex items-center gap-3">
+                    <Wallet className="h-6 w-6 text-amber-400" />
+                    <div>
+                      <h3 className="font-medium text-white">Crypto Transactions Only</h3>
+                      <p className="text-sm text-pi-muted">
+                        P.I.E. exclusively uses cryptocurrency for all transactions. 
+                        <a 
+                          href="https://metamask.io/download/" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="ml-2 text-amber-400 hover:text-amber-300 underline font-medium"
+                        >
+                          Get MetaMask →
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-4">
+                  <Button size="lg" onClick={() => handleOpenAuthModal('signup')}>
+                    Get Started <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                  <Button variant="outline" size="lg" onClick={() => handleOpenAuthModal('signin')}>
+                    Sign In
+                  </Button>
+                </div>
+                
+                <div className="flex items-center mt-8">
+                  <div className="flex -space-x-2">
+                    {reviews.slice(0, 4).map((review, i) => (
+                      <div key={i} className="w-8 h-8 rounded-full border-2 border-dark overflow-hidden">
+                        {review.profile_photo_url ? (
+                          <img 
+                            src={review.profile_photo_url} 
+                            alt="User" 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-white/20 to-white/5"></div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="ml-4">
+                    <div className="flex items-center">
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <Star 
+                          key={i} 
+                          className={`w-4 h-4 ${i <= displayRating ? 'text-amber-400 fill-amber-400' : 'text-gray-400'}`} 
+                        />
+                      ))}
+                    </div>
+                    <p className="text-sm text-pi-muted">
+                      {totalReviews > 0 
+                        ? `Trusted by ${totalReviews} user${totalReviews !== 1 ? 's' : ''}` 
+                        : 'Be the first to leave a review!'}
+                    </p>
+                  </div>
+                </div>
               </div>
-
-              <div className="order-1 md:order-2 relative">
-                <motion.img
-                  src="/hero-image.png"
-                  alt="Hero Image"
-                  className="max-w-full rounded-lg shadow-xl"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.3 }}
-                />
+              
+              <div className="hidden lg:block">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-pi-focus/30 to-purple-600/30 rounded-lg blur-3xl opacity-30"></div>
+                  <div className="relative glass-card rounded-xl overflow-hidden border border-white/10 flex items-center justify-center p-8">
+                    {/* Animated P.I.E. Circle */}
+                    <div className="relative w-80 h-80">
+                      {/* Outer rotating ring */}
+                      <div className="absolute inset-0 rounded-full border-4 border-pi-focus/30 animate-[spin_30s_linear_infinite]"></div>
+                      
+                      {/* Middle rotating ring with symbols */}
+                      <div className="absolute inset-4 rounded-full border-2 border-purple-500/40 animate-[spin_20s_linear_infinite_reverse]">
+                        {/* Celestial symbols */}
+                        {[...Array(12)].map((_, i) => (
+                          <div 
+                            key={i}
+                            className="absolute w-3 h-3 bg-white/70 rounded-full transform -translate-x-1/2 -translate-y-1/2"
+                            style={{
+                              left: '50%',
+                              top: '50%',
+                              transform: `rotate(${i * 30}deg) translateY(-40px) rotate(${-i * 30}deg)`,
+                            }}
+                          ></div>
+                        ))}
+                      </div>
+                      
+                      {/* Inner rotating ring */}
+                      <div className="absolute inset-12 rounded-full border border-cyan-400/50 animate-[spin_15s_linear_infinite]"></div>
+                      
+                      {/* Center stable P.I.E. logo */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="bg-gradient-to-br from-pi-focus to-purple-600 w-36 h-36 rounded-full flex items-center justify-center text-white font-elixia text-4xl shadow-lg shadow-pi-focus/20">
+                          P.I.E.
+                        </div>
+                      </div>
+                      
+                      {/* Particles */}
+                      {[...Array(20)].map((_, i) => (
+                        <div 
+                          key={i}
+                          className="absolute w-1 h-1 bg-white/60 rounded-full animate-ping"
+                          style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            animationDelay: `${Math.random() * 5}s`,
+                            animationDuration: `${1 + Math.random() * 3}s`,
+                          }}
+                        ></div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </section>
-
-        <section id="services" className="py-16 md:py-24">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-semibold text-white text-center mb-12">
-              Our Services
+        
+        {/* Featured services section */}
+        <FeaturedServices />
+        
+        {/* CTA section */}
+        <section className="py-20 px-4 bg-dark-secondary">
+          <div className="container mx-auto max-w-5xl text-center">
+            <h2 className="text-3xl md:text-4xl font-elixia mb-6 text-gradient">
+              Ready to bring your above below?
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <div className="glass-card p-6 text-center animate-delayed" style={{ '--delay': '1' } as React.CSSProperties}>
-                <h3 className="text-xl font-medium text-gradient mb-3">Consultations</h3>
-                <p className="text-pi-muted">
-                  Connect with experts for personalized advice and guidance.
-                </p>
-              </div>
-              <div className="glass-card p-6 text-center animate-delayed" style={{ '--delay': '2' } as React.CSSProperties}>
-                <h3 className="text-xl font-medium text-gradient mb-3">Live Sessions</h3>
-                <p className="text-pi-muted">
-                  Engage in real-time interactions and collaborative experiences.
-                </p>
-              </div>
-              <div className="glass-card p-6 text-center animate-delayed" style={{ '--delay': '3' } as React.CSSProperties}>
-                <h3 className="text-xl font-medium text-gradient mb-3">Product Marketplace</h3>
-                <p className="text-pi-muted">
-                  Discover and sell unique products within our community.
-                </p>
-              </div>
-            </div>
+            <p className="text-lg text-pi-muted mb-8 max-w-2xl mx-auto">
+              Join our platform and unlock a world of opportunities for your services.
+              Connect with clients, collaborate with peers, and grow your business.
+            </p>
+            <Button size="lg" onClick={() => handleOpenAuthModal('signup')}>
+              Join P.I.E Today <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
           </div>
         </section>
-
-        <section id="about" className="py-16 md:py-24 bg-dark-secondary">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-semibold text-white text-center mb-12">
-              About Us
-            </h2>
-            <div className="glass-card p-8 md:p-12">
-              <p className="text-pi-muted text-lg">
-                We are a community-driven platform dedicated to empowering creators and
-                fostering meaningful connections. Our mission is to provide the tools and
-                resources you need to succeed in today's digital landscape.
-              </p>
-              <ul className="list-disc list-inside text-pi-muted mt-6">
-                <li>Connect with experts and peers</li>
-                <li>Showcase and sell your products</li>
-                <li>Participate in live events and workshops</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        <section id="contact" className="py-16 md:py-24">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-semibold text-white text-center mb-12">
-              Contact Us
-            </h2>
-            <div className="glass-card p-8 md:p-12 text-center">
-              <p className="text-pi-muted text-lg mb-6">
-                Have questions or need assistance? Reach out to our team for support.
-              </p>
-              <Button variant="outline">Contact Support</Button>
-            </div>
-          </div>
-        </section>
-      </main>
-
+      </div>
+      
       <Footer />
-
-      <AuthModal
+      
+      <AuthModal 
         isOpen={isAuthModalOpen}
-        onClose={closeAuthModal}
-        defaultMode={authMode}
-      />
-
-      <AgeVerificationModal
-        isOpen={isAgeModalOpen}
-        onVerify={handleAgeVerification}
+        onClose={() => setIsAuthModalOpen(false)}
+        defaultMode={authModalMode}
       />
     </div>
   );
