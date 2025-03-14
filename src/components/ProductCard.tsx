@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -8,9 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import AppointmentDialog from "./AppointmentDialog";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { QrCode, Copy, Phone, Star } from 'lucide-react';
+import { QrCode, Copy, Phone, Star, RefreshCw } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import ReviewDialog from "./ReviewDialog";
+import { formatCurrency, convertPrice } from "@/lib/utils";
 
 interface ProductCardProps {
   product: {
@@ -23,6 +24,8 @@ interface ProductCardProps {
     category?: string; 
     type?: string;
     contact_phone?: string;
+    price_currency?: string;
+    original_price?: number;
   };
   onClick?: () => void;
   showEditButton?: boolean;
@@ -35,6 +38,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
+  const [isLoadingPrices, setIsLoadingPrices] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState<string>(product.price_currency || 'usd');
   
   const ADMIN_EMAIL = "cmooregee@gmail.com";
   const isAdminUser = user?.email === ADMIN_EMAIL;
@@ -43,6 +49,49 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const { adminWalletAddresses, isLoading } = useWalletAddresses(user, product.id, isAdminUser);
 
   const selectedWalletAddress = adminWalletAddresses.length > 0 ? adminWalletAddresses[0] : null;
+
+  useEffect(() => {
+    const fetchCryptoPrices = async () => {
+      try {
+        setIsLoadingPrices(true);
+        const cryptoIds = 'bitcoin,ethereum,solana,cardano,polkadot,litecoin,usdc,bnb';
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds}&vs_currencies=usd`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch crypto prices');
+        }
+        const data = await response.json();
+        
+        // Format data to make it easier to use
+        const prices: Record<string, number> = {};
+        Object.entries(data).forEach(([cryptoId, priceData]: [string, any]) => {
+          prices[cryptoId] = priceData.usd;
+        });
+        
+        // Add USD as 1 for easy conversion
+        prices['usd'] = 1;
+        
+        setCryptoPrices(prices);
+      } catch (error) {
+        console.error('Error fetching crypto prices:', error);
+        // Set some fallback values
+        setCryptoPrices({
+          usd: 1,
+          bitcoin: 65000,
+          ethereum: 3500,
+          solana: 140,
+          cardano: 0.5,
+          polkadot: 7,
+          litecoin: 80,
+          usdc: 1,
+          bnb: 600
+        });
+      } finally {
+        setIsLoadingPrices(false);
+      }
+    };
+
+    fetchCryptoPrices();
+  }, []);
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -84,11 +133,25 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
       // Copy wallet address to clipboard
       await navigator.clipboard.writeText(selectedWalletAddress.wallet_address);
       
+      // Calculate the equivalent price in the selected crypto
+      let priceToPay = product.price;
+      if (product.price_currency !== selectedWalletAddress.crypto_type) {
+        const convertedPrice = convertPrice(
+          product.original_price || product.price,
+          product.price_currency || 'usd',
+          selectedWalletAddress.crypto_type,
+          cryptoPrices
+        );
+        if (convertedPrice !== null) {
+          priceToPay = convertedPrice;
+        }
+      }
+      
       // Record the purchase
       await supabase.functions.invoke('send-purchase-confirmation', {
         body: {
           productTitle: product.title,
-          productPrice: product.price,
+          productPrice: priceToPay,
           walletAddress: selectedWalletAddress.wallet_address,
           cryptoType: selectedWalletAddress.crypto_type,
           contactPhone: product.contact_phone || "Not provided"
@@ -97,7 +160,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
 
       toast({
         title: "Payment address copied!",
-        description: `Send ${product.price} ${selectedWalletAddress.crypto_type} to the copied address to complete your purchase. Contact the seller at ${product.contact_phone || "unknown"} after payment.`,
+        description: `Send ${priceToPay.toFixed(6)} ${selectedWalletAddress.crypto_type.toUpperCase()} to the copied address to complete your purchase. Contact the seller at ${product.contact_phone || "unknown"} after payment.`,
       });
     } catch (error) {
       console.error('Error processing:', error);
@@ -156,8 +219,29 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
       });
     }
   };
+  
+  const handleChangeCurrency = (currency: string) => {
+    setSelectedCurrency(currency);
+  };
 
   const qrCodeUrl = selectedWalletAddress ? generateQRCode(selectedWalletAddress.wallet_address) : '';
+  
+  // Display the price in the selected currency
+  const displayPrice = () => {
+    const baseCurrency = product.price_currency || 'usd';
+    const basePrice = product.original_price || product.price;
+    
+    if (selectedCurrency === baseCurrency) {
+      return formatCurrency(basePrice, baseCurrency);
+    }
+    
+    const converted = convertPrice(basePrice, baseCurrency, selectedCurrency, cryptoPrices);
+    if (converted === null) {
+      return `${formatCurrency(basePrice, baseCurrency)} (conversion unavailable)`;
+    }
+    
+    return formatCurrency(converted, selectedCurrency);
+  };
 
   return (
     <Card 
@@ -184,7 +268,52 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
           {product.description}
         </p>
         <div className="mt-auto">
-          <p className="text-lg font-bold mb-4">${product.price.toFixed(2)}{product.type !== 'tangible' ? '/hr' : ''}</p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-lg font-bold">
+              {isLoadingPrices ? (
+                <span className="flex items-center">
+                  <RefreshCw size={16} className="animate-spin mr-2" />
+                  Loading...
+                </span>
+              ) : (
+                displayPrice()
+              )}
+              {product.type !== 'tangible' ? '/hr' : ''}
+            </p>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <RefreshCw size={16} className="mr-1" />
+                  Convert
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-2 w-48">
+                <div className="text-sm font-medium mb-2">Display price in:</div>
+                <div className="space-y-1">
+                  <Button 
+                    variant={selectedCurrency === 'usd' ? 'default' : 'ghost'} 
+                    size="sm" 
+                    className="w-full justify-start"
+                    onClick={() => handleChangeCurrency('usd')}
+                  >
+                    USD ($)
+                  </Button>
+                  {Object.keys(cryptoPrices).filter(key => key !== 'usd').map(crypto => (
+                    <Button
+                      key={crypto}
+                      variant={selectedCurrency === crypto ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => handleChangeCurrency(crypto)}
+                    >
+                      {crypto.toUpperCase()}
+                    </Button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           
           {isAdminUser && (showEditButton !== false) ? (
             <Button onClick={handleEdit} className="w-full">

@@ -23,6 +23,7 @@ const CRYPTO_OPTIONS = [
   { value: 'polkadot', label: 'Polkadot (DOT)' },
   { value: 'litecoin', label: 'Litecoin (LTC)' },
   { value: 'usdc', label: 'USD Coin (USDC)' },
+  { value: 'bnb', label: 'Binance Coin (BNB)' }
 ];
 
 const CATEGORY_OPTIONS = [
@@ -41,6 +42,7 @@ const formSchema = z.object({
   price: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
     message: 'Price must be a positive number',
   }),
+  priceCurrency: z.string().default('usd'),
   category: z.string().min(1, 'Please select a category'),
   contact_phone: z.string().min(10, 'Phone number must be at least 10 digits'),
   image: z.any().optional(),
@@ -68,6 +70,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const [walletAddresses, setWalletAddresses] = useState<WalletAddress[]>(initialWalletAddresses);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialValues?.image_url || null);
+  const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
+  const [isLoadingPrices, setIsLoadingPrices] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -85,6 +89,48 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }
   }, [user, isAdminUser, navigate, toast]);
 
+  useEffect(() => {
+    const fetchCryptoPrices = async () => {
+      try {
+        setIsLoadingPrices(true);
+        const cryptoIds = CRYPTO_OPTIONS.map(option => option.value).join(',');
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds}&vs_currencies=usd`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch crypto prices');
+        }
+        const data = await response.json();
+        // Format data to make it easier to use
+        const prices: Record<string, number> = {};
+        Object.entries(data).forEach(([cryptoId, priceData]: [string, any]) => {
+          prices[cryptoId] = priceData.usd;
+        });
+        setCryptoPrices(prices);
+      } catch (error) {
+        console.error('Error fetching crypto prices:', error);
+        toast({
+          title: "Failed to load crypto prices",
+          description: "Using estimated conversions instead",
+          variant: "destructive",
+        });
+        // Set some fallback values
+        setCryptoPrices({
+          bitcoin: 65000,
+          ethereum: 3500,
+          solana: 140,
+          cardano: 0.5,
+          polkadot: 7,
+          litecoin: 80,
+          usdc: 1,
+          bnb: 600
+        });
+      } finally {
+        setIsLoadingPrices(false);
+      }
+    };
+
+    fetchCryptoPrices();
+  }, [toast]);
+
   if (!isAdminUser) {
     return null;
   }
@@ -96,10 +142,45 @@ const ProductForm: React.FC<ProductFormProps> = ({
       type: initialValues?.type || 'digital',
       description: initialValues?.description || '',
       price: initialValues?.price ? String(initialValues.price) : '',
+      priceCurrency: initialValues?.price_currency || 'usd',
       category: initialValues?.category || '',
       contact_phone: initialValues?.contact_phone || '',
     },
   });
+
+  const watchPrice = form.watch('price');
+  const watchPriceCurrency = form.watch('priceCurrency');
+  
+  // Function to convert price to different cryptocurrencies
+  const convertPrice = (price: string, fromCurrency: string, toCurrency: string): string => {
+    if (!price || isNaN(parseFloat(price))) return '0';
+    
+    const numericPrice = parseFloat(price);
+    
+    // If both currencies are the same, return the original price
+    if (fromCurrency === toCurrency) return numericPrice.toFixed(2);
+    
+    // If converting from USD to crypto
+    if (fromCurrency === 'usd' && toCurrency !== 'usd') {
+      if (!cryptoPrices[toCurrency]) return 'N/A';
+      return (numericPrice / cryptoPrices[toCurrency]).toFixed(6);
+    }
+    
+    // If converting from crypto to USD
+    if (fromCurrency !== 'usd' && toCurrency === 'usd') {
+      if (!cryptoPrices[fromCurrency]) return 'N/A';
+      return (numericPrice * cryptoPrices[fromCurrency]).toFixed(2);
+    }
+    
+    // If converting between cryptos
+    if (fromCurrency !== 'usd' && toCurrency !== 'usd') {
+      if (!cryptoPrices[fromCurrency] || !cryptoPrices[toCurrency]) return 'N/A';
+      const usdValue = numericPrice * cryptoPrices[fromCurrency];
+      return (usdValue / cryptoPrices[toCurrency]).toFixed(6);
+    }
+    
+    return 'N/A';
+  };
 
   const addWalletAddress = () => {
     if (walletAddresses.length >= 3) {
@@ -212,6 +293,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
     try {
       const imageUrl = await uploadImage();
       
+      // Convert price to USD for storage if needed
+      let priceInUSD = parseFloat(values.price);
+      if (values.priceCurrency !== 'usd' && cryptoPrices[values.priceCurrency]) {
+        priceInUSD = parseFloat(values.price) * cryptoPrices[values.priceCurrency];
+      }
+      
       let product;
       
       if (isEditing && initialValues) {
@@ -221,7 +308,9 @@ const ProductForm: React.FC<ProductFormProps> = ({
             title: values.title,
             type: values.type,
             description: values.description,
-            price: parseFloat(values.price),
+            price: priceInUSD,
+            price_currency: values.priceCurrency,
+            original_price: parseFloat(values.price),
             category: values.category,
             image_url: imageUrl,
             contact_phone: values.contact_phone,
@@ -247,7 +336,9 @@ const ProductForm: React.FC<ProductFormProps> = ({
             title: values.title,
             type: values.type,
             description: values.description,
-            price: parseFloat(values.price),
+            price: priceInUSD,
+            price_currency: values.priceCurrency,
+            original_price: parseFloat(values.price),
             category: values.category,
             image_url: imageUrl,
             contact_phone: values.contact_phone,
@@ -381,22 +472,75 @@ const ProductForm: React.FC<ProductFormProps> = ({
             )}
           />
           
-          <FormField
-            control={form.control}
-            name="price"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Price per hour (USD)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
-                </FormControl>
-                <FormDescription>
-                  For services, this is the hourly rate. For products, this is the fixed price.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Price</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    For services, this is the hourly rate. For products, this is the fixed price.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="priceCurrency"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Currency</FormLabel>
+                  <FormControl>
+                    <select 
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      {...field}
+                    >
+                      <option value="usd">USD (US Dollar)</option>
+                      {CRYPTO_OPTIONS.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </FormControl>
+                  <FormDescription>
+                    Select the currency you want to price your product in.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          {/* Price Conversion Preview */}
+          {watchPrice && !isNaN(parseFloat(watchPrice)) && (
+            <div className="p-4 bg-dark-secondary rounded-lg">
+              <h3 className="text-md font-semibold mb-2">Price Conversions:</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                {watchPriceCurrency !== 'usd' && (
+                  <div className="p-2 bg-dark-accent rounded-md">
+                    <div className="font-medium">USD:</div>
+                    <div>${convertPrice(watchPrice, watchPriceCurrency, 'usd')}</div>
+                  </div>
+                )}
+                {CRYPTO_OPTIONS.map(option => 
+                  option.value !== watchPriceCurrency && (
+                    <div key={option.value} className="p-2 bg-dark-accent rounded-md">
+                      <div className="font-medium">{option.label}:</div>
+                      <div>{convertPrice(watchPrice, watchPriceCurrency, option.value)}</div>
+                    </div>
+                  )
+                )}
+              </div>
+              <p className="text-xs text-pi-muted mt-2">
+                {isLoadingPrices ? 'Loading prices...' : 'Conversions are approximate and based on current market rates.'}
+              </p>
+            </div>
+          )}
 
           <FormField
             control={form.control}
