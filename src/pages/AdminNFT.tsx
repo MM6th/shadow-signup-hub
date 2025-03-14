@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -820,4 +821,274 @@ const AdminNFT: React.FC = () => {
                   id="blockchain"
                   value={currentNFT.blockchain || 'ethereum'}
                   onChange={(e) => setCurrentNFT({...currentNFT, blockchain: e.target.value})}
-                  className="flex h-10 w-full rounded-md border border-input bg-dark px-3 py-
+                  className="flex h-10 w-full rounded-md border border-input bg-dark px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {BLOCKCHAIN_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="collection">Collection</Label>
+                <select
+                  id="collection"
+                  value={currentNFT.collection || ''}
+                  onChange={(e) => setCurrentNFT({...currentNFT, collection: e.target.value})}
+                  className="flex h-10 w-full rounded-md border border-input bg-dark px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">Select a collection</option>
+                  {collections.map(collection => (
+                    <option key={collection.id} value={collection.name}>{collection.name}</option>
+                  ))}
+                  <option value="Uncategorized">Uncategorized</option>
+                </select>
+              </div>
+            </div>
+            
+            {/* Cover Image Upload */}
+            <div className="space-y-2">
+              <Label htmlFor="cover-image">Cover Image</Label>
+              <div className="border border-dashed border-gray-600 rounded-lg p-4">
+                {imagePreview ? (
+                  <div className="relative">
+                    <img 
+                      src={imagePreview} 
+                      alt="NFT Preview" 
+                      className="w-full h-48 object-contain rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute top-2 right-2 bg-black/70 text-white p-1 rounded-full"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-48 bg-dark rounded">
+                    <Image className="mb-2 text-pi-muted" size={32} />
+                    <p className="text-sm text-pi-muted mb-2">Drag and drop or click to upload</p>
+                    <Input
+                      id="cover-image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('cover-image')?.click()}>
+                      Choose Image
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Content File Upload (for non-image NFTs) */}
+            {currentNFT.content_type !== 'image' && (
+              <div className="space-y-2">
+                <Label htmlFor="content-file">{currentNFT.content_type?.charAt(0).toUpperCase() + currentNFT.content_type?.slice(1)} File</Label>
+                <div className="border border-dashed border-gray-600 rounded-lg p-4">
+                  {contentFileInfo ? (
+                    <div className="flex items-center justify-between bg-dark p-3 rounded">
+                      <div className="flex items-center">
+                        <div className="p-2 bg-gray-800 rounded mr-3">
+                          {currentNFT.content_type === 'audio' && <Music size={20} />}
+                          {currentNFT.content_type === 'video' && <Film size={20} />}
+                          {currentNFT.content_type === 'book' && <Book size={20} />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{contentFileInfo}</p>
+                        </div>
+                      </div>
+                      <Button type="button" variant="ghost" size="sm" onClick={removeContentFile} className="text-destructive">
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-32 bg-dark rounded">
+                      {currentNFT.content_type === 'audio' && <Music className="mb-2 text-pi-muted" size={32} />}
+                      {currentNFT.content_type === 'video' && <Film className="mb-2 text-pi-muted" size={32} />}
+                      {currentNFT.content_type === 'book' && <Book className="mb-2 text-pi-muted" size={32} />}
+                      <p className="text-sm text-pi-muted mb-2">Upload your {currentNFT.content_type} file</p>
+                      <Input
+                        id="content-file"
+                        type="file"
+                        accept={currentNFT.content_type === 'audio' ? 'audio/*' : 
+                                currentNFT.content_type === 'video' ? 'video/*' : 
+                                currentNFT.content_type === 'book' ? '.pdf,.epub' : ''}
+                        onChange={handleContentFileChange}
+                        className="hidden"
+                      />
+                      <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('content-file')?.click()}>
+                        Choose File
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              {collections.length > 0 && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleCreateCollectionFromNFTDialog}
+                  className="mr-auto"
+                >
+                  <Plus size={16} className="mr-2" /> New Collection
+                </Button>
+              )}
+              <Button type="button" variant="outline" onClick={() => setIsNFTDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? 'Processing...' : isEditing ? 'Update NFT' : 'Create NFT'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Collection Creation Dialog */}
+      <Dialog open={isCollectionDialogOpen} onOpenChange={setIsCollectionDialogOpen}>
+        <DialogContent className="bg-dark-secondary border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle>Create New Collection</DialogTitle>
+            <DialogDescription>
+              Add a new collection to organize your NFTs
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleCollectionSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="collection-name">Collection Name</Label>
+              <Input
+                id="collection-name"
+                value={currentCollection.name || ''}
+                onChange={(e) => setCurrentCollection({...currentCollection, name: e.target.value})}
+                placeholder="Enter collection name"
+                className="bg-dark border-gray-700"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="collection-description">Description</Label>
+              <Textarea
+                id="collection-description"
+                value={currentCollection.description || ''}
+                onChange={(e) => setCurrentCollection({...currentCollection, description: e.target.value})}
+                placeholder="Describe your collection"
+                className="bg-dark border-gray-700 min-h-24"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="collection-image">Collection Image (Optional)</Label>
+              <div className="border border-dashed border-gray-600 rounded-lg p-4">
+                {imagePreview ? (
+                  <div className="relative">
+                    <img 
+                      src={imagePreview} 
+                      alt="Collection Preview" 
+                      className="w-full h-48 object-contain rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute top-2 right-2 bg-black/70 text-white p-1 rounded-full"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-48 bg-dark rounded">
+                    <Image className="mb-2 text-pi-muted" size={32} />
+                    <p className="text-sm text-pi-muted mb-2">Add an image for your collection</p>
+                    <Input
+                      id="collection-image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('collection-image')?.click()}>
+                      Choose Image
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsCollectionDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? 'Processing...' : 'Create Collection'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="bg-dark-secondary border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle>Delete NFT</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this NFT? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {nftToDelete && (
+            <div className="flex items-start space-x-4 mb-4">
+              <div className="w-16 h-16 overflow-hidden rounded bg-dark-accent">
+                <img
+                  src={nftToDelete.imageurl}
+                  alt={nftToDelete.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div>
+                <h4 className="font-medium">{nftToDelete.title}</h4>
+                <p className="text-sm text-pi-muted">{nftToDelete.collection}</p>
+                <div className="mt-1 flex items-center text-amber-400">
+                  <DollarSign size={14} className="mr-1" />
+                  <span>{nftToDelete.price} {nftToDelete.currency?.toUpperCase()}</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <Alert variant="destructive" className="bg-red-900/20 border-red-800 mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              Deleting this NFT will permanently remove it from your collection.
+              If the NFT has been minted, this action will only remove it from your dashboard.
+            </AlertDescription>
+          </Alert>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              type="button"
+              variant="destructive"
+              onClick={confirmDeleteNFT}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Deleting...' : 'Delete NFT'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default AdminNFT;
