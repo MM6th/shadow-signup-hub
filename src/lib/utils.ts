@@ -25,10 +25,10 @@ export function formatCurrency(value: number, currency: string = 'usd'): string 
     bnb: 'BNB'
   };
 
-  const symbol = symbols[currency] || currency.toUpperCase();
+  const symbol = symbols[currency.toLowerCase()] || currency.toUpperCase();
   
   // For cryptocurrencies, show more decimal places
-  const decimals = ['usd', 'usdc'].includes(currency) ? 2 : 6;
+  const decimals = ['usd', 'usdc'].includes(currency.toLowerCase()) ? 2 : 6;
   
   return `${symbol}${value.toFixed(decimals)}`;
 }

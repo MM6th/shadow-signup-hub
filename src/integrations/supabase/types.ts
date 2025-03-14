@@ -172,7 +172,9 @@ export type Database = {
           description: string
           id: string
           image_url: string | null
+          original_price: number | null
           price: number
+          price_currency: string | null
           title: string
           type: string
           updated_at: string
@@ -185,7 +187,9 @@ export type Database = {
           description: string
           id?: string
           image_url?: string | null
+          original_price?: number | null
           price: number
+          price_currency?: string | null
           title: string
           type: string
           updated_at?: string
@@ -198,7 +202,9 @@ export type Database = {
           description?: string
           id?: string
           image_url?: string | null
+          original_price?: number | null
           price?: number
+          price_currency?: string | null
           title?: string
           type?: string
           updated_at?: string

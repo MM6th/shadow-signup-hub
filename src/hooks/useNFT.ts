@@ -16,6 +16,7 @@ export interface NFT {
   owner_id: string;
   blockchain: string;
   status: 'draft' | 'minting' | 'minted' | 'listed' | 'sold';
+  currency?: string; // Add currency field
 }
 
 export interface NFTCollection {
@@ -251,7 +252,7 @@ export const useNFT = () => {
     }
   };
 
-  const listNFTForSale = async (nftId: string, price: number) => {
+  const listNFTForSale = async (nftId: string, price: number, currency: string = 'ethereum') => {
     try {
       setIsLoading(true);
       
@@ -259,6 +260,7 @@ export const useNFT = () => {
         .from('nfts')
         .update({ 
           price,
+          currency,
           status: 'listed' 
         })
         .eq('id', nftId)
@@ -269,7 +271,7 @@ export const useNFT = () => {
       
       toast({
         title: 'NFT Listed',
-        description: `Your NFT has been listed for sale at ${price} ETH`,
+        description: `Your NFT has been listed for sale at ${price} ${currency.toUpperCase()}`,
       });
       
       return data as unknown as NFT;
