@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Plus, Edit, Trash2, Image, Package, DollarSign, Tag, ChevronUp, ChevronDown, Wallet, BarChart3 } from 'lucide-react';
+import { Plus, Edit, Trash2, Image, Package, DollarSign, Tag, ChevronUp, ChevronDown, Wallet, BarChart3, Film, Music, Book, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserSession } from '@/hooks/useUserSession';
@@ -21,6 +22,20 @@ const BLOCKCHAIN_OPTIONS = [
   { value: 'ethereum', label: 'Ethereum' },
   { value: 'polygon', label: 'Polygon' },
   { value: 'solana', label: 'Solana' },
+];
+
+const CONTENT_TYPE_OPTIONS = [
+  { value: 'image', label: 'Image/Photo', icon: Image },
+  { value: 'audio', label: 'Audio', icon: Music },
+  { value: 'video', label: 'Video', icon: Film },
+  { value: 'book', label: 'Book', icon: Book },
+];
+
+const CURRENCY_OPTIONS = [
+  { value: 'ethereum', label: 'Ethereum (ETH)' },
+  { value: 'bitcoin', label: 'Bitcoin (BTC)' },
+  { value: 'solana', label: 'Solana (SOL)' },
+  { value: 'usdc', label: 'USD Coin (USDC)' },
 ];
 
 const AdminNFT: React.FC = () => {
@@ -37,17 +52,25 @@ const AdminNFT: React.FC = () => {
     createNFT,
     createCollection,
     simulateMintNFT,
-    listNFTForSale
+    listNFTForSale,
+    deleteNFT
   } = useNFT();
   
   const [isNFTDialogOpen, setIsNFTDialogOpen] = useState(false);
   const [isCollectionDialogOpen, setIsCollectionDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [nftToDelete, setNftToDelete] = useState<NFT | null>(null);
   
-  const [currentNFT, setCurrentNFT] = useState<Partial<NFT>>({});
+  const [currentNFT, setCurrentNFT] = useState<Partial<NFT>>({
+    content_type: 'image', // Default to image
+    currency: 'ethereum'    // Default to ethereum
+  });
   const [currentCollection, setCurrentCollection] = useState<Partial<NFTCollection>>({});
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [contentFile, setContentFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [contentFileInfo, setContentFileInfo] = useState<string | null>(null);
   
   const [activeTab, setActiveTab] = useState<string>('marketplace');
   const [isLoading, setIsLoading] = useState(false);
@@ -82,17 +105,42 @@ const AdminNFT: React.FC = () => {
     setImageFile(file);
   };
 
+  const handleContentFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setContentFile(file);
+    setContentFileInfo(`${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+    
+    // Update the file type based on the file extension
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
+    setCurrentNFT((prev) => ({ 
+      ...prev, 
+      file_type: fileExt 
+    }));
+  };
+
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
   };
 
-  const uploadImage = async (file: File): Promise<string | null> => {
+  const removeContentFile = () => {
+    setContentFile(null);
+    setContentFileInfo(null);
+    setCurrentNFT((prev) => ({ 
+      ...prev, 
+      file_type: null,
+      file_url: null
+    }));
+  };
+
+  const uploadFile = async (file: File, path: string): Promise<string | null> => {
     try {
       setIsLoading(true);
       const fileExt = file.name.split('.').pop();
       const fileName = `${uuidv4()}.${fileExt}`;
-      const filePath = `nft-images/${fileName}`;
+      const filePath = `${path}/${fileName}`;
       
       const { error } = await supabase.storage
         .from('products')
@@ -108,10 +156,10 @@ const AdminNFT: React.FC = () => {
         
       return publicUrl;
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error(`Error uploading ${path}:`, error);
       toast({
         title: 'Upload Failed',
-        description: 'Failed to upload image. Please try again.',
+        description: `Failed to upload ${path}. Please try again.`,
         variant: 'destructive',
       });
       return null;
@@ -126,7 +174,7 @@ const AdminNFT: React.FC = () => {
     if (!imageFile && !currentNFT.imageurl) {
       toast({
         title: 'Image Required',
-        description: 'Please upload an image for your NFT',
+        description: 'Please upload a cover image for your NFT',
         variant: 'destructive',
       });
       return;
@@ -150,31 +198,61 @@ const AdminNFT: React.FC = () => {
       return;
     }
     
+    // For non-image content types, we need a content file
+    if (currentNFT.content_type !== 'image' && !contentFile && !currentNFT.file_url) {
+      toast({
+        title: 'Content File Required',
+        description: `Please upload a ${currentNFT.content_type} file for your NFT`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
+      // Upload image (cover)
       let imageUrl = currentNFT.imageurl;
       if (imageFile) {
-        imageUrl = await uploadImage(imageFile);
+        imageUrl = await uploadFile(imageFile, 'nft-images');
         if (!imageUrl) return;
       }
       
-      await createNFT({
-        title: currentNFT.title,
-        description: currentNFT.description,
-        price: currentNFT.price,
+      // Upload content file if needed
+      let fileUrl = currentNFT.file_url;
+      if (contentFile) {
+        fileUrl = await uploadFile(contentFile, 'nft-content');
+        if (!fileUrl && currentNFT.content_type !== 'image') return;
+      }
+      
+      // Create or update the NFT
+      const nftData: Omit<NFT, 'id' | 'created_at' | 'tokenid' | 'status' | 'owner_id'> = {
+        title: currentNFT.title!,
+        description: currentNFT.description!,
+        price: currentNFT.price!,
         imageurl: imageUrl!,
         collection: currentNFT.collection || 'Uncategorized',
-        blockchain: currentNFT.blockchain || 'ethereum'
-      });
+        blockchain: currentNFT.blockchain || 'ethereum',
+        content_type: currentNFT.content_type || 'image',
+        file_url: fileUrl,
+        file_type: currentNFT.file_type,
+        currency: currentNFT.currency || 'ethereum'
+      };
+      
+      await createNFT(nftData);
       
       await fetchNFTs();
       
       setIsNFTDialogOpen(false);
       setIsCollectionDialogOpen(false);
-      setCurrentNFT({});
+      setCurrentNFT({
+        content_type: 'image',
+        currency: 'ethereum'
+      });
       setImageFile(null);
       setImagePreview(null);
+      setContentFile(null);
+      setContentFileInfo(null);
       
       toast({
         title: 'NFT Created Successfully',
@@ -258,7 +336,7 @@ const AdminNFT: React.FC = () => {
     fetchNFTs();
   };
 
-  const handleListNFT = async (nftId: string, price: number) => {
+  const handleListNFT = async (nftId: string, price: number, currency: string = 'ethereum') => {
     if (!wallet.isConnected) {
       toast({
         title: 'Wallet Required',
@@ -268,8 +346,29 @@ const AdminNFT: React.FC = () => {
       return;
     }
     
-    await listNFTForSale(nftId, price);
+    await listNFTForSale(nftId, price, currency);
     fetchNFTs();
+  };
+
+  const handleDeleteNFT = async (nft: NFT) => {
+    setNftToDelete(nft);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteNFT = async () => {
+    if (!nftToDelete) return;
+    
+    const success = await deleteNFT(nftToDelete.id);
+    if (success) {
+      await fetchNFTs();
+      setIsDeleteDialogOpen(false);
+      setNftToDelete(null);
+      
+      toast({
+        title: 'NFT Deleted',
+        description: 'The NFT has been permanently deleted',
+      });
+    }
   };
 
   const handleCreateCollectionFromNFTDialog = () => {
@@ -284,6 +383,12 @@ const AdminNFT: React.FC = () => {
   const onCollectionCreated = () => {
     setIsCollectionDialogOpen(false);
     setIsNFTDialogOpen(true);
+  };
+
+  const getContentTypeIcon = (contentType: string) => {
+    const option = CONTENT_TYPE_OPTIONS.find(opt => opt.value === contentType);
+    const IconComponent = option?.icon || Image;
+    return <IconComponent size={14} className="mr-1" />;
   };
 
   if (authLoading) {
@@ -351,9 +456,14 @@ const AdminNFT: React.FC = () => {
                 <h2 className="text-xl font-medium">Your NFTs</h2>
                 <Button onClick={() => {
                   setIsEditing(false);
-                  setCurrentNFT({});
+                  setCurrentNFT({
+                    content_type: 'image',
+                    currency: 'ethereum'
+                  });
                   setImageFile(null);
                   setImagePreview(null);
+                  setContentFile(null);
+                  setContentFileInfo(null);
                   setIsNFTDialogOpen(true);
                 }}>
                   <Plus size={16} className="mr-2" /> Create NFT
@@ -374,7 +484,10 @@ const AdminNFT: React.FC = () => {
                   </p>
                   <Button onClick={() => {
                     setIsEditing(false);
-                    setCurrentNFT({});
+                    setCurrentNFT({
+                      content_type: 'image',
+                      currency: 'ethereum'
+                    });
                     setIsNFTDialogOpen(true);
                   }}>
                     <Plus size={16} className="mr-2" /> Create Your First NFT
@@ -397,13 +510,17 @@ const AdminNFT: React.FC = () => {
                           {nft.status === 'listed' && 'Listed'}
                           {nft.status === 'sold' && 'Sold'}
                         </div>
+                        <div className="absolute top-2 left-2 px-2 py-1 rounded text-xs font-medium bg-black/50 flex items-center">
+                          {getContentTypeIcon(nft.content_type)}
+                          {nft.content_type.charAt(0).toUpperCase() + nft.content_type.slice(1)}
+                        </div>
                       </div>
                       <div className="p-4">
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="font-medium text-lg">{nft.title}</h3>
                           <span className="flex items-center bg-dark-accent px-2 py-1 rounded text-sm">
                             <DollarSign size={14} className="text-amber-400 mr-1" /> 
-                            {nft.price} ETH
+                            {nft.price} {nft.currency?.toUpperCase() || 'ETH'}
                           </span>
                         </div>
                         
@@ -428,7 +545,7 @@ const AdminNFT: React.FC = () => {
                             </Button>
                           )}
                           {nft.status === 'minted' && (
-                            <Button variant="outline" size="sm" onClick={() => handleListNFT(nft.id, nft.price)}>
+                            <Button variant="outline" size="sm" onClick={() => handleListNFT(nft.id, nft.price, nft.currency)}>
                               List for Sale
                             </Button>
                           )}
@@ -436,9 +553,15 @@ const AdminNFT: React.FC = () => {
                             setIsEditing(true);
                             setCurrentNFT(nft);
                             setImagePreview(nft.imageurl);
+                            if (nft.file_url) {
+                              setContentFileInfo(`File already uploaded (${nft.file_type})`);
+                            }
                             setIsNFTDialogOpen(true);
                           }}>
                             <Edit size={14} className="mr-1" /> Edit
+                          </Button>
+                          <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteNFT(nft)}>
+                            <Trash2 size={14} className="mr-1" /> Delete
                           </Button>
                         </div>
                       </div>
@@ -628,9 +751,33 @@ const AdminNFT: React.FC = () => {
               />
             </div>
             
+            <div className="space-y-2">
+              <Label htmlFor="content_type">Content Type</Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {CONTENT_TYPE_OPTIONS.map(option => {
+                  const IconComponent = option.icon;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setCurrentNFT({...currentNFT, content_type: option.value})}
+                      className={`flex flex-col items-center justify-center p-3 rounded-md border transition-colors ${
+                        currentNFT.content_type === option.value
+                          ? 'border-pi-focus bg-pi-focus/20 text-white'
+                          : 'border-gray-700 bg-dark-secondary text-pi-muted hover:border-pi-focus'
+                      }`}
+                    >
+                      <IconComponent className="mb-1" size={24} />
+                      <span className="text-sm">{option.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="price">Price (ETH)</Label>
+                <Label htmlFor="price">Price</Label>
                 <Input
                   id="price"
                   type="number"
@@ -644,287 +791,25 @@ const AdminNFT: React.FC = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="blockchain">Blockchain</Label>
+                <Label htmlFor="currency">Currency</Label>
                 <select
-                  id="blockchain"
-                  value={currentNFT.blockchain || 'ethereum'}
-                  onChange={(e) => setCurrentNFT({...currentNFT, blockchain: e.target.value})}
+                  id="currency"
+                  value={currentNFT.currency || 'ethereum'}
+                  onChange={(e) => setCurrentNFT({...currentNFT, currency: e.target.value})}
                   className="flex h-10 w-full rounded-md border border-input bg-dark px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {BLOCKCHAIN_OPTIONS.map(option => (
+                  {CURRENCY_OPTIONS.map(option => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
               </div>
             </div>
             
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="collection">Collection</Label>
-                <Button 
-                  type="button"
-                  variant="link" 
-                  size="sm" 
-                  className="text-pi-focus h-6 p-0"
-                  onClick={handleCreateCollectionFromNFTDialog}
-                >
-                  <Plus size={14} className="mr-1" /> Create New Collection
-                </Button>
-              </div>
-              <select
-                id="collection"
-                value={currentNFT.collection || ''}
-                onChange={(e) => setCurrentNFT({...currentNFT, collection: e.target.value})}
-                className="flex h-10 w-full rounded-md border border-input bg-dark px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="">Select a collection</option>
-                {collections.length === 0 && (
-                  <option value="Uncategorized">Uncategorized</option>
-                )}
-                {collections.map(collection => (
-                  <option key={collection.id} value={collection.name}>{collection.name}</option>
-                ))}
-              </select>
-              {collections.length === 0 && (
-                <p className="text-xs text-amber-400 mt-1">
-                  No collections found. Create a collection or your NFT will be marked as "Uncategorized".
-                </p>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="imageUrl">NFT Image</Label>
-              <div className="mt-1">
-                {imagePreview ? (
-                  <div className="relative w-full h-48 rounded-md overflow-hidden mb-2">
-                    <img 
-                      src={imagePreview} 
-                      alt="NFT preview" 
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={removeImage}
-                      className="absolute top-2 right-2 p-1 rounded-full bg-black/70 text-white"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <label
-                      htmlFor="image-upload"
-                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-500 rounded-md cursor-pointer hover:border-pi-focus transition-colors"
-                    >
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Image className="mb-2 text-pi-muted" size={24} />
-                        <p className="text-sm text-pi-muted">
-                          Click to upload NFT image
-                        </p>
-                      </div>
-                      <input
-                        id="image-upload"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleImageChange}
-                      />
-                    </label>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setIsNFTDialogOpen(false)}
-                disabled={isLoading}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <span className="mr-2">
-                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                    </span>
-                    {isEditing ? 'Updating...' : 'Creating...'}
-                  </>
-                ) : (
-                  isEditing ? 'Update NFT' : 'Create NFT'
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isCollectionDialogOpen} onOpenChange={(open) => {
-        setIsCollectionDialogOpen(open);
-        if (!open && isNFTDialogOpen === false) {
-          setTimeout(() => setIsNFTDialogOpen(true), 100);
-        }
-      }}>
-        <DialogContent className="bg-dark-secondary border-gray-700 text-white">
-          <DialogHeader>
-            <DialogTitle>Create New Collection</DialogTitle>
-            <DialogDescription>
-              Fill in the details to create a new NFT collection
-            </DialogDescription>
-          </DialogHeader>
-          
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            
-            if (!currentCollection.name || !currentCollection.description) {
-              toast({
-                title: 'Missing Information',
-                description: 'Please fill out all required fields',
-                variant: 'destructive',
-              });
-              return;
-            }
-            
-            setIsLoading(true);
-            
-            try {
-              let imageUrl = currentCollection.image_url;
-              if (imageFile) {
-                imageUrl = await uploadImage(imageFile);
-              }
-              
-              await createCollection({
-                name: currentCollection.name,
-                description: currentCollection.description,
-                image_url: imageUrl
-              });
-              
-              await fetchCollections();
-              
-              if (isNFTDialogOpen === false) {
-                onCollectionCreated();
-              } else {
-                setIsCollectionDialogOpen(false);
-              }
-              
-              setCurrentCollection({});
-              setImageFile(null);
-              setImagePreview(null);
-              
-              toast({
-                title: 'Collection Created',
-                description: 'Your collection has been created successfully',
-              });
-            } catch (error) {
-              console.error('Error saving collection:', error);
-              toast({
-                title: 'Error',
-                description: 'An error occurred while saving the collection',
-                variant: 'destructive',
-              });
-            } finally {
-              setIsLoading(false);
-            }
-          }} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Collection Name</Label>
-              <Input
-                id="name"
-                value={currentCollection.name || ''}
-                onChange={(e) => setCurrentCollection({...currentCollection, name: e.target.value})}
-                placeholder="Enter collection name"
-                className="bg-dark border-gray-700"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="collectionDescription">Description</Label>
-              <Textarea
-                id="collectionDescription"
-                value={currentCollection.description || ''}
-                onChange={(e) => setCurrentCollection({...currentCollection, description: e.target.value})}
-                placeholder="Enter a description for your collection"
-                className="bg-dark border-gray-700 min-h-24"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="collectionImage">Collection Cover Image (Optional)</Label>
-              <div className="mt-1">
-                {imagePreview ? (
-                  <div className="relative w-full h-48 rounded-md overflow-hidden mb-2">
-                    <img 
-                      src={imagePreview} 
-                      alt="Collection preview" 
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={removeImage}
-                      className="absolute top-2 right-2 p-1 rounded-full bg-black/70 text-white"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <label
-                      htmlFor="collection-image-upload"
-                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-500 rounded-md cursor-pointer hover:border-pi-focus transition-colors"
-                    >
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Image className="mb-2 text-pi-muted" size={24} />
-                        <p className="text-sm text-pi-muted">
-                          Click to upload collection image
-                        </p>
-                      </div>
-                      <input
-                        id="collection-image-upload"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleImageChange}
-                      />
-                    </label>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  setIsCollectionDialogOpen(false);
-                  if (isNFTDialogOpen === false) {
-                    setTimeout(() => setIsNFTDialogOpen(true), 100);
-                  }
-                }}
-                disabled={isLoading}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <span className="mr-2">
-                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                    </span>
-                    Creating...
-                  </>
-                ) : (
-                  'Create Collection'
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-export default AdminNFT;
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="blockchain">Blockchain</Label>
+                <select
+                  id="blockchain"
+                  value={currentNFT.blockchain || 'ethereum'}
+                  onChange={(e) => setCurrentNFT({...currentNFT, blockchain: e.target.value})}
+                  className="flex h-10 w-full rounded-md border border-input bg-dark px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-

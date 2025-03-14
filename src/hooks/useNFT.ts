@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +15,10 @@ export interface NFT {
   owner_id: string;
   blockchain: string;
   status: 'draft' | 'minting' | 'minted' | 'listed' | 'sold';
-  currency?: string; // Add currency field
+  currency?: string;
+  content_type: string; // 'image', 'audio', 'video', 'book'
+  file_url?: string | null;
+  file_type?: string | null;
 }
 
 export interface NFTCollection {
@@ -120,11 +122,15 @@ export const useNFT = () => {
           title: nftData.title,
           description: nftData.description,
           price: nftData.price,
-          imageurl: nftData.imageurl, // Changed from imageUrl to imageurl
+          imageurl: nftData.imageurl,
           collection: nftData.collection,
           owner_id: user.id,
           blockchain: nftData.blockchain || 'ethereum',
-          status: 'draft'
+          status: 'draft',
+          content_type: nftData.content_type || 'image',
+          file_url: nftData.file_url,
+          file_type: nftData.file_type,
+          currency: nftData.currency || 'ethereum'
         })
         .select()
         .single();
@@ -288,6 +294,64 @@ export const useNFT = () => {
     }
   };
 
+  const deleteNFT = async (nftId: string) => {
+    if (!user) {
+      toast({
+        title: 'Authentication required',
+        description: 'You must be logged in to delete an NFT',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      // Check first if the NFT exists and belongs to the user
+      const { data: nft, error: fetchError } = await supabase
+        .from('nfts')
+        .select('*')
+        .eq('id', nftId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      if (nft.owner_id !== user.id) {
+        toast({
+          title: 'Permission denied',
+          description: 'You can only delete NFTs that you own',
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      // Delete the NFT
+      const { error: deleteError } = await supabase
+        .from('nfts')
+        .delete()
+        .eq('id', nftId);
+      
+      if (deleteError) throw deleteError;
+      
+      toast({
+        title: 'NFT Deleted',
+        description: 'Your NFT has been deleted successfully',
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting NFT:', error);
+      toast({
+        title: 'Failed to delete NFT',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     nfts,
     collections,
@@ -297,6 +361,7 @@ export const useNFT = () => {
     createNFT,
     createCollection,
     simulateMintNFT,
-    listNFTForSale
+    listNFTForSale,
+    deleteNFT
   };
 };
