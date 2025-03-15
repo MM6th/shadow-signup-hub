@@ -28,7 +28,8 @@ serve(async (req) => {
     
     if (imageUrls && imageUrls.length > 0) {
       userPrompt += `\n\nThe user has uploaded ${imageUrls.length} photos of the character.`;
-      // Note: In a real implementation, you would include image analysis here
+      // Include the actual image URLs in the prompt
+      userPrompt += `\n\nImage URLs: ${imageUrls.join(', ')}`;
     }
     
     if (bookText) {
@@ -41,6 +42,8 @@ serve(async (req) => {
     2. Screenplay outline (title, logline, setting, characters, plot points)
     3. Sample scene dialogue
     `;
+    
+    console.log("Sending request to OpenAI with prompt:", userPrompt.substring(0, 100) + "...");
     
     // Call OpenAI API for content generation
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -58,7 +61,14 @@ serve(async (req) => {
       }),
     });
     
+    if (!openAIResponse.ok) {
+      const errorData = await openAIResponse.json();
+      console.error("OpenAI API error:", errorData);
+      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+    }
+    
     const data = await openAIResponse.json();
+    console.log("Received response from OpenAI:", data);
     
     if (!data.choices || data.choices.length === 0) {
       throw new Error('Failed to generate screenplay content');

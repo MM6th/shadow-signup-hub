@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -75,7 +76,7 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+          // No need for Authorization header with Bearer token, the function is public
         },
         body: JSON.stringify({
           projectName: values.projectName,
