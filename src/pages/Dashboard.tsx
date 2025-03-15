@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -8,11 +9,13 @@ import { Button as ShadcnButton } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import VideoUploader from '@/components/VideoUploader';
 import { ChartButton } from '@/components/charts/ChartButton';
+import { ScreenplayModal } from '@/components/charts/ScreenplayModal';
 
 const Dashboard: React.FC = () => {
   const { user, profile, isLoading, hasProfile, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
+  const [isScreenplayModalOpen, setIsScreenplayModalOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -183,7 +186,10 @@ const Dashboard: React.FC = () => {
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="text-lg font-medium">My Screenplays</h2>
                   <div className="flex gap-2">
-                    <ShadcnButton onClick={() => navigate('/digital-office')} className="flex items-center">
+                    <ShadcnButton 
+                      onClick={() => setIsScreenplayModalOpen(true)} 
+                      className="flex items-center"
+                    >
                       <Plus size={16} className="mr-2" /> Create New Screenplay
                     </ShadcnButton>
                   </div>
@@ -201,6 +207,12 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Screenplay Modal */}
+      <ScreenplayModal 
+        open={isScreenplayModalOpen}
+        onOpenChange={setIsScreenplayModalOpen}
+      />
     </div>
   );
 };
