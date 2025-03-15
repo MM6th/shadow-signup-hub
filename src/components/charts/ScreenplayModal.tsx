@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -93,13 +93,43 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
       
       console.log("Response status:", response.status);
       
+      // First check if the response is OK
+      if (!response.ok) {
+        const contentType = response.headers.get("content-type");
+        let errorMessage = "";
+        
+        try {
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || "Unknown server error";
+          } else {
+            const textResponse = await response.text();
+            errorMessage = `Server responded with non-JSON content: ${textResponse.substring(0, 100)}...`;
+          }
+        } catch (parseError) {
+          errorMessage = `Failed to parse error response: ${parseError.message}`;
+        }
+        
+        throw new Error(`Server error (${response.status}): ${errorMessage}`);
+      }
+      
+      // Check content type
       const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
+        const textResponse = await response.text();
+        console.error("Received non-JSON response:", textResponse.substring(0, 200));
         throw new Error("Received non-JSON response from server");
       }
       
-      const result = await response.json();
-      console.log("Function response:", result);
+      // Parse the JSON response
+      let result;
+      try {
+        result = await response.json();
+        console.log("Function response:", result);
+      } catch (jsonError) {
+        console.error("JSON parse error:", jsonError);
+        throw new Error(`Failed to parse JSON response: ${jsonError.message}`);
+      }
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to generate screenplay content');
