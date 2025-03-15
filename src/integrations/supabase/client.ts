@@ -15,16 +15,30 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 // Create a storage bucket for media if it doesn't exist
 (async () => {
   try {
-    const { data, error } = await supabase.storage.getBucket('media');
-    if (error && error.message.includes('does not exist')) {
+    // First check if the bucket exists
+    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+    
+    if (bucketsError) {
+      console.error('Error checking buckets:', bucketsError);
+      return;
+    }
+    
+    const mediaBucketExists = buckets?.some(bucket => bucket.name === 'media');
+    
+    // If media bucket doesn't exist, create it
+    if (!mediaBucketExists) {
+      console.log('Media bucket does not exist, creating it now...');
       const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('media', {
         public: true
       });
+      
       if (bucketError) {
         console.error('Error creating media bucket:', bucketError);
       } else {
-        console.log('Media storage bucket created');
+        console.log('Media storage bucket created successfully');
       }
+    } else {
+      console.log('Media bucket already exists');
     }
   } catch (err) {
     console.error('Error initializing storage bucket:', err);

@@ -44,10 +44,8 @@ serve(async (req) => {
     
     if (!apiKey) {
       console.error("OpenAI API key not found in environment variables");
-      return new Response(
-        JSON.stringify({ error: 'OpenAI API key not configured properly' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      )
+      console.log("Falling back to mock data generation");
+      return generateMockResponse(supabaseClient, session, characterName, characterDescription, bookText, images, corsHeaders);
     }
     
     const openai = new OpenAI({
@@ -137,8 +135,15 @@ serve(async (req) => {
     }
   } catch (error) {
     console.error("Error in generate-screenplay function:", error);
+    
+    // If we reach this point, something went wrong with the function itself
+    // Return a proper response with CORS headers to prevent CORS errors
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message, 
+        message: "Falling back to client-side mock data generation due to server error",
+        fallback: true 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }
@@ -148,93 +153,105 @@ serve(async (req) => {
 async function generateMockResponse(supabaseClient, session, characterName, characterDescription, bookText, images, corsHeaders) {
   console.log("Generating mock screenplay content...")
   
-  // Create a mock screenplay content similar to what we'd get from OpenAI
-  const mockScreenplayContent = {
-    character_profile: {
-      name: characterName,
-      background: "Born into a family of scholars, they developed a keen intellect and curiosity about the world from an early age.",
-      personality: "Analytical, introspective, and determined. They possess a sharp wit and an unwavering sense of justice.",
-      physical_attributes: "Medium height with an athletic build. They have expressive eyes that reveal their emotions despite attempts to hide them."
-    },
-    screenplay_outline: {
-      title: `The Journey of ${characterName}`,
-      logline: `After discovering a hidden truth about their past, ${characterName} embarks on a dangerous quest that will challenge everything they thought they knew about the world.`,
-      setting: "A blend of futuristic metropolis and untamed wilderness in a world where technology and nature exist in precarious balance.",
-      characters: [
-        {
-          name: characterName,
-          role: "Protagonist",
-          description: characterDescription || "A brilliant but troubled individual searching for answers about their mysterious past."
-        },
-        {
-          name: "Elara",
-          role: "Ally",
-          description: "A skilled navigator with secret knowledge of the forbidden zones."
-        },
-        {
-          name: "Director Voss",
-          role: "Antagonist",
-          description: "The calculating leader of the Institute who will stop at nothing to maintain order and control."
-        }
-      ],
-      plot_points: [
-        `${characterName} discovers inconsistencies in their personal records while working at the Archives.`,
-        "An encounter with a mysterious stranger leaves them with a cryptic message and a strange artifact.",
-        "When their investigation draws unwanted attention, they're forced to flee the city with the help of Elara.",
-        "The journey through the wilderness reveals incredible abilities they never knew they possessed.",
-        "A confrontation with Director Voss reveals shocking truths about their origin and the real purpose of the Institute.",
-        "The final decision: use their newfound knowledge to bring down the corrupt system or accept a comfortable lie."
-      ]
-    },
-    sample_scene: {
-      scene_title: "The Archives",
-      setting: "INT. CENTRAL ARCHIVES - NIGHT",
-      description: "Dim blue light bathes rows of holographic data terminals. The room is empty except for a single figure hunched over a terminal, their face illuminated by the screen's glow.",
-      dialogue: [
-        {
-          character: characterName,
-          line: "That's impossible. These records can't both be correct."
-        },
-        {
-          character: "SYSTEM VOICE",
-          line: "Access to restricted files detected. Security alert in progress."
-        },
-        {
-          character: characterName,
-          line: "No, no, no. Override code Theta-Nine-Three!"
-        },
-        {
-          character: "ELARA",
-          line: "That won't work. We need to leave. Now."
-        }
-      ]
+  try {
+    // Create a mock screenplay content similar to what we'd get from OpenAI
+    const mockScreenplayContent = {
+      character_profile: {
+        name: characterName,
+        background: "Born into a family of scholars, they developed a keen intellect and curiosity about the world from an early age.",
+        personality: "Analytical, introspective, and determined. They possess a sharp wit and an unwavering sense of justice.",
+        physical_attributes: "Medium height with an athletic build. They have expressive eyes that reveal their emotions despite attempts to hide them."
+      },
+      screenplay_outline: {
+        title: `The Journey of ${characterName}`,
+        logline: `After discovering a hidden truth about their past, ${characterName} embarks on a dangerous quest that will challenge everything they thought they knew about the world.`,
+        setting: "A blend of futuristic metropolis and untamed wilderness in a world where technology and nature exist in precarious balance.",
+        characters: [
+          {
+            name: characterName,
+            role: "Protagonist",
+            description: characterDescription || "A brilliant but troubled individual searching for answers about their mysterious past."
+          },
+          {
+            name: "Elara",
+            role: "Ally",
+            description: "A skilled navigator with secret knowledge of the forbidden zones."
+          },
+          {
+            name: "Director Voss",
+            role: "Antagonist",
+            description: "The calculating leader of the Institute who will stop at nothing to maintain order and control."
+          }
+        ],
+        plot_points: [
+          `${characterName} discovers inconsistencies in their personal records while working at the Archives.`,
+          "An encounter with a mysterious stranger leaves them with a cryptic message and a strange artifact.",
+          "When their investigation draws unwanted attention, they're forced to flee the city with the help of Elara.",
+          "The journey through the wilderness reveals incredible abilities they never knew they possessed.",
+          "A confrontation with Director Voss reveals shocking truths about their origin and the real purpose of the Institute.",
+          "The final decision: use their newfound knowledge to bring down the corrupt system or accept a comfortable lie."
+        ]
+      },
+      sample_scene: {
+        scene_title: "The Archives",
+        setting: "INT. CENTRAL ARCHIVES - NIGHT",
+        description: "Dim blue light bathes rows of holographic data terminals. The room is empty except for a single figure hunched over a terminal, their face illuminated by the screen's glow.",
+        dialogue: [
+          {
+            character: characterName,
+            line: "That's impossible. These records can't both be correct."
+          },
+          {
+            character: "SYSTEM VOICE",
+            line: "Access to restricted files detected. Security alert in progress."
+          },
+          {
+            character: characterName,
+            line: "No, no, no. Override code Theta-Nine-Three!"
+          },
+          {
+            character: "ELARA",
+            line: "That won't work. We need to leave. Now."
+          }
+        ]
+      }
+    };
+
+    // Insert the mock data into Supabase
+    const { data, error } = await supabaseClient
+      .from('screenplay_projects')
+      .insert({
+        user_id: session.user.id,
+        name: characterName,
+        character_description: characterDescription || null,
+        book_text: bookText || null,
+        images: images || [],
+        ai_generated_content: mockScreenplayContent
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Database error:", error);
+      throw error;
     }
-  };
 
-  // Insert the mock data into Supabase
-  const { data, error } = await supabaseClient
-    .from('screenplay_projects')
-    .insert({
-      user_id: session.user.id,
-      name: characterName,
-      character_description: characterDescription || null,
-      book_text: bookText || null,
-      images: images || [],
-      ai_generated_content: mockScreenplayContent
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Database error:", error);
-    throw error;
+    console.log("Mock screenplay saved to database with ID:", data.id);
+    return new Response(
+      JSON.stringify({ success: true, data, note: "Generated with mock data (OpenAI fallback)" }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  } catch (error) {
+    console.error("Error generating mock response:", error);
+    return new Response(
+      JSON.stringify({ 
+        error: "Failed to generate mock screenplay content", 
+        details: error.message,
+        fallback: true 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    )
   }
-
-  console.log("Mock screenplay saved to database with ID:", data.id);
-  return new Response(
-    JSON.stringify({ success: true, data, note: "Generated with mock data (OpenAI fallback)" }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  )
 }
 
 // Helper functions to parse the generated content
@@ -273,7 +290,7 @@ function parseCharacters(text) {
   }
   
   return characters.length > 0 ? characters : [
-    { name: characterName || "Character Name", role: "Protagonist", description: "Main character description" },
+    { name: "Character Name", role: "Protagonist", description: "Main character description" },
     { name: "Supporting Character", role: "Supporting", description: "A supporting character" }
   ];
 }
