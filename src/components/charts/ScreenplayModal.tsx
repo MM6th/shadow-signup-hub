@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -94,6 +93,11 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
       
       console.log("Response status:", response.status);
       
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Received non-JSON response from server");
+      }
+      
       const result = await response.json();
       console.log("Function response:", result);
       
@@ -107,7 +111,7 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
       console.error("Error generating screenplay:", error);
       toast({
         title: "Generation Failed",
-        description: error instanceof Error ? error.message : "Failed to generate screenplay content.",
+        description: error instanceof Error ? error.message : "Failed to generate screenplay content. Please try again.",
         variant: "destructive",
       });
       setIsGenerating(false);

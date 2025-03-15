@@ -67,9 +67,10 @@ serve(async (req) => {
     console.log("Sending request to OpenAI with prompt length:", userPrompt.length);
     
     // Call OpenAI API for content generation
+    let openAIResponse;
     try {
       console.log("Calling OpenAI API...");
-      const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${OPENAI_API_KEY}`,
@@ -81,17 +82,54 @@ serve(async (req) => {
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
           ],
+          response_format: { type: "json_object" }
         }),
       });
       
+      // First check if the response is OK
       if (!openAIResponse.ok) {
-        const errorData = await openAIResponse.json();
-        console.error("OpenAI API error:", errorData);
-        throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+        // Try to get the text of the error first
+        let errorText;
+        try {
+          const contentType = openAIResponse.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await openAIResponse.json();
+            console.error("OpenAI API error (JSON):", errorData);
+            errorText = errorData.error?.message || JSON.stringify(errorData);
+          } else {
+            errorText = await openAIResponse.text();
+            console.error("OpenAI API error (text):", errorText);
+            
+            // Check if it's an HTML response (likely from a proxy/CDN)
+            if (errorText.includes("<!DOCTYPE html>")) {
+              errorText = "Received HTML instead of JSON. Possible network or API configuration issue.";
+            }
+          }
+        } catch (textError) {
+          console.error("Error parsing error response:", textError);
+          errorText = "Unknown error format from OpenAI API";
+        }
+        
+        throw new Error(`OpenAI API error (${openAIResponse.status}): ${errorText}`);
       }
       
-      const data = await openAIResponse.json();
-      console.log("Received response from OpenAI");
+      // Now safely try to parse the successful JSON response
+      let data;
+      try {
+        data = await openAIResponse.json();
+        console.log("Received valid JSON response from OpenAI");
+      } catch (jsonError) {
+        // Handle case where response looks OK but isn't valid JSON
+        const rawText = await openAIResponse.text();
+        console.error("Failed to parse OpenAI response as JSON:", jsonError);
+        console.error("Raw response:", rawText.substring(0, 500) + "...");
+        
+        if (rawText.includes("<!DOCTYPE html>")) {
+          throw new Error("Received HTML instead of JSON from OpenAI API. Check your network configuration.");
+        } else {
+          throw new Error(`Invalid JSON response from OpenAI: ${jsonError.message}`);
+        }
+      }
       
       if (!data.choices || data.choices.length === 0) {
         throw new Error('Failed to generate screenplay content: No choices returned');
@@ -103,17 +141,29 @@ serve(async (req) => {
       // Try to parse the JSON response
       let screenplayData;
       try {
-        // Extract JSON from the response if it's wrapped in markdown code blocks
-        const jsonMatch = generatedContent.match(/```json\n([\s\S]*?)\n```/) || 
-                          generatedContent.match(/```\n([\s\S]*?)\n```/) ||
-                          [null, generatedContent];
-        
-        screenplayData = JSON.parse(jsonMatch[1] || generatedContent);
+        // Since we specified response_format as json_object, we should get valid JSON
+        screenplayData = JSON.parse(generatedContent);
         console.log("Successfully parsed JSON response");
       } catch (parseError) {
         console.error('Error parsing JSON from AI response:', parseError);
-        // If JSON parsing fails, return the raw text
-        screenplayData = { rawContent: generatedContent };
+        console.error('Raw content excerpt:', generatedContent.substring(0, 500) + "...");
+        
+        // If JSON parsing fails, try to extract JSON from markdown code blocks
+        try {
+          const jsonMatch = generatedContent.match(/```json\n([\s\S]*?)\n```/) || 
+                          generatedContent.match(/```\n([\s\S]*?)\n```/);
+          
+          if (jsonMatch && jsonMatch[1]) {
+            screenplayData = JSON.parse(jsonMatch[1]);
+            console.log("Successfully extracted and parsed JSON from code block");
+          } else {
+            // If still can't parse, return the raw text
+            screenplayData = { rawContent: generatedContent };
+          }
+        } catch (extractError) {
+          console.error('Failed to extract JSON from code blocks:', extractError);
+          screenplayData = { rawContent: generatedContent };
+        }
       }
       
       return new Response(JSON.stringify({ 
@@ -122,9 +172,10 @@ serve(async (req) => {
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+      
     } catch (openAIError) {
       console.error("Error calling OpenAI API:", openAIError);
-      throw new Error(`OpenAI API error: ${openAIError.message}`);
+      throw openAIError;
     }
     
   } catch (error) {
