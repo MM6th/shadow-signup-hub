@@ -54,7 +54,10 @@ serve(async (req) => {
       apiKey: apiKey,
     });
 
-    console.log("Generating screenplay content with OpenAI...")
+    console.log("Generating screenplay content with OpenAI...");
+    console.log("Using character name:", characterName);
+    console.log("Character description length:", characterDescription ? characterDescription.length : 0);
+    console.log("Book text length:", bookText ? bookText.length : 0);
     
     try {
       const completion = await openai.chat.completions.create({
@@ -66,7 +69,7 @@ serve(async (req) => {
           },
           {
             role: "user",
-            content: `Create a screenplay based on this character: ${characterName} - ${characterDescription}. ${bookText ? `Include this context: ${bookText}` : ''}`
+            content: `Create a screenplay based on this character: ${characterName} - ${characterDescription || "No description provided"}. ${bookText ? `Include this context: ${bookText}` : ''}`
           }
         ],
         temperature: 0.7,
@@ -77,10 +80,6 @@ serve(async (req) => {
       console.log("OpenAI content generated successfully");
     
       // Parse and structure the generated content
-      // This is a simplified parsing approach - in production you'd want more robust parsing
-      const sections = generatedContent.split("\n\n");
-      
-      // Create structured screenplay content
       const screenplayContent = {
         character_profile: {
           name: characterName,
@@ -103,13 +102,15 @@ serve(async (req) => {
         }
       };
 
-      // Insert the data into Supabase
+      console.log("Structured content created successfully");
+
+      // Save the screenplay directly
       const { data, error } = await supabaseClient
         .from('screenplay_projects')
         .insert({
           user_id: session.user.id,
-          name: `${characterName}'s Story`,
-          character_description: characterDescription,
+          name: characterName,
+          character_description: characterDescription || null,
           book_text: bookText || null,
           images: images || [],
           ai_generated_content: screenplayContent
@@ -122,7 +123,7 @@ serve(async (req) => {
         throw error;
       }
 
-      console.log("Screenplay saved to database");
+      console.log("Screenplay saved to database with ID:", data.id);
       return new Response(
         JSON.stringify({ success: true, data }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -215,8 +216,8 @@ async function generateMockResponse(supabaseClient, session, characterName, char
     .from('screenplay_projects')
     .insert({
       user_id: session.user.id,
-      name: `${characterName}'s Story`,
-      character_description: characterDescription,
+      name: characterName,
+      character_description: characterDescription || null,
       book_text: bookText || null,
       images: images || [],
       ai_generated_content: mockScreenplayContent
@@ -229,7 +230,7 @@ async function generateMockResponse(supabaseClient, session, characterName, char
     throw error;
   }
 
-  console.log("Mock screenplay saved to database");
+  console.log("Mock screenplay saved to database with ID:", data.id);
   return new Response(
     JSON.stringify({ success: true, data, note: "Generated with mock data (OpenAI fallback)" }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -272,7 +273,7 @@ function parseCharacters(text) {
   }
   
   return characters.length > 0 ? characters : [
-    { name: "Character Name", role: "Protagonist", description: "Main character description" },
+    { name: characterName || "Character Name", role: "Protagonist", description: "Main character description" },
     { name: "Supporting Character", role: "Supporting", description: "A supporting character" }
   ];
 }

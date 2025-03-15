@@ -9,4 +9,24 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Create a Supabase client
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+// Create a storage bucket for media if it doesn't exist
+(async () => {
+  try {
+    const { data, error } = await supabase.storage.getBucket('media');
+    if (error && error.message.includes('does not exist')) {
+      const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('media', {
+        public: true
+      });
+      if (bucketError) {
+        console.error('Error creating media bucket:', bucketError);
+      } else {
+        console.log('Media storage bucket created');
+      }
+    }
+  } catch (err) {
+    console.error('Error initializing storage bucket:', err);
+  }
+})();

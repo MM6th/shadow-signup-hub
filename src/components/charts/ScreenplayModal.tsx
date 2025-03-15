@@ -68,55 +68,6 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
     setImagePreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
-  const generateScreenplay = async (values: z.infer<typeof formSchema>, imageUrls: string[]) => {
-    try {
-      setIsGenerating(true);
-      setErrorMessage(null);
-      
-      console.log("Calling generate-screenplay function with:", {
-        characterName: values.projectName,
-        characterDescription: values.characterDescription || "",
-        bookText: values.bookText || "",
-        images: imageUrls
-      });
-      
-      // Call our edge function to generate screenplay content
-      const { data, error } = await supabase.functions.invoke('generate-screenplay', {
-        body: {
-          characterName: values.projectName,
-          characterDescription: values.characterDescription || "",
-          bookText: values.bookText || "",
-          images: imageUrls
-        },
-      });
-      
-      console.log("Function response:", { data, error });
-      
-      if (error) {
-        console.error("Supabase function error:", error);
-        throw new Error(`Supabase function error: ${error.message}`);
-      }
-      
-      if (!data || !data.success) {
-        throw new Error(data?.error || 'Failed to generate screenplay content');
-      }
-      
-      setIsGenerating(false);
-      return data.data;
-    } catch (error) {
-      console.error("Error generating screenplay:", error);
-      const errorMsg = error instanceof Error ? error.message : "Failed to generate screenplay content. Please try again.";
-      setErrorMessage(errorMsg);
-      toast({
-        title: "Generation Failed",
-        description: errorMsg,
-        variant: "destructive",
-      });
-      setIsGenerating(false);
-      return null;
-    }
-  };
-
   const uploadImages = async () => {
     if (uploadedImages.length === 0) return [];
     
@@ -178,35 +129,32 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
         description: "Creating your screenplay content with AI...",
       });
       
-      const screenplayData = await generateScreenplay(values, imageUrls);
-      if (!screenplayData) {
-        setIsSubmitting(false);
-        return;
+      console.log("Calling generate-screenplay function with:", {
+        characterName: values.projectName,
+        characterDescription: values.characterDescription || "",
+        bookText: values.bookText || "",
+        images: imageUrls
+      });
+      
+      // Call our edge function to generate screenplay content
+      const { data, error } = await supabase.functions.invoke('generate-screenplay', {
+        body: {
+          characterName: values.projectName,
+          characterDescription: values.characterDescription || "",
+          bookText: values.bookText || "",
+          images: imageUrls
+        },
+      });
+      
+      console.log("Function response:", data, error);
+      
+      if (error) {
+        console.error("Supabase function error:", error);
+        throw new Error(`Supabase function error: ${error.message}`);
       }
       
-      console.log("Screenplay data generated:", screenplayData);
-      
-      // 3. Save screenplay project to database
-      const user = await supabase.auth.getUser();
-      const userId = user.data.user?.id;
-      
-      console.log("Saving to screenplay_projects table");
-      const { data: insertData, error } = await supabase
-        .from('screenplay_projects')
-        .insert({
-          name: values.projectName,
-          character_description: values.characterDescription || null,
-          book_text: values.bookText || null,
-          images: imageUrls,
-          ai_generated_content: screenplayData,
-          user_id: userId
-        })
-        .select()
-        .single();
-        
-      if (error) {
-        console.error("Database error:", error);
-        throw error;
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Failed to generate screenplay content');
       }
       
       toast({
@@ -214,9 +162,9 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
         description: "Screenplay project created successfully.",
       });
       
-      // 4. Close modal and navigate to the screenplay view page
+      // Close modal and navigate to the screenplay view page
       onOpenChange(false);
-      navigate(`/screenplay/${insertData.id}`);
+      navigate(`/screenplay/${data.data.id}`);
       
     } catch (error: any) {
       console.error("Error creating screenplay project:", error);
@@ -228,6 +176,7 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
       });
     } finally {
       setIsSubmitting(false);
+      setIsGenerating(false);
     }
   };
 
@@ -255,9 +204,9 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
               name="projectName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Project Name</FormLabel>
+                  <FormLabel>Character Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter project name" {...field} />
+                    <Input placeholder="Enter character name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
