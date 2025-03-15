@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button as ShadcnButton } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import VideoUploader from '@/components/VideoUploader';
+import { ChartButton } from '@/components/charts/ChartButton';
 
 const Dashboard: React.FC = () => {
   const { user, profile, isLoading, hasProfile, signOut } = useAuth();
@@ -158,9 +159,12 @@ const Dashboard: React.FC = () => {
               <TabsContent value="products">
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="text-lg font-medium">My Products & Services</h2>
-                  <ShadcnButton onClick={() => navigate('/create-product')} className="flex items-center">
-                    <Plus size={16} className="mr-2" /> Create New
-                  </ShadcnButton>
+                  <div className="flex gap-2">
+                    <ChartButton /> {/* New Chart Button (Admin Only) */}
+                    <ShadcnButton onClick={() => navigate('/create-product')} className="flex items-center">
+                      <Plus size={16} className="mr-2" /> Create New
+                    </ShadcnButton>
+                  </div>
                 </div>
                 
                 <ProductsList userId={user.id} />

@@ -9,6 +9,63 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      astro_charts: {
+        Row: {
+          birth_date: string
+          birth_location: string
+          birth_time: string
+          chart_type: string
+          client_name: string
+          created_at: string
+          house_system: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          notes: string | null
+          report_content: string | null
+          report_url: string | null
+          updated_at: string
+          user_id: string
+          zodiac_type: string
+        }
+        Insert: {
+          birth_date: string
+          birth_location: string
+          birth_time: string
+          chart_type: string
+          client_name: string
+          created_at?: string
+          house_system?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          report_content?: string | null
+          report_url?: string | null
+          updated_at?: string
+          user_id: string
+          zodiac_type?: string
+        }
+        Update: {
+          birth_date?: string
+          birth_location?: string
+          birth_time?: string
+          chart_type?: string
+          client_name?: string
+          created_at?: string
+          house_system?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          report_content?: string | null
+          report_url?: string | null
+          updated_at?: string
+          user_id?: string
+          zodiac_type?: string
+        }
+        Relationships: []
+      }
       live_sessions: {
         Row: {
           created_at: string
