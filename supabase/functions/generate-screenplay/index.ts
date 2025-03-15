@@ -56,6 +56,7 @@ serve(async (req) => {
     console.log("Using character name:", characterName);
     console.log("Character description length:", characterDescription ? characterDescription.length : 0);
     console.log("Book text length:", bookText ? bookText.length : 0);
+    console.log("User ID:", session.user.id);
     
     try {
       const completion = await openai.chat.completions.create({
@@ -102,7 +103,7 @@ serve(async (req) => {
 
       console.log("Structured content created successfully");
 
-      // Save the screenplay directly
+      // Save the screenplay directly - make sure to include user_id
       const { data, error } = await supabaseClient
         .from('screenplay_projects')
         .insert({
@@ -217,11 +218,11 @@ async function generateMockResponse(supabaseClient, session, characterName, char
       }
     };
 
-    // Insert the mock data into Supabase
+    // Insert the mock data into Supabase - make sure to include user_id
     const { data, error } = await supabaseClient
       .from('screenplay_projects')
       .insert({
-        user_id: session.user.id,
+        user_id: session.user.id,  // Make sure user_id is included
         name: characterName,
         character_description: characterDescription || null,
         book_text: bookText || null,

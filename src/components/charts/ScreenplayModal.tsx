@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { UploadCloud, BookOpen, User, Loader2, AlertCircle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/context/AuthContext';
 
 interface ScreenplayModalProps {
   open: boolean;
@@ -38,6 +38,7 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -55,7 +56,6 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
     const newFiles = Array.from(files);
     setUploadedImages(prev => [...prev, ...newFiles]);
     
-    // Create preview URLs
     const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
     setImagePreviewUrls(prev => [...prev, ...newPreviewUrls]);
   };
@@ -63,7 +63,6 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
   const removeImage = (index: number) => {
     setUploadedImages(prev => prev.filter((_, i) => i !== index));
     
-    // Also remove the preview URL and revoke the object URL to free memory
     URL.revokeObjectURL(imagePreviewUrls[index]);
     setImagePreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
@@ -114,9 +113,12 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
     }
   };
 
-  // Client-side fallback for generating mock data
   const generateMockScreenplayContent = async (characterName: string, characterDescription: string | undefined, bookText: string | undefined, imageUrls: string[]) => {
     console.log("Generating client-side mock screenplay content as fallback");
+    
+    if (!user) {
+      throw new Error("User must be logged in to create a screenplay project");
+    }
     
     const mockScreenplayContent = {
       character_profile: {
@@ -188,7 +190,8 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
           character_description: characterDescription || null,
           book_text: bookText || null,
           images: imageUrls || [],
-          ai_generated_content: mockScreenplayContent
+          ai_generated_content: mockScreenplayContent,
+          user_id: user.id
         })
         .select()
         .single();
@@ -211,11 +214,13 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
       setIsSubmitting(true);
       setErrorMessage(null);
       
-      // 1. Upload images
+      if (!user) {
+        throw new Error("You must be logged in to create a screenplay project");
+      }
+      
       const imageUrls = await uploadImages();
       console.log("Images uploaded:", imageUrls);
       
-      // 2. Generate screenplay content using AI
       toast({
         title: "Generating Content",
         description: "Creating your screenplay content with AI...",
@@ -229,7 +234,6 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
       });
       
       try {
-        // Call our edge function to generate screenplay content
         const { data, error } = await supabase.functions.invoke('generate-screenplay', {
           body: {
             characterName: values.projectName,
@@ -243,7 +247,6 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
         
         if (error) {
           console.error("Supabase function error:", error);
-          // Try client-side fallback if the function fails
           console.log("Attempting client-side fallback...");
           const fallbackData = await generateMockScreenplayContent(
             values.projectName, 
@@ -271,13 +274,11 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
           description: "Screenplay project created successfully.",
         });
         
-        // Close modal and navigate to the screenplay view page
         onOpenChange(false);
         navigate(`/screenplay/${data.data.id}`);
       } catch (functionError) {
         console.error("Error calling Edge Function:", functionError);
         
-        // Try client-side fallback if the function fails
         console.log("Attempting client-side fallback due to function error...");
         const fallbackData = await generateMockScreenplayContent(
           values.projectName, 
