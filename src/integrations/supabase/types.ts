@@ -332,6 +332,42 @@ export type Database = {
         }
         Relationships: []
       }
+      screenplay_projects: {
+        Row: {
+          ai_generated_content: Json | null
+          book_text: string | null
+          character_description: string | null
+          created_at: string
+          id: string
+          images: string[] | null
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_generated_content?: Json | null
+          book_text?: string | null
+          character_description?: string | null
+          created_at?: string
+          id?: string
+          images?: string[] | null
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_generated_content?: Json | null
+          book_text?: string | null
+          character_description?: string | null
+          created_at?: string
+          id?: string
+          images?: string[] | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       video_metadata: {
         Row: {
           created_at: string | null

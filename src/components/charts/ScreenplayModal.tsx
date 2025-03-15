@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -67,34 +66,33 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
     setImagePreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
-  const generateScreenplay = async (values: z.infer<typeof formSchema>) => {
+  const generateScreenplay = async (values: z.infer<typeof formSchema>, imageUrls: string[]) => {
     try {
       setIsGenerating(true);
       
-      // Here you would call your AI service to generate screenplay content
-      // For now, we'll simulate a delay and return mock data
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const mockScreenplayData = {
-        character: {
-          name: "Character from " + values.projectName,
-          description: values.characterDescription || "A mysterious character with a complex backstory.",
-          traits: ["Intelligent", "Reserved", "Determined"]
+      // Call our edge function to generate screenplay content
+      const response = await fetch(`${window.location.origin}/functions/v1/generate-screenplay`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
         },
-        screenplay: {
-          title: values.projectName,
-          scenes: [
-            {
-              setting: "INT. APARTMENT - DAY",
-              action: "Character sits at a desk, deep in thought, surrounded by papers.",
-              dialogue: "CHARACTER\n(to self)\nThere must be a way to solve this..."
-            }
-          ]
-        }
-      };
+        body: JSON.stringify({
+          projectName: values.projectName,
+          characterDescription: values.characterDescription,
+          bookText: values.bookText,
+          imageUrls: imageUrls
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to generate screenplay content');
+      }
       
       setIsGenerating(false);
-      return mockScreenplayData;
+      return result.data;
     } catch (error) {
       console.error("Error generating screenplay:", error);
       toast({
@@ -153,7 +151,7 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
       const imageUrls = await uploadImages();
       
       // 2. Generate screenplay content using AI
-      const screenplayData = await generateScreenplay(values);
+      const screenplayData = await generateScreenplay(values, imageUrls);
       if (!screenplayData) {
         setIsSubmitting(false);
         return;
