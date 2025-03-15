@@ -77,7 +77,7 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
         imageUrls: imageUrls
       });
       
-      // Call our edge function to generate screenplay content using supabase.functions.invoke instead of fetch
+      // Call our edge function to generate screenplay content
       const { data, error } = await supabase.functions.invoke('generate-screenplay', {
         body: {
           projectName: values.projectName,

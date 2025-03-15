@@ -23,8 +23,6 @@ serve(async (req) => {
       throw new Error("API configuration error: OpenAI API key is missing");
     }
     
-    console.log("OpenAI API Key prefix:", OPENAI_API_KEY.substring(0, 3) + "..." + OPENAI_API_KEY.substring(OPENAI_API_KEY.length - 3));
-    
     let requestBody;
     try {
       requestBody = await req.json();
