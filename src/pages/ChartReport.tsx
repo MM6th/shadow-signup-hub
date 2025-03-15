@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -392,5 +393,128 @@ Notes: ${chartData.notes || 'None provided'}`;
             
             <div className="p-6">
               <TabsContent value="visual" className="mt-0">
-                <div className="aspect-square max-w-xl mx-auto relative rounded-full overflow-hidden border-2 border-pi-focus border-t-transparent bg
+                <div className="aspect-square max-w-xl mx-auto relative rounded-full overflow-hidden border-2 border-pi-focus border-t-transparent bg-dark-accent/30 mb-8">
+                  {/* Placeholder for the wheel chart - would be replaced with actual chart visualization */}
+                  <div className="absolute inset-0 flex items-center justify-center text-pi-muted">
+                    Chart visualization would be rendered here
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-elixia text-gradient">Chart Info</h3>
+                    <div className="space-y-1 text-sm">
+                      <p>Type: <span className="text-pi capitalize">{chart.chart_type}</span></p>
+                      <p>System: <span className="text-pi capitalize">{chart.zodiac_type}</span></p>
+                      <p>Houses: <span className="text-pi capitalize">{chart.house_system}</span></p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-elixia text-gradient">Subject</h3>
+                    <div className="space-y-1 text-sm">
+                      <p>Name: <span className="text-pi">{chart.client_name}</span></p>
+                      <p>Birth Date: <span className="text-pi">{new Date(chart.birth_date).toLocaleDateString()}</span></p>
+                      <p>Birth Time: <span className="text-pi">{chart.birth_time}</span></p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-elixia text-gradient">Location</h3>
+                    <div className="space-y-1 text-sm">
+                      <p>Place: <span className="text-pi">{chart.birth_location}</span></p>
+                      {chart.latitude && chart.longitude && (
+                        <>
+                          <p>Lat: <span className="text-pi">{chart.latitude}°</span></p>
+                          <p>Long: <span className="text-pi">{chart.longitude}°</span></p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="positions" className="mt-0">
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-elixia text-gradient mb-4">Planetary Positions</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {planetaryPositions.map((planet) => {
+                        const PlanetIcon = planet.icon;
+                        return (
+                          <div key={planet.name} className="flex items-start p-3 bg-dark-secondary/30 rounded-lg">
+                            <div className="mr-3">
+                              <PlanetIcon size={24} className="text-pi-focus" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium">{planet.name}</h4>
+                              <div className="text-sm text-pi-muted">
+                                <p>{planet.sign} {planet.degree}° (House {planet.house})</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-xl font-elixia text-gradient mb-4">House Cusps</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {houses.map((house) => (
+                        <div key={house.house} className="p-3 bg-dark-secondary/30 rounded-lg text-center">
+                          <div className="text-lg font-medium">House {house.house}</div>
+                          <div className="text-sm text-pi-muted">{house.sign} {house.degree}°</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-xl font-elixia text-gradient mb-4">Major Aspects</h3>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-dark-accent">
+                        <thead>
+                          <tr>
+                            <th className="px-4 py-2 text-left">Planets</th>
+                            <th className="px-4 py-2 text-left">Aspect</th>
+                            <th className="px-4 py-2 text-left">Orb</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-dark-accent">
+                          {aspects.map((aspect, idx) => (
+                            <tr key={idx}>
+                              <td className="px-4 py-2">{aspect.planet1} - {aspect.planet2}</td>
+                              <td className="px-4 py-2">{aspect.aspect}</td>
+                              <td className="px-4 py-2">{aspect.orb}°</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="report" className="mt-0">
+                {isEditing ? (
+                  <Textarea
+                    value={reportContent}
+                    onChange={(e) => setReportContent(e.target.value)}
+                    className="min-h-[500px] font-mono text-sm"
+                  />
+                ) : (
+                  <div className="prose prose-invert max-w-none">
+                    <pre className="whitespace-pre-wrap">{reportContent}</pre>
+                  </div>
+                )}
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
+      </div>
+    </div>
+  );
+};
 
+export default ChartReport;
