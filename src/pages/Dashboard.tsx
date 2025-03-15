@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -99,10 +98,11 @@ const Dashboard: React.FC = () => {
             </div>
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
-              <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto mb-6">
+              <TabsList className="grid grid-cols-4 w-full max-w-2xl mx-auto mb-6">
                 <TabsTrigger value="profile">Profile Details</TabsTrigger>
                 <TabsTrigger value="products">My Products</TabsTrigger>
                 <TabsTrigger value="videos">My Videos</TabsTrigger>
+                <TabsTrigger value="screenplays">My Screenplays</TabsTrigger>
               </TabsList>
               
               <TabsContent value="profile">
@@ -177,6 +177,19 @@ const Dashboard: React.FC = () => {
                 </div>
                 
                 <VideoUploader userId={user.id} />
+              </TabsContent>
+              
+              <TabsContent value="screenplays">
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="text-lg font-medium">My Screenplays</h2>
+                  <div className="flex gap-2">
+                    <ShadcnButton onClick={() => navigate('/digital-office')} className="flex items-center">
+                      <Plus size={16} className="mr-2" /> Create New Screenplay
+                    </ShadcnButton>
+                  </div>
+                </div>
+                
+                <ScreenplayList userId={user.id} />
               </TabsContent>
             </Tabs>
             
@@ -265,6 +278,95 @@ const ProductsList = ({ userId }: { userId: string }) => {
                   onClick={() => navigate(`/edit-product/${product.id}`)}
                 >
                   Edit
+                </ShadcnButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const ScreenplayList = ({ userId }: { userId: string }) => {
+  const [screenplays, setScreenplays] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchScreenplays = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('screenplay_projects')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+          
+        if (error) throw error;
+        setScreenplays(data || []);
+      } catch (error) {
+        console.error('Error fetching screenplays:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchScreenplays();
+  }, [userId]);
+  
+  if (isLoading) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-spin h-8 w-8 border-4 border-pi-focus border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p className="text-pi-muted">Loading your screenplays...</p>
+      </div>
+    );
+  }
+  
+  if (screenplays.length === 0) {
+    return (
+      <div className="glass-card p-8 text-center">
+        <Film size={48} className="mx-auto text-pi-muted mb-4" />
+        <h3 className="text-xl font-medium mb-2">No Screenplays Yet</h3>
+        <p className="text-pi-muted mb-6">You haven't created any screenplays yet.</p>
+        <ShadcnButton onClick={() => navigate('/digital-office')}>
+          <Plus size={16} className="mr-2" /> Create Your First Screenplay
+        </ShadcnButton>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {screenplays.map(screenplay => (
+        <div key={screenplay.id} className="glass-card p-4 flex">
+          <div className="w-16 h-16 bg-dark-secondary rounded-md overflow-hidden mr-4 flex-shrink-0">
+            {screenplay.images && screenplay.images.length > 0 ? (
+              <img src={screenplay.images[0]} alt={screenplay.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Film size={24} className="text-pi-muted" />
+              </div>
+            )}
+          </div>
+          <div className="flex-grow">
+            <h3 className="font-medium line-clamp-1">{screenplay.name}</h3>
+            <p className="text-sm text-pi-muted line-clamp-1">
+              {screenplay.character_description ? 
+                screenplay.character_description.substring(0, 60) + '...' : 
+                'Screenplay project'}
+            </p>
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-sm text-pi-muted">
+                {new Date(screenplay.created_at).toLocaleDateString()}
+              </span>
+              <div className="flex gap-2">
+                <ShadcnButton 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate(`/screenplay/${screenplay.id}`)}
+                >
+                  View
                 </ShadcnButton>
               </div>
             </div>

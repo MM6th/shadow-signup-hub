@@ -1,160 +1,302 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import { corsHeaders } from '../_shared/cors.ts'
+import { OpenAI } from "https://esm.sh/openai@4.12.4"
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-// Mock generator function that creates a plausible-looking screenplay response
-function generateMockScreenplay(projectName: string, characterDescription?: string, bookText?: string) {
-  console.log("Generating mock screenplay content for:", projectName);
-  
-  // Extract character name from description or create a default
-  let characterName = "Alex";
-  if (characterDescription && characterDescription.includes("name")) {
-    const nameMatch = characterDescription.match(/name(?:\s+is)?\s+([A-Za-z]+)/i);
-    if (nameMatch && nameMatch[1]) {
-      characterName = nameMatch[1];
-    }
-  }
-  
-  // Create a basic setting from project name
-  const settings = ["modern-day city", "small coastal town", "futuristic metropolis", "rural countryside"];
-  const randomSetting = settings[Math.floor(Math.random() * settings.length)];
-  
-  // Generate the mock screenplay content as structured JSON
-  return {
-    character_profile: {
-      name: characterName,
-      background: `${characterName} grew up in a ${randomSetting}, always dreaming of more. Their journey began when an unexpected event changed everything.`,
-      personality: "Determined, resourceful, and compassionate, with a sharp wit and occasional stubbornness.",
-      physical_attributes: "Medium height with distinctive features that reflect their background and experiences."
-    },
-    screenplay_outline: {
-      title: projectName,
-      logline: `In a ${randomSetting}, ${characterName} must overcome personal demons and external challenges to achieve an impossible goal.`,
-      setting: `The story takes place in a ${randomSetting}, with elements that reflect the main character's journey.`,
-      characters: [
-        {
-          name: characterName,
-          role: "Protagonist",
-          description: characterDescription || `The main character who drives the story forward through their actions and decisions.`
-        },
-        {
-          name: "Morgan",
-          role: "Mentor/Ally",
-          description: "Guides the protagonist through challenging situations with wisdom and experience."
-        },
-        {
-          name: "Taylor",
-          role: "Antagonist",
-          description: "Creates obstacles for the protagonist, representing opposing values or goals."
-        }
-      ],
-      plot_points: [
-        "Inciting Incident: An unexpected event disrupts the protagonist's normal life.",
-        "First Challenge: The protagonist faces their first major obstacle.",
-        "Midpoint Crisis: Everything changes as new information comes to light.",
-        "Lowest Point: The protagonist experiences a significant setback.",
-        "Climactic Confrontation: The final challenge that tests everything the protagonist has learned.",
-        "Resolution: The aftermath of the conflict and its impact on the characters."
-      ]
-    },
-    sample_scene: {
-      scene_title: "The Decision",
-      setting: `Interior - ${characterName}'s apartment - Night`,
-      description: "The room is dimly lit, with rain pattering against the windows. Personal items reveal aspects of the protagonist's character.",
-      dialogue: [
-        {
-          character: characterName,
-          line: "I can't keep running from this. Not anymore."
-        },
-        {
-          character: "Morgan",
-          line: "You know what you're up against. They won't make it easy."
-        },
-        {
-          character: characterName,
-          line: "Nothing worth doing ever is. But this... this is something I have to face."
-        },
-        {
-          character: "Morgan",
-          line: "Then I'll be there with you. Every step of the way."
-        },
-        {
-          character: characterName,
-          line: "No. This is something I need to do alone."
-        }
-      ]
-    }
-  };
-}
+console.log("Generate Screenplay Edge Function Initialized")
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    console.log("Generate screenplay function called");
-    
-    let requestBody;
-    try {
-      requestBody = await req.json();
-      console.log("Request body parsed successfully:", Object.keys(requestBody));
-    } catch (parseError) {
-      console.error("Error parsing request body:", parseError);
-      throw new Error("Invalid request format");
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    )
+
+    // Get the session to verify authentication
+    const {
+      data: { session },
+    } = await supabaseClient.auth.getSession()
+
+    if (!session) {
+      return new Response(
+        JSON.stringify({ error: 'Not authenticated' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      )
     }
-    
-    const { projectName, characterDescription, bookText, imageUrls } = requestBody;
-    
-    if (!projectName) {
-      console.error("Missing required field: projectName");
-      throw new Error("Missing required field: projectName");
-    }
-    
-    console.log("Processing request for project:", projectName);
-    console.log("Character description:", characterDescription ? "Provided" : "Not provided");
-    console.log("Book text:", bookText ? `Provided (${bookText.length} chars)` : "Not provided");
-    console.log("Image URLs:", imageUrls ? `${imageUrls.length} images provided` : "No images");
-    
-    // Generate mock content instead of calling OpenAI API
-    try {
-      console.log("Generating mock screenplay content...");
-      const screenplayData = generateMockScreenplay(projectName, characterDescription, bookText);
-      
-      console.log("Mock screenplay generated successfully");
-      
-      // Return a properly formatted JSON response
-      return new Response(JSON.stringify({ 
-        success: true, 
-        data: screenplayData 
-      }), {
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        },
-      });
-      
-    } catch (generateError) {
-      console.error("Error generating mock screenplay:", generateError);
-      throw generateError;
-    }
-    
-  } catch (error) {
-    console.error('Error in generate-screenplay function:', error);
-    
-    // Ensure we always return a valid JSON response even for errors
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: error.message || "Unknown error occurred" 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+
+    // Extract the request payload
+    const { characterName, characterDescription, bookText, images } = await req.json()
+
+    // Initialize OpenAI client
+    const openai = new OpenAI({
+      apiKey: Deno.env.get('OPEN_API_KEY'),
     });
+
+    console.log("Generating screenplay content with OpenAI...")
+    
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: "You are a professional screenplay writer. Create a detailed character profile, screenplay outline, and sample scene based on the provided character and context information."
+          },
+          {
+            role: "user",
+            content: `Create a screenplay based on this character: ${characterName} - ${characterDescription}. ${bookText ? `Include this context: ${bookText}` : ''}`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2500,
+      });
+
+      const generatedContent = completion.choices[0].message.content;
+      console.log("OpenAI content generated successfully");
+    
+      // Parse and structure the generated content
+      // This is a simplified parsing approach - in production you'd want more robust parsing
+      const sections = generatedContent.split("\n\n");
+      
+      // Create structured screenplay content
+      const screenplayContent = {
+        character_profile: {
+          name: characterName,
+          background: extractSection(generatedContent, "Background"),
+          personality: extractSection(generatedContent, "Personality"),
+          physical_attributes: extractSection(generatedContent, "Physical Attributes")
+        },
+        screenplay_outline: {
+          title: extractSection(generatedContent, "Title") || "Untitled Screenplay",
+          logline: extractSection(generatedContent, "Logline"),
+          setting: extractSection(generatedContent, "Setting"),
+          characters: parseCharacters(generatedContent),
+          plot_points: parsePlotPoints(generatedContent)
+        },
+        sample_scene: {
+          scene_title: extractSection(generatedContent, "Scene"),
+          setting: extractSection(generatedContent, "Scene Setting"),
+          description: extractSection(generatedContent, "Description"),
+          dialogue: parseDialogue(generatedContent)
+        }
+      };
+
+      // Insert the data into Supabase
+      const { data, error } = await supabaseClient
+        .from('screenplay_projects')
+        .insert({
+          user_id: session.user.id,
+          name: `${characterName}'s Story`,
+          character_description: characterDescription,
+          book_text: bookText || null,
+          images: images || [],
+          ai_generated_content: screenplayContent
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Database error:", error);
+        throw error;
+      }
+
+      console.log("Screenplay saved to database");
+      return new Response(
+        JSON.stringify({ success: true, data }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    } catch (openAiError) {
+      console.error("OpenAI API error:", openAiError);
+      
+      // Fallback to mock data if OpenAI fails
+      console.log("Falling back to mock data generation");
+      return generateMockResponse(supabaseClient, session, characterName, characterDescription, bookText, images, corsHeaders);
+    }
+  } catch (error) {
+    console.error("Error in generate-screenplay function:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    )
   }
-});
+})
+
+// Helper function to generate mock response as fallback
+async function generateMockResponse(supabaseClient, session, characterName, characterDescription, bookText, images, corsHeaders) {
+  console.log("Generating mock screenplay content...")
+  
+  // Create a mock screenplay content similar to what we'd get from OpenAI
+  const mockScreenplayContent = {
+    character_profile: {
+      name: characterName,
+      background: "Born into a family of scholars, they developed a keen intellect and curiosity about the world from an early age.",
+      personality: "Analytical, introspective, and determined. They possess a sharp wit and an unwavering sense of justice.",
+      physical_attributes: "Medium height with an athletic build. They have expressive eyes that reveal their emotions despite attempts to hide them."
+    },
+    screenplay_outline: {
+      title: `The Journey of ${characterName}`,
+      logline: `After discovering a hidden truth about their past, ${characterName} embarks on a dangerous quest that will challenge everything they thought they knew about the world.`,
+      setting: "A blend of futuristic metropolis and untamed wilderness in a world where technology and nature exist in precarious balance.",
+      characters: [
+        {
+          name: characterName,
+          role: "Protagonist",
+          description: characterDescription || "A brilliant but troubled individual searching for answers about their mysterious past."
+        },
+        {
+          name: "Elara",
+          role: "Ally",
+          description: "A skilled navigator with secret knowledge of the forbidden zones."
+        },
+        {
+          name: "Director Voss",
+          role: "Antagonist",
+          description: "The calculating leader of the Institute who will stop at nothing to maintain order and control."
+        }
+      ],
+      plot_points: [
+        `${characterName} discovers inconsistencies in their personal records while working at the Archives.`,
+        "An encounter with a mysterious stranger leaves them with a cryptic message and a strange artifact.",
+        "When their investigation draws unwanted attention, they're forced to flee the city with the help of Elara.",
+        "The journey through the wilderness reveals incredible abilities they never knew they possessed.",
+        "A confrontation with Director Voss reveals shocking truths about their origin and the real purpose of the Institute.",
+        "The final decision: use their newfound knowledge to bring down the corrupt system or accept a comfortable lie."
+      ]
+    },
+    sample_scene: {
+      scene_title: "The Archives",
+      setting: "INT. CENTRAL ARCHIVES - NIGHT",
+      description: "Dim blue light bathes rows of holographic data terminals. The room is empty except for a single figure hunched over a terminal, their face illuminated by the screen's glow.",
+      dialogue: [
+        {
+          character: characterName,
+          line: "That's impossible. These records can't both be correct."
+        },
+        {
+          character: "SYSTEM VOICE",
+          line: "Access to restricted files detected. Security alert in progress."
+        },
+        {
+          character: characterName,
+          line: "No, no, no. Override code Theta-Nine-Three!"
+        },
+        {
+          character: "ELARA",
+          line: "That won't work. We need to leave. Now."
+        }
+      ]
+    }
+  };
+
+  // Insert the mock data into Supabase
+  const { data, error } = await supabaseClient
+    .from('screenplay_projects')
+    .insert({
+      user_id: session.user.id,
+      name: `${characterName}'s Story`,
+      character_description: characterDescription,
+      book_text: bookText || null,
+      images: images || [],
+      ai_generated_content: mockScreenplayContent
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Database error:", error);
+    throw error;
+  }
+
+  console.log("Mock screenplay saved to database");
+  return new Response(
+    JSON.stringify({ success: true, data, note: "Generated with mock data (OpenAI fallback)" }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  )
+}
+
+// Helper functions to parse the generated content
+function extractSection(text, sectionName) {
+  const regex = new RegExp(`${sectionName}[:\\s]+(.*?)(?=\\n\\n|$)`, 'is');
+  const match = text.match(regex);
+  return match ? match[1].trim() : '';
+}
+
+function parseCharacters(text) {
+  const charactersSection = extractSection(text, "Characters");
+  if (!charactersSection) return [];
+  
+  const characters = [];
+  const characterEntries = charactersSection.split('\n');
+  
+  for (const entry of characterEntries) {
+    const match = entry.match(/^([^:]+):?\s*(.+)$/);
+    if (match) {
+      const [_, name, description] = match;
+      let role = "Supporting";
+      
+      if (description.toLowerCase().includes("protagonist") || 
+          description.toLowerCase().includes("main character")) {
+        role = "Protagonist";
+      } else if (description.toLowerCase().includes("antagonist") || 
+                description.toLowerCase().includes("villain")) {
+        role = "Antagonist";
+      } else if (description.toLowerCase().includes("ally") || 
+                description.toLowerCase().includes("sidekick")) {
+        role = "Ally";
+      }
+      
+      characters.push({ name: name.trim(), role, description: description.trim() });
+    }
+  }
+  
+  return characters.length > 0 ? characters : [
+    { name: "Character Name", role: "Protagonist", description: "Main character description" },
+    { name: "Supporting Character", role: "Supporting", description: "A supporting character" }
+  ];
+}
+
+function parsePlotPoints(text) {
+  const plotSection = extractSection(text, "Plot Points") || extractSection(text, "Plot");
+  if (!plotSection) return ["Beginning of the story", "Middle conflict", "Climax", "Resolution"];
+  
+  return plotSection.split('\n')
+    .map(point => point.replace(/^-\s*/, '').trim())
+    .filter(point => point.length > 0);
+}
+
+function parseDialogue(text) {
+  const dialogueSection = extractSection(text, "Dialogue");
+  if (!dialogueSection) return [
+    { character: "CHARACTER NAME", line: "Example dialogue line" },
+    { character: "OTHER CHARACTER", line: "Response dialogue" }
+  ];
+  
+  const dialogue = [];
+  const lines = dialogueSection.split('\n');
+  
+  for (let i = 0; i < lines.length; i++) {
+    const characterMatch = lines[i].match(/^([A-Z][A-Z\s]+)(?:\s*\(.*\))?:?\s*$/);
+    if (characterMatch && i + 1 < lines.length) {
+      const character = characterMatch[1].trim();
+      let line = lines[i + 1].trim();
+      
+      // Remove quotes if present
+      line = line.replace(/^["'](.*)["']$/, '$1');
+      
+      dialogue.push({ character, line });
+      i++; // Skip the next line as we've already processed it
+    }
+  }
+  
+  return dialogue.length > 0 ? dialogue : [
+    { character: "CHARACTER", line: "Example dialogue" },
+    { character: "ANOTHER CHARACTER", line: "Response dialogue" }
+  ];
+}
