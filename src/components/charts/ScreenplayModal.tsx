@@ -74,19 +74,19 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
       setErrorMessage(null);
       
       console.log("Calling generate-screenplay function with:", {
-        projectName: values.projectName,
+        characterName: values.projectName,
         characterDescription: values.characterDescription || "",
         bookText: values.bookText || "",
-        imageUrls: imageUrls
+        images: imageUrls
       });
       
       // Call our edge function to generate screenplay content
       const { data, error } = await supabase.functions.invoke('generate-screenplay', {
         body: {
-          projectName: values.projectName,
+          characterName: values.projectName,
           characterDescription: values.characterDescription || "",
           bookText: values.bookText || "",
-          imageUrls: imageUrls
+          images: imageUrls
         },
       });
       

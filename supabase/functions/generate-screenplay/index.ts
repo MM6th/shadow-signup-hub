@@ -39,9 +39,19 @@ serve(async (req) => {
     // Extract the request payload
     const { characterName, characterDescription, bookText, images } = await req.json()
 
-    // Initialize OpenAI client
+    // Initialize OpenAI client - check for both environment variable formats
+    const apiKey = Deno.env.get('OPENAI_API_KEY') || Deno.env.get('OPEN_API_KEY');
+    
+    if (!apiKey) {
+      console.error("OpenAI API key not found in environment variables");
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key not configured properly' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
+    }
+    
     const openai = new OpenAI({
-      apiKey: Deno.env.get('OPEN_API_KEY'),
+      apiKey: apiKey,
     });
 
     console.log("Generating screenplay content with OpenAI...")
