@@ -77,66 +77,29 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
         imageUrls: imageUrls
       });
       
-      // Call our edge function to generate screenplay content
-      const response = await fetch(`${window.location.origin}/functions/v1/generate-screenplay`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Call our edge function to generate screenplay content using supabase.functions.invoke instead of fetch
+      const { data, error } = await supabase.functions.invoke('generate-screenplay', {
+        body: {
           projectName: values.projectName,
           characterDescription: values.characterDescription || "",
           bookText: values.bookText || "",
           imageUrls: imageUrls
-        }),
+        },
       });
       
-      console.log("Response status:", response.status);
+      console.log("Function response:", { data, error });
       
-      // First check if the response is OK
-      if (!response.ok) {
-        const contentType = response.headers.get("content-type");
-        let errorMessage = "";
-        
-        try {
-          if (contentType && contentType.includes("application/json")) {
-            const errorData = await response.json();
-            errorMessage = errorData.error || "Unknown server error";
-          } else {
-            const textResponse = await response.text();
-            errorMessage = `Server responded with non-JSON content: ${textResponse.substring(0, 100)}...`;
-          }
-        } catch (parseError) {
-          errorMessage = `Failed to parse error response: ${parseError.message}`;
-        }
-        
-        throw new Error(`Server error (${response.status}): ${errorMessage}`);
+      if (error) {
+        console.error("Supabase function error:", error);
+        throw new Error(`Supabase function error: ${error.message}`);
       }
       
-      // Check content type
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        const textResponse = await response.text();
-        console.error("Received non-JSON response:", textResponse.substring(0, 200));
-        throw new Error("Received non-JSON response from server");
-      }
-      
-      // Parse the JSON response
-      let result;
-      try {
-        result = await response.json();
-        console.log("Function response:", result);
-      } catch (jsonError) {
-        console.error("JSON parse error:", jsonError);
-        throw new Error(`Failed to parse JSON response: ${jsonError.message}`);
-      }
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to generate screenplay content');
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Failed to generate screenplay content');
       }
       
       setIsGenerating(false);
-      return result.data;
+      return data.data;
     } catch (error) {
       console.error("Error generating screenplay:", error);
       toast({
