@@ -14,7 +14,7 @@ const ReportContent: React.FC<ReportContentProps> = ({
   setReportContent 
 }) => {
   return (
-    <div>
+    <div className="mt-4">
       {isEditing ? (
         <Textarea
           value={reportContent}

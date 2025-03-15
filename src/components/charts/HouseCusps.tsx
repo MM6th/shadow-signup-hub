@@ -11,7 +11,7 @@ interface HouseCuspsProps {
 
 const HouseCusps: React.FC<HouseCuspsProps> = ({ houses }) => {
   return (
-    <div>
+    <div className="mt-6">
       <h3 className="text-xl font-elixia text-gradient mb-4">House Cusps</h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {houses.map((house) => (
