@@ -1,8 +1,18 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, PenSquare, Printer, Download, Save } from 'lucide-react';
+import { ArrowLeft, PenSquare, Printer, Download, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 
 interface ChartHeaderProps {
   chart: any;
@@ -11,6 +21,7 @@ interface ChartHeaderProps {
   handleSave: () => void;
   handlePrint: () => void;
   handleExportPDF: () => void;
+  handleDelete: () => void;
   isSaving: boolean;
 }
 
@@ -21,9 +32,11 @@ const ChartHeader: React.FC<ChartHeaderProps> = ({
   handleSave,
   handlePrint,
   handleExportPDF,
+  handleDelete,
   isSaving
 }) => {
   const navigate = useNavigate();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   return (
     <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -82,9 +95,41 @@ const ChartHeader: React.FC<ChartHeaderProps> = ({
             <Button variant="outline" onClick={handleExportPDF}>
               <Download size={16} className="mr-2" /> Export PDF
             </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 size={16} className="mr-2" /> Delete
+            </Button>
           </>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="bg-dark-secondary border-gray-700">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete Astrological Chart</AlertDialogTitle>
+            <AlertDialogDescription className="text-pi-muted">
+              Are you sure you want to delete this chart for {chart.client_name}? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-gray-700 text-white hover:bg-dark-accent/30">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                handleDelete();
+              }}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -36,6 +36,7 @@ const ChartReport: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [reportContent, setReportContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('visual');
   const [useRealData, setUseRealData] = useState(true);
@@ -154,6 +155,39 @@ const ChartReport: React.FC = () => {
     });
   };
   
+  const handleDelete = async () => {
+    if (!chartId) return;
+    
+    try {
+      setIsDeleting(true);
+      
+      // Delete the chart from the database
+      const { error } = await supabase
+        .from('astro_charts')
+        .delete()
+        .eq('id', chartId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Chart Deleted",
+        description: "The astrological chart has been permanently deleted",
+      });
+      
+      // Navigate back to dashboard
+      navigate('/dashboard');
+    } catch (error: any) {
+      console.error('Error deleting chart:', error);
+      toast({
+        title: "Error Deleting Chart",
+        description: error?.message || "There was a problem deleting the chart",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
   const toggleChartDataSource = () => {
     setUseRealData(!useRealData);
     setIsLoading(true);
@@ -204,6 +238,7 @@ const ChartReport: React.FC = () => {
           handleSave={handleSave}
           handlePrint={handlePrint}
           handleExportPDF={handleExportPDF}
+          handleDelete={handleDelete}
           isSaving={isSaving}
         />
         
