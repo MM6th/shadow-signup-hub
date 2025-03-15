@@ -2,12 +2,95 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Mock generator function that creates a plausible-looking screenplay response
+function generateMockScreenplay(projectName: string, characterDescription?: string, bookText?: string) {
+  console.log("Generating mock screenplay content for:", projectName);
+  
+  // Extract character name from description or create a default
+  let characterName = "Alex";
+  if (characterDescription && characterDescription.includes("name")) {
+    const nameMatch = characterDescription.match(/name(?:\s+is)?\s+([A-Za-z]+)/i);
+    if (nameMatch && nameMatch[1]) {
+      characterName = nameMatch[1];
+    }
+  }
+  
+  // Create a basic setting from project name
+  const settings = ["modern-day city", "small coastal town", "futuristic metropolis", "rural countryside"];
+  const randomSetting = settings[Math.floor(Math.random() * settings.length)];
+  
+  // Generate the mock screenplay content as structured JSON
+  return {
+    character_profile: {
+      name: characterName,
+      background: `${characterName} grew up in a ${randomSetting}, always dreaming of more. Their journey began when an unexpected event changed everything.`,
+      personality: "Determined, resourceful, and compassionate, with a sharp wit and occasional stubbornness.",
+      physical_attributes: "Medium height with distinctive features that reflect their background and experiences."
+    },
+    screenplay_outline: {
+      title: projectName,
+      logline: `In a ${randomSetting}, ${characterName} must overcome personal demons and external challenges to achieve an impossible goal.`,
+      setting: `The story takes place in a ${randomSetting}, with elements that reflect the main character's journey.`,
+      characters: [
+        {
+          name: characterName,
+          role: "Protagonist",
+          description: characterDescription || `The main character who drives the story forward through their actions and decisions.`
+        },
+        {
+          name: "Morgan",
+          role: "Mentor/Ally",
+          description: "Guides the protagonist through challenging situations with wisdom and experience."
+        },
+        {
+          name: "Taylor",
+          role: "Antagonist",
+          description: "Creates obstacles for the protagonist, representing opposing values or goals."
+        }
+      ],
+      plot_points: [
+        "Inciting Incident: An unexpected event disrupts the protagonist's normal life.",
+        "First Challenge: The protagonist faces their first major obstacle.",
+        "Midpoint Crisis: Everything changes as new information comes to light.",
+        "Lowest Point: The protagonist experiences a significant setback.",
+        "Climactic Confrontation: The final challenge that tests everything the protagonist has learned.",
+        "Resolution: The aftermath of the conflict and its impact on the characters."
+      ]
+    },
+    sample_scene: {
+      scene_title: "The Decision",
+      setting: `Interior - ${characterName}'s apartment - Night`,
+      description: "The room is dimly lit, with rain pattering against the windows. Personal items reveal aspects of the protagonist's character.",
+      dialogue: [
+        {
+          character: characterName,
+          line: "I can't keep running from this. Not anymore."
+        },
+        {
+          character: "Morgan",
+          line: "You know what you're up against. They won't make it easy."
+        },
+        {
+          character: characterName,
+          line: "Nothing worth doing ever is. But this... this is something I have to face."
+        },
+        {
+          character: "Morgan",
+          line: "Then I'll be there with you. Every step of the way."
+        },
+        {
+          character: characterName,
+          line: "No. This is something I need to do alone."
+        }
+      ]
+    }
+  };
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -17,11 +100,6 @@ serve(async (req) => {
 
   try {
     console.log("Generate screenplay function called");
-    
-    if (!OPENAI_API_KEY) {
-      console.error("OPENAI_API_KEY is not set");
-      throw new Error("API configuration error: OpenAI API key is missing");
-    }
     
     let requestBody;
     try {
@@ -39,132 +117,17 @@ serve(async (req) => {
       throw new Error("Missing required field: projectName");
     }
     
-    // Craft the appropriate prompt based on available inputs
-    let systemPrompt = "You are an expert screenplay writer and character developer.";
-    let userPrompt = `Create a detailed character profile and screenplay outline for a project titled "${projectName}".`;
+    console.log("Processing request for project:", projectName);
+    console.log("Character description:", characterDescription ? "Provided" : "Not provided");
+    console.log("Book text:", bookText ? `Provided (${bookText.length} chars)` : "Not provided");
+    console.log("Image URLs:", imageUrls ? `${imageUrls.length} images provided` : "No images");
     
-    if (characterDescription) {
-      userPrompt += `\n\nCharacter description provided by user: ${characterDescription}`;
-    }
-    
-    if (imageUrls && imageUrls.length > 0) {
-      userPrompt += `\n\nThe user has uploaded ${imageUrls.length} photos of the character.`;
-      // Include the actual image URLs in the prompt
-      userPrompt += `\n\nImage URLs: ${imageUrls.join(', ')}`;
-    }
-    
-    if (bookText) {
-      userPrompt += `\n\nAdapt the following book text into a screenplay format:\n${bookText.substring(0, 3000)}`;
-      // Limiting to 3000 chars to avoid token limits
-    }
-    
-    userPrompt += `\n\nPlease provide the following in JSON format:
-    1. Character profile (name, background, personality, physical attributes)
-    2. Screenplay outline (title, logline, setting, characters, plot points)
-    3. Sample scene dialogue
-    `;
-    
-    console.log("Sending request to OpenAI with prompt length:", userPrompt.length);
-    
-    // Call OpenAI API for content generation
+    // Generate mock content instead of calling OpenAI API
     try {
-      console.log("Calling OpenAI API...");
-      const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          response_format: { type: "json_object" }
-        }),
-      });
+      console.log("Generating mock screenplay content...");
+      const screenplayData = generateMockScreenplay(projectName, characterDescription, bookText);
       
-      // Check if the response is OK
-      if (!openAIResponse.ok) {
-        const contentType = openAIResponse.headers.get("content-type");
-        let errorText = "";
-        
-        try {
-          if (contentType && contentType.includes("application/json")) {
-            const errorData = await openAIResponse.json();
-            console.error("OpenAI API error (JSON):", errorData);
-            errorText = errorData.error?.message || JSON.stringify(errorData);
-          } else {
-            errorText = await openAIResponse.text();
-            console.error("OpenAI API error (text):", errorText.substring(0, 500));
-            
-            if (errorText.includes("<!DOCTYPE html>")) {
-              errorText = "OpenAI API returned HTML instead of JSON. Possible network or configuration issue.";
-            }
-          }
-        } catch (parseError) {
-          console.error("Error parsing error response:", parseError);
-          errorText = "Unknown error from OpenAI API";
-        }
-        
-        throw new Error(`OpenAI API error (${openAIResponse.status}): ${errorText}`);
-      }
-      
-      // Verify the content type before attempting to parse JSON
-      const contentType = openAIResponse.headers.get("content-type");
-      console.log("OpenAI response content type:", contentType);
-      
-      if (!contentType || !contentType.includes("application/json")) {
-        // Handle non-JSON response by returning a more informative error
-        const rawText = await openAIResponse.text();
-        console.error("OpenAI returned non-JSON response:", rawText.substring(0, 500));
-        throw new Error("OpenAI API returned non-JSON response. Contact support with error code: CONTENT_TYPE_ERROR");
-      }
-      
-      // Parse the JSON response
-      const data = await openAIResponse.json();
-      console.log("OpenAI response parsed successfully");
-      
-      if (!data.choices || data.choices.length === 0) {
-        throw new Error('Failed to generate screenplay content: No choices returned');
-      }
-      
-      const generatedContent = data.choices[0].message.content;
-      console.log("Generated content length:", generatedContent.length);
-      
-      // Try to parse the JSON response from OpenAI
-      let screenplayData;
-      try {
-        screenplayData = JSON.parse(generatedContent);
-        console.log("Successfully parsed JSON from AI response");
-      } catch (parseError) {
-        console.error('Error parsing JSON from AI response:', parseError);
-        console.error('Raw content excerpt:', generatedContent.substring(0, 500));
-        
-        // If JSON parsing fails, try to extract JSON from markdown code blocks
-        try {
-          const jsonMatch = generatedContent.match(/```json\n([\s\S]*?)\n```/) || 
-                          generatedContent.match(/```\n([\s\S]*?)\n```/);
-          
-          if (jsonMatch && jsonMatch[1]) {
-            screenplayData = JSON.parse(jsonMatch[1]);
-            console.log("Successfully extracted and parsed JSON from code block");
-          } else {
-            // If still can't parse, return the raw text but in a valid JSON format
-            screenplayData = { 
-              error: "Parsing error", 
-              rawContent: generatedContent.substring(0, 1000) + "..." 
-            };
-          }
-        } catch (extractError) {
-          console.error('Failed to extract JSON from code blocks:', extractError);
-          screenplayData = { 
-            error: "Multiple parsing errors", 
-            rawContent: generatedContent.substring(0, 1000) + "..." 
-          };
-        }
-      }
+      console.log("Mock screenplay generated successfully");
       
       // Return a properly formatted JSON response
       return new Response(JSON.stringify({ 
@@ -177,9 +140,9 @@ serve(async (req) => {
         },
       });
       
-    } catch (openAIError) {
-      console.error("Error calling OpenAI API:", openAIError);
-      throw openAIError;
+    } catch (generateError) {
+      console.error("Error generating mock screenplay:", generateError);
+      throw generateError;
     }
     
   } catch (error) {
