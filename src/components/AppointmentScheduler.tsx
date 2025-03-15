@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { format } from 'date-fns';
+import { format, parse, isValid } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,13 +27,29 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   onSchedulingComplete 
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [dateInputValue, setDateInputValue] = useState<string>("");
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const { toast } = useToast();
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
+    if (date) {
+      setDateInputValue(format(date, 'yyyy-MM-dd'));
+    }
     setSelectedTimeSlot(null); // Reset time slot when date changes
+  };
+
+  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setDateInputValue(value);
+    
+    // Try to parse the date
+    const parsedDate = parse(value, 'yyyy-MM-dd', new Date());
+    if (isValid(parsedDate)) {
+      setSelectedDate(parsedDate);
+    }
   };
 
   const handleTimeSelect = async (timeSlot: string) => {
@@ -88,30 +105,39 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="text-sm font-medium block mb-2">Select Date</label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !selectedDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? format(selectedDate, 'PPP') : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={handleDateSelect}
-                disabled={isDateDisabled}
-                initialFocus
-                className="p-3 pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
+          <div className="flex space-x-2">
+            <Input
+              type="date"
+              value={dateInputValue}
+              onChange={handleDateInputChange}
+              className="w-full"
+              placeholder="YYYY-MM-DD"
+            />
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  type="button"
+                  className="px-2"
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    handleDateSelect(date);
+                    setCalendarOpen(false);
+                  }}
+                  disabled={isDateDisabled}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
         
         <div>

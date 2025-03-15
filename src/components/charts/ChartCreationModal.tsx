@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
 import { Calendar } from '@/components/ui/calendar';
-import { Clock } from 'lucide-react';
+import { Clock, CalendarIcon } from 'lucide-react';
 import { 
   Dialog, 
   DialogContent, 
@@ -29,7 +29,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format } from 'date-fns';
+import { format, parse, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -47,6 +47,7 @@ const chartFormSchema = z.object({
   birthDate: z.date({
     required_error: "Birth date is required.",
   }),
+  birthDateInput: z.string().optional(),
   birthTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
     message: "Birth time must be in 24-hour format (HH:MM).",
   }),
@@ -75,6 +76,7 @@ const defaultValues: Partial<ChartFormValues> = {
   houseSystem: "placidus",
   zodiacType: "tropical",
   notes: "",
+  birthDateInput: "",
 };
 
 export function ChartCreationModal({ open, onOpenChange }: ChartCreationModalProps) {
@@ -83,11 +85,25 @@ export function ChartCreationModal({ open, onOpenChange }: ChartCreationModalPro
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [chartCreationType, setChartCreationType] = useState("create");
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const form = useForm<ChartFormValues>({
     resolver: zodResolver(chartFormSchema),
     defaultValues,
   });
+
+  // Handle manual date input
+  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>, onChange: (date: Date) => void) => {
+    const dateString = e.target.value;
+    form.setValue('birthDateInput', dateString);
+    
+    // Try to parse the date in YYYY-MM-DD format
+    const parsedDate = parse(dateString, 'yyyy-MM-dd', new Date());
+    
+    if (isValid(parsedDate)) {
+      onChange(parsedDate);
+    }
+  };
 
   const onSubmit = async (data: ChartFormValues) => {
     if (!user) {
@@ -208,33 +224,45 @@ export function ChartCreationModal({ open, onOpenChange }: ChartCreationModalPro
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Birth Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal bg-dark",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 bg-dark" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
+                        <div className="flex space-x-2">
+                          <FormControl>
+                            <Input
+                              type="date"
+                              value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
+                              onChange={(e) => handleDateInputChange(e, field.onChange)}
+                              className="bg-dark w-full"
+                              placeholder="YYYY-MM-DD"
                             />
-                          </PopoverContent>
-                        </Popover>
+                          </FormControl>
+                          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                type="button"
+                                className="bg-dark px-2"
+                              >
+                                <CalendarIcon className="h-4 w-4" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 bg-dark" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={(date) => {
+                                  field.onChange(date);
+                                  if (date) {
+                                    form.setValue('birthDateInput', format(date, 'yyyy-MM-dd'));
+                                  }
+                                  setCalendarOpen(false);
+                                }}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <FormDescription className="text-xs">
+                          Enter date in YYYY-MM-DD format or use the calendar
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
