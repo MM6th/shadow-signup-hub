@@ -14,7 +14,7 @@ import ChartHeader from '@/components/charts/ChartHeader';
 import ChartVisual from '@/components/charts/ChartVisual';
 import ChartPositions from '@/components/charts/ChartPositions';
 import ReportContent from '@/components/charts/ReportContent';
-import { generateDefaultReport, generateMockChartData } from '@/components/charts/ChartUtils';
+import { generateDefaultReport, generateRealChartData, generateMockChartData } from '@/components/charts/ChartUtils';
 
 interface Planet {
   name: string;
@@ -38,6 +38,7 @@ const ChartReport: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('visual');
+  const [useRealData, setUseRealData] = useState(true);
   
   const [planetaryPositions, setPlanetaryPositions] = useState<Planet[]>([]);
   const [houses, setHouses] = useState<{ house: number; sign: string; degree: number }[]>([]);
@@ -87,8 +88,14 @@ const ChartReport: React.FC = () => {
         setChart(data);
         setReportContent(data.report_content || generateDefaultReport(data));
         
-        // Generate mock data for the chart
-        generateMockChartData(data, setPlanetaryPositions, setHouses, setAspects);
+        // Generate chart data based on user preference
+        if (useRealData) {
+          console.log('Using real astrological data');
+          await generateRealChartData(data, setPlanetaryPositions, setHouses, setAspects);
+        } else {
+          console.log('Using mock astrological data');
+          generateMockChartData(data, setPlanetaryPositions, setHouses, setAspects);
+        }
         
       } catch (error: any) {
         console.error('Error fetching chart:', error);
@@ -104,7 +111,7 @@ const ChartReport: React.FC = () => {
     };
     
     fetchChartData();
-  }, [chartId, navigate, toast]);
+  }, [chartId, navigate, toast, useRealData]);
   
   const handleSave = async () => {
     if (!chartId) return;
@@ -145,6 +152,12 @@ const ChartReport: React.FC = () => {
       title: "Export PDF",
       description: "PDF export functionality would be implemented here",
     });
+  };
+  
+  const toggleChartDataSource = () => {
+    setUseRealData(!useRealData);
+    setIsLoading(true);
+    // The useEffect will handle re-loading the data
   };
   
   if (isLoading) {
@@ -196,12 +209,22 @@ const ChartReport: React.FC = () => {
         
         <div className="glass-card rounded-xl overflow-hidden mb-8">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="bg-dark-secondary/50 px-6 pt-4">
+            <div className="bg-dark-secondary/50 px-6 pt-4 flex justify-between items-center">
               <TabsList className="grid w-full max-w-md grid-cols-3">
                 <TabsTrigger value="visual">Visual Chart</TabsTrigger>
                 <TabsTrigger value="positions">Positions</TabsTrigger>
                 <TabsTrigger value="report">Full Report</TabsTrigger>
               </TabsList>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={toggleChartDataSource}
+                className="ml-2"
+              >
+                <Sparkles className="h-4 w-4 mr-1" />
+                {useRealData ? "Using Real Data" : "Using Mock Data"}
+              </Button>
             </div>
             
             <div className="p-6">

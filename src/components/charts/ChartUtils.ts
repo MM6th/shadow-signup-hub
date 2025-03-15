@@ -1,5 +1,5 @@
-
 import { Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune } from '@/components/icons/PlanetIcons';
+import { supabase } from '@/integrations/supabase/client';
 
 export const getZodiacSign = (index: number): string => {
   const signs = [
@@ -56,10 +56,101 @@ This astrological chart reveals key insights about ${chartData.client_name}'s pe
 Notes: ${chartData.notes || 'None provided'}`;
 };
 
+export const generateRealChartData = async (chartData: any, setPlanetaryPositions: any, setHouses: any, setAspects: any) => {
+  try {
+    const { data, error } = await supabase.functions.invoke('calculate-chart', {
+      body: {
+        birthDate: chartData.birth_date,
+        birthTime: chartData.birth_time,
+        latitude: chartData.latitude || 0,
+        longitude: chartData.longitude || 0,
+        location: chartData.birth_location,
+        houseSystem: chartData.house_system,
+        zodiacType: chartData.zodiac_type
+      }
+    });
+
+    if (error) {
+      console.error('Error fetching real chart data:', error);
+      generateMockChartData(chartData, setPlanetaryPositions, setHouses, setAspects);
+      return;
+    }
+
+    console.log('Received real astrological data:', data);
+
+    const planets = [
+      { name: 'Sun', icon: Sun },
+      { name: 'Moon', icon: Moon },
+      { name: 'Mercury', icon: Mercury },
+      { name: 'Venus', icon: Venus },
+      { name: 'Mars', icon: Mars },
+      { name: 'Jupiter', icon: Jupiter },
+      { name: 'Saturn', icon: Saturn },
+      { name: 'Uranus', icon: Uranus },
+      { name: 'Neptune', icon: Neptune }
+    ];
+
+    const realPlanetaryPositions = planets.map(planet => {
+      const planetData = data.planets.find((p: any) => p.name.toLowerCase() === planet.name.toLowerCase());
+      
+      if (planetData) {
+        return {
+          name: planet.name,
+          sign: planetData.sign,
+          house: planetData.house,
+          degree: parseFloat(planetData.degree.toFixed(2)),
+          icon: planet.icon,
+          description: `${planet.name} in ${planetData.sign} shapes ${getSignTraits(getZodiacSignIndex(planetData.sign))} qualities.`
+        };
+      }
+      
+      return {
+        name: planet.name,
+        sign: 'Unknown',
+        house: 1,
+        degree: 0,
+        icon: planet.icon,
+        description: `${planet.name} position could not be determined.`
+      };
+    });
+
+    setPlanetaryPositions(realPlanetaryPositions);
+
+    const realHouses = data.houses.map((house: any) => ({
+      house: house.house,
+      sign: house.sign,
+      degree: parseFloat(house.degree.toFixed(2))
+    }));
+
+    setHouses(realHouses);
+
+    const realAspects = data.aspects.map((aspect: any) => ({
+      planet1: aspect.planet1,
+      planet2: aspect.planet2,
+      aspect: aspect.type,
+      orb: parseFloat(aspect.orb.toFixed(2))
+    }));
+
+    setAspects(realAspects);
+  } catch (error) {
+    console.error('Exception during chart calculation:', error);
+    generateMockChartData(chartData, setPlanetaryPositions, setHouses, setAspects);
+  }
+};
+
+const getZodiacSignIndex = (sign: string): number => {
+  const signs = [
+    'Aries', 'Taurus', 'Gemini', 'Cancer', 
+    'Leo', 'Virgo', 'Libra', 'Scorpio', 
+    'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
+  ];
+  
+  return signs.findIndex(s => s.toLowerCase() === sign.toLowerCase());
+};
+
 export const generateMockChartData = (chartData: any, setPlanetaryPositions: any, setHouses: any, setAspects: any) => {
   const seed = chartData.id.charCodeAt(0) + chartData.birth_date.charCodeAt(0);
   
-  // Use imported icons instead of requiring them
   const mockPlanets = [
     { 
       name: 'Sun', 
