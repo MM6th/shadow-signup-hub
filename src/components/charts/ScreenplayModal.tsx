@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { UploadCloud, BookOpen, User, Loader2 } from 'lucide-react';
+import { UploadCloud, BookOpen, User, Loader2, AlertCircle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ScreenplayModalProps {
@@ -34,6 +35,7 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -69,6 +71,7 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
   const generateScreenplay = async (values: z.infer<typeof formSchema>, imageUrls: string[]) => {
     try {
       setIsGenerating(true);
+      setErrorMessage(null);
       
       console.log("Calling generate-screenplay function with:", {
         projectName: values.projectName,
@@ -102,9 +105,11 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
       return data.data;
     } catch (error) {
       console.error("Error generating screenplay:", error);
+      const errorMsg = error instanceof Error ? error.message : "Failed to generate screenplay content. Please try again.";
+      setErrorMessage(errorMsg);
       toast({
         title: "Generation Failed",
-        description: error instanceof Error ? error.message : "Failed to generate screenplay content. Please try again.",
+        description: errorMsg,
         variant: "destructive",
       });
       setIsGenerating(false);
@@ -161,6 +166,7 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setIsSubmitting(true);
+      setErrorMessage(null);
       
       // 1. Upload images
       const imageUrls = await uploadImages();
@@ -212,6 +218,7 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
       
     } catch (error: any) {
       console.error("Error creating screenplay project:", error);
+      setErrorMessage(error.message || "Failed to create screenplay project.");
       toast({
         title: "Submission Failed",
         description: error.message || "Failed to create screenplay project.",
@@ -228,6 +235,16 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
         <DialogHeader>
           <DialogTitle className="text-2xl font-elixia text-gradient">Create Screenplay Project</DialogTitle>
         </DialogHeader>
+        
+        {errorMessage && (
+          <div className="bg-red-500/20 border border-red-500 rounded-md p-3 mb-4 flex items-start">
+            <AlertCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-red-500">Error</p>
+              <p className="text-xs text-red-400">{errorMessage}</p>
+            </div>
+          </div>
+        )}
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
