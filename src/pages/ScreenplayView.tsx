@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Download, Printer } from 'lucide-react';
+import { ArrowLeft, Download, Printer, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +16,16 @@ import {
 } from "@/components/ui/card";
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const ScreenplayView = () => {
   const { screenplayId } = useParams<{ screenplayId: string }>();
@@ -27,6 +37,8 @@ const ScreenplayView = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('characters');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   useEffect(() => {
     const fetchScreenplayData = async () => {
@@ -91,6 +103,42 @@ const ScreenplayView = () => {
       title: "Export PDF",
       description: "PDF export functionality would be implemented here",
     });
+  };
+  
+  const handleDeleteConfirm = async () => {
+    if (!screenplayId) return;
+    
+    try {
+      setIsDeleting(true);
+      
+      // Delete screenplay from database
+      const { error: deleteError } = await supabase
+        .from('screenplay_projects')
+        .delete()
+        .eq('id', screenplayId);
+      
+      if (deleteError) {
+        throw deleteError;
+      }
+      
+      toast({
+        title: "Screenplay deleted",
+        description: "Your screenplay has been successfully deleted",
+      });
+      
+      // Navigate back to dashboard
+      navigate('/dashboard');
+    } catch (error: any) {
+      console.error('Error deleting screenplay:', error);
+      toast({
+        title: "Error deleting screenplay",
+        description: error?.message || "There was a problem deleting the screenplay",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
   };
   
   if (isLoading) {
@@ -169,8 +217,34 @@ const ScreenplayView = () => {
               <Download className="mr-2 h-4 w-4" />
               Export PDF
             </Button>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(true)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
           </div>
         </div>
+        
+        {/* Alert Dialog for Delete Confirmation */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete your
+                screenplay and remove the data from our servers.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         
         {/* Images */}
         {images && images.length > 0 && (
