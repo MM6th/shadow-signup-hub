@@ -13,6 +13,7 @@ import DigitalOffice from '@/pages/DigitalOffice';
 import NotFound from '@/pages/NotFound';
 import { Toaster } from '@/components/ui/toaster';
 import ChartReport from '@/pages/ChartReport';
+import ScreenplayView from '@/pages/ScreenplayView';
 import { AuthProvider } from '@/context/AuthContext';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
           <Route path="/create-product" element={<CreateProduct />} />
           <Route path="/edit-product/:productId" element={<EditProduct />} />
           <Route path="/chart-report/:chartId" element={<ChartReport />} />
+          <Route path="/screenplay/:screenplayId" element={<ScreenplayView />} />
           <Route path="/admin-nft" element={<AdminNFT />} />
           <Route path="/digital-office" element={<DigitalOffice />} />
           <Route path="*" element={<NotFound />} />

@@ -191,7 +191,7 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
       const userId = user.data.user?.id;
       
       console.log("Saving to screenplay_projects table");
-      const { error } = await supabase
+      const { data: insertData, error } = await supabase
         .from('screenplay_projects')
         .insert({
           name: values.projectName,
@@ -200,7 +200,9 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
           images: imageUrls,
           ai_generated_content: screenplayData,
           user_id: userId
-        });
+        })
+        .select()
+        .single();
         
       if (error) {
         console.error("Database error:", error);
@@ -214,7 +216,7 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
       
       // 4. Close modal and navigate to the screenplay view page
       onOpenChange(false);
-      // navigate(`/screenplay/${screenplayId}`); // Uncomment when the screenplay page is created
+      navigate(`/screenplay/${insertData.id}`);
       
     } catch (error: any) {
       console.error("Error creating screenplay project:", error);
