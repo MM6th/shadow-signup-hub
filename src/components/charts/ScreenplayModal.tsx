@@ -71,22 +71,31 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
     try {
       setIsGenerating(true);
       
+      console.log("Calling generate-screenplay function with:", {
+        projectName: values.projectName,
+        characterDescription: values.characterDescription || "",
+        bookText: values.bookText || "",
+        imageUrls: imageUrls
+      });
+      
       // Call our edge function to generate screenplay content
       const response = await fetch(`${window.location.origin}/functions/v1/generate-screenplay`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // No need for Authorization header with Bearer token, the function is public
         },
         body: JSON.stringify({
           projectName: values.projectName,
-          characterDescription: values.characterDescription,
-          bookText: values.bookText,
+          characterDescription: values.characterDescription || "",
+          bookText: values.bookText || "",
           imageUrls: imageUrls
         }),
       });
       
+      console.log("Response status:", response.status);
+      
       const result = await response.json();
+      console.log("Function response:", result);
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to generate screenplay content');
@@ -98,7 +107,7 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
       console.error("Error generating screenplay:", error);
       toast({
         title: "Generation Failed",
-        description: "Failed to generate screenplay content.",
+        description: error instanceof Error ? error.message : "Failed to generate screenplay content.",
         variant: "destructive",
       });
       setIsGenerating(false);
@@ -119,11 +128,18 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
         const fileName = `${projectId}-${i}.${fileExt}`;
         const filePath = `screenplays/${fileName}`;
         
+        console.log(`Uploading image ${i+1}/${uploadedImages.length}`);
+        
         const { error: uploadError, data } = await supabase.storage
           .from('media')
           .upload(filePath, file);
           
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          throw uploadError;
+        }
+        
+        console.log("File uploaded successfully:", filePath);
         
         const { data: urlData } = supabase.storage
           .from('media')
@@ -132,6 +148,7 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
         imageUrls.push(urlData.publicUrl);
       }
       
+      console.log("All images uploaded:", imageUrls);
       return imageUrls;
     } catch (error) {
       console.error("Error uploading images:", error);
@@ -150,15 +167,27 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
       
       // 1. Upload images
       const imageUrls = await uploadImages();
+      console.log("Images uploaded:", imageUrls);
       
       // 2. Generate screenplay content using AI
+      toast({
+        title: "Generating Content",
+        description: "Creating your screenplay content with AI...",
+      });
+      
       const screenplayData = await generateScreenplay(values, imageUrls);
       if (!screenplayData) {
         setIsSubmitting(false);
         return;
       }
       
+      console.log("Screenplay data generated:", screenplayData);
+      
       // 3. Save screenplay project to database
+      const user = await supabase.auth.getUser();
+      const userId = user.data.user?.id;
+      
+      console.log("Saving to screenplay_projects table");
       const { error } = await supabase
         .from('screenplay_projects')
         .insert({
@@ -167,10 +196,13 @@ export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
           book_text: values.bookText || null,
           images: imageUrls,
           ai_generated_content: screenplayData,
-          user_id: (await supabase.auth.getUser()).data.user?.id
+          user_id: userId
         });
         
-      if (error) throw error;
+      if (error) {
+        console.error("Database error:", error);
+        throw error;
+      }
       
       toast({
         title: "Success!",

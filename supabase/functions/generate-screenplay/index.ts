@@ -16,7 +16,28 @@ serve(async (req) => {
   }
 
   try {
-    const { projectName, characterDescription, bookText, imageUrls } = await req.json();
+    console.log("Generate screenplay function called");
+    
+    if (!OPENAI_API_KEY) {
+      console.error("OPENAI_API_KEY is not set");
+      throw new Error("API configuration error: OpenAI API key is missing");
+    }
+    
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log("Request body parsed successfully:", Object.keys(requestBody));
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError);
+      throw new Error("Invalid request format");
+    }
+    
+    const { projectName, characterDescription, bookText, imageUrls } = requestBody;
+    
+    if (!projectName) {
+      console.error("Missing required field: projectName");
+      throw new Error("Missing required field: projectName");
+    }
     
     // Craft the appropriate prompt based on available inputs
     let systemPrompt = "You are an expert screenplay writer and character developer.";
@@ -43,60 +64,68 @@ serve(async (req) => {
     3. Sample scene dialogue
     `;
     
-    console.log("Sending request to OpenAI with prompt:", userPrompt.substring(0, 100) + "...");
+    console.log("Sending request to OpenAI with prompt length:", userPrompt.length);
     
     // Call OpenAI API for content generation
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-      }),
-    });
-    
-    if (!openAIResponse.ok) {
-      const errorData = await openAIResponse.json();
-      console.error("OpenAI API error:", errorData);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
-    }
-    
-    const data = await openAIResponse.json();
-    console.log("Received response from OpenAI:", data);
-    
-    if (!data.choices || data.choices.length === 0) {
-      throw new Error('Failed to generate screenplay content');
-    }
-    
-    const generatedContent = data.choices[0].message.content;
-    
-    // Try to parse the JSON response
-    let screenplayData;
     try {
-      // Extract JSON from the response if it's wrapped in markdown code blocks
-      const jsonMatch = generatedContent.match(/```json\n([\s\S]*?)\n```/) || 
-                        generatedContent.match(/```\n([\s\S]*?)\n```/) ||
-                        [null, generatedContent];
+      console.log("Calling OpenAI API...");
+      const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+        }),
+      });
       
-      screenplayData = JSON.parse(jsonMatch[1] || generatedContent);
-    } catch (parseError) {
-      console.error('Error parsing JSON from AI response:', parseError);
-      // If JSON parsing fails, return the raw text
-      screenplayData = { rawContent: generatedContent };
+      if (!openAIResponse.ok) {
+        const errorData = await openAIResponse.json();
+        console.error("OpenAI API error:", errorData);
+        throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+      }
+      
+      const data = await openAIResponse.json();
+      console.log("Received response from OpenAI");
+      
+      if (!data.choices || data.choices.length === 0) {
+        throw new Error('Failed to generate screenplay content: No choices returned');
+      }
+      
+      const generatedContent = data.choices[0].message.content;
+      console.log("Generated content length:", generatedContent.length);
+      
+      // Try to parse the JSON response
+      let screenplayData;
+      try {
+        // Extract JSON from the response if it's wrapped in markdown code blocks
+        const jsonMatch = generatedContent.match(/```json\n([\s\S]*?)\n```/) || 
+                          generatedContent.match(/```\n([\s\S]*?)\n```/) ||
+                          [null, generatedContent];
+        
+        screenplayData = JSON.parse(jsonMatch[1] || generatedContent);
+        console.log("Successfully parsed JSON response");
+      } catch (parseError) {
+        console.error('Error parsing JSON from AI response:', parseError);
+        // If JSON parsing fails, return the raw text
+        screenplayData = { rawContent: generatedContent };
+      }
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        data: screenplayData 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (openAIError) {
+      console.error("Error calling OpenAI API:", openAIError);
+      throw new Error(`OpenAI API error: ${openAIError.message}`);
     }
-    
-    return new Response(JSON.stringify({ 
-      success: true, 
-      data: screenplayData 
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
     
   } catch (error) {
     console.error('Error in generate-screenplay function:', error);
