@@ -1,4 +1,6 @@
 
+import { Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune } from '@/components/icons/PlanetIcons';
+
 export const getZodiacSign = (index: number): string => {
   const signs = [
     'Aries', 'Taurus', 'Gemini', 'Cancer', 
@@ -57,9 +59,7 @@ Notes: ${chartData.notes || 'None provided'}`;
 export const generateMockChartData = (chartData: any, setPlanetaryPositions: any, setHouses: any, setAspects: any) => {
   const seed = chartData.id.charCodeAt(0) + chartData.birth_date.charCodeAt(0);
   
-  // Import these from their respective components
-  const { Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune } = require('@/components/icons/PlanetIcons');
-  
+  // Use imported icons instead of requiring them
   const mockPlanets = [
     { 
       name: 'Sun', 
