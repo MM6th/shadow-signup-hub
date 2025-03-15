@@ -2,30 +2,19 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { 
-  ArrowLeft, 
-  Download, 
-  Save, 
-  PenSquare, 
-  Sparkles, 
-  Printer
-} from 'lucide-react';
-import { 
-  Sun,
-  Moon,
-  Mercury,
-  Venus,
-  Mars,
-  Jupiter,
-  Saturn,
-  Uranus,
-  Neptune
-} from '@/components/icons/PlanetIcons';
+import { ArrowLeft, Download, Save, PenSquare, Sparkles, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+
+// Import refactored components
+import ChartLoader from '@/components/charts/ChartLoader';
+import ChartHeader from '@/components/charts/ChartHeader';
+import ChartVisual from '@/components/charts/ChartVisual';
+import ChartPositions from '@/components/charts/ChartPositions';
+import ReportContent from '@/components/charts/ReportContent';
+import { generateDefaultReport, generateMockChartData } from '@/components/charts/ChartUtils';
 
 interface Planet {
   name: string;
@@ -91,7 +80,8 @@ const ChartReport: React.FC = () => {
         setChart(data);
         setReportContent(data.report_content || generateDefaultReport(data));
         
-        generateMockChartData(data);
+        // Generate mock data for the chart
+        generateMockChartData(data, setPlanetaryPositions, setHouses, setAspects);
         
       } catch (error) {
         console.error('Error fetching chart:', error);
@@ -108,160 +98,6 @@ const ChartReport: React.FC = () => {
     
     fetchChartData();
   }, [chartId, user, navigate, toast]);
-  
-  const generateMockChartData = (chartData: any) => {
-    const seed = chartData.id.charCodeAt(0) + chartData.birth_date.charCodeAt(0);
-    
-    const mockPlanets: Planet[] = [
-      { 
-        name: 'Sun', 
-        sign: getZodiacSign(seed % 12), 
-        house: (seed % 12) + 1, 
-        degree: seed % 30, 
-        icon: Sun,
-        description: `The Sun in ${getZodiacSign(seed % 12)} suggests a personality that is ${getSignTraits(seed % 12)}.`
-      },
-      { 
-        name: 'Moon', 
-        sign: getZodiacSign((seed + 3) % 12), 
-        house: ((seed + 3) % 12) + 1, 
-        degree: (seed + 10) % 30, 
-        icon: Moon,
-        description: `The Moon in ${getZodiacSign((seed + 3) % 12)} indicates emotional patterns that are ${getSignTraits((seed + 3) % 12)}.`
-      },
-      { 
-        name: 'Mercury', 
-        sign: getZodiacSign((seed + 1) % 12), 
-        house: ((seed + 1) % 12) + 1, 
-        degree: (seed + 5) % 30, 
-        icon: Mercury,
-        description: `Mercury in ${getZodiacSign((seed + 1) % 12)} shapes a communication style that is ${getSignTraits((seed + 1) % 12)}.`
-      },
-      { 
-        name: 'Venus', 
-        sign: getZodiacSign((seed + 2) % 12), 
-        house: ((seed + 2) % 12) + 1, 
-        degree: (seed + 15) % 30, 
-        icon: Venus,
-        description: `Venus in ${getZodiacSign((seed + 2) % 12)} indicates love and values focused on being ${getSignTraits((seed + 2) % 12)}.`
-      },
-      { 
-        name: 'Mars', 
-        sign: getZodiacSign((seed + 4) % 12), 
-        house: ((seed + 4) % 12) + 1, 
-        degree: (seed + 20) % 30, 
-        icon: Mars,
-        description: `Mars in ${getZodiacSign((seed + 4) % 12)} gives an energy and drive that is ${getSignTraits((seed + 4) % 12)}.`
-      },
-      { 
-        name: 'Jupiter', 
-        sign: getZodiacSign((seed + 5) % 12), 
-        house: ((seed + 5) % 12) + 1, 
-        degree: (seed + 25) % 30, 
-        icon: Jupiter,
-        description: `Jupiter in ${getZodiacSign((seed + 5) % 12)} brings expansion and growth through ${getSignTraits((seed + 5) % 12)} qualities.`
-      },
-      { 
-        name: 'Saturn', 
-        sign: getZodiacSign((seed + 6) % 12), 
-        house: ((seed + 6) % 12) + 1, 
-        degree: (seed + 8) % 30, 
-        icon: Saturn,
-        description: `Saturn in ${getZodiacSign((seed + 6) % 12)} creates structure and discipline in ${getSignTraits((seed + 6) % 12)} areas.`
-      },
-      { 
-        name: 'Uranus', 
-        sign: getZodiacSign((seed + 7) % 12), 
-        house: ((seed + 7) % 12) + 1, 
-        degree: (seed + 12) % 30, 
-        icon: Uranus,
-        description: `Uranus in ${getZodiacSign((seed + 7) % 12)} brings revolutionary changes through ${getSignTraits((seed + 7) % 12)} approaches.`
-      },
-      { 
-        name: 'Neptune', 
-        sign: getZodiacSign((seed + 8) % 12), 
-        house: ((seed + 8) % 12) + 1, 
-        degree: (seed + 18) % 30, 
-        icon: Neptune,
-        description: `Neptune in ${getZodiacSign((seed + 8) % 12)} dissolves boundaries through ${getSignTraits((seed + 8) % 12)} ideals.`
-      }
-    ];
-    
-    setPlanetaryPositions(mockPlanets);
-    
-    const mockHouses = Array.from({ length: 12 }, (_, i) => ({
-      house: i + 1,
-      sign: getZodiacSign((seed + i) % 12),
-      degree: ((seed + i * 3) % 30)
-    }));
-    
-    setHouses(mockHouses);
-    
-    const mockAspects = [
-      { planet1: 'Sun', planet2: 'Moon', aspect: 'Conjunction', orb: 2.1 },
-      { planet1: 'Mercury', planet2: 'Venus', aspect: 'Trine', orb: 0.5 },
-      { planet1: 'Mars', planet2: 'Saturn', aspect: 'Square', orb: 1.3 },
-      { planet1: 'Jupiter', planet2: 'Sun', aspect: 'Opposition', orb: 3.2 },
-      { planet1: 'Venus', planet2: 'Neptune', aspect: 'Sextile', orb: 0.8 }
-    ];
-    
-    setAspects(mockAspects);
-  };
-  
-  const getZodiacSign = (index: number): string => {
-    const signs = [
-      'Aries', 'Taurus', 'Gemini', 'Cancer', 
-      'Leo', 'Virgo', 'Libra', 'Scorpio', 
-      'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
-    ];
-    return signs[index];
-  };
-  
-  const getSignTraits = (index: number): string => {
-    const traits = [
-      'bold and pioneering',
-      'grounded and determined',
-      'curious and adaptable',
-      'nurturing and intuitive',
-      'confident and expressive',
-      'analytical and precise',
-      'balanced and diplomatic',
-      'intense and transformative',
-      'adventurous and philosophical',
-      'disciplined and ambitious',
-      'innovative and independent',
-      'compassionate and imaginative'
-    ];
-    return traits[index];
-  };
-  
-  const generateDefaultReport = (chartData: any): string => {
-    return `# ${chartData.chart_type.charAt(0).toUpperCase() + chartData.chart_type.slice(1)} Chart for ${chartData.client_name}
-    
-Birth Information:
-- Date: ${new Date(chartData.birth_date).toLocaleDateString()}
-- Time: ${chartData.birth_time}
-- Location: ${chartData.birth_location}
-
-Chart System: ${chartData.zodiac_type} zodiac with ${chartData.house_system} houses
-
-## Overview
-This astrological chart reveals key insights about ${chartData.client_name}'s personality, life path, and potential. The positions of celestial bodies at the time of birth create a unique energetic blueprint.
-
-## Key Planetary Positions
-(This section will be populated with the specific planetary positions from the chart calculation)
-
-## Houses and Their Meanings
-(This section will detail the houses and signs present in the natal chart)
-
-## Major Aspects
-(This section will analyze the significant planetary aspects)
-
-## Interpretation
-(The full interpretation will be provided based on the overall chart analysis)
-
-Notes: ${chartData.notes || 'None provided'}`;
-  };
   
   const handleSave = async () => {
     if (!chartId || !user) return;
@@ -305,14 +141,7 @@ Notes: ${chartData.notes || 'None provided'}`;
   };
   
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-dark bg-dark-gradient flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin h-12 w-12 border-4 border-pi-focus border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-pi-muted">Loading chart data...</p>
-        </div>
-      </div>
-    );
+    return <ChartLoader />;
   }
   
   if (!chart) return null;
@@ -320,66 +149,15 @@ Notes: ${chartData.notes || 'None provided'}`;
   return (
     <div className="min-h-screen bg-dark bg-dark-gradient text-pi py-10">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/dashboard')}
-              className="flex items-center mb-2 text-pi-muted hover:text-pi"
-            >
-              <ArrowLeft size={16} className="mr-2" /> Back to Dashboard
-            </Button>
-            
-            <h1 className="text-3xl font-elixia text-gradient">
-              {chart.chart_type.charAt(0).toUpperCase() + chart.chart_type.slice(1).replace(/([A-Z])/g, ' $1')} Chart
-            </h1>
-            
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-              <div className="text-pi-muted">
-                Client: <span className="text-pi">{chart.client_name}</span>
-              </div>
-              <div className="text-pi-muted px-2 border-l border-r border-dark-accent">
-                Born: <span className="text-pi">{new Date(chart.birth_date).toLocaleDateString()}</span>
-              </div>
-              <div className="text-pi-muted">
-                System: <span className="text-pi capitalize">{chart.zodiac_type} • {chart.house_system}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 self-end md:self-auto">
-            {isEditing ? (
-              <>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsEditing(false)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="bg-pi-focus hover:bg-pi-focus/80"
-                >
-                  <Save size={16} className="mr-2" /> {isSaving ? 'Saving...' : 'Save Report'}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="outline" onClick={() => setIsEditing(true)}>
-                  <PenSquare size={16} className="mr-2" /> Edit
-                </Button>
-                <Button variant="outline" onClick={handlePrint}>
-                  <Printer size={16} className="mr-2" /> Print
-                </Button>
-                <Button variant="outline" onClick={handleExportPDF}>
-                  <Download size={16} className="mr-2" /> Export PDF
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
+        <ChartHeader 
+          chart={chart}
+          isEditing={isEditing}
+          setIsEditing={setIsEditing}
+          handleSave={handleSave}
+          handlePrint={handlePrint}
+          handleExportPDF={handleExportPDF}
+          isSaving={isSaving}
+        />
         
         <div className="glass-card rounded-xl overflow-hidden mb-8">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -393,121 +171,23 @@ Notes: ${chartData.notes || 'None provided'}`;
             
             <div className="p-6">
               <TabsContent value="visual" className="mt-0">
-                <div className="aspect-square max-w-xl mx-auto relative rounded-full overflow-hidden border-2 border-pi-focus border-t-transparent bg-dark-accent/30 mb-8">
-                  {/* Placeholder for the wheel chart - would be replaced with actual chart visualization */}
-                  <div className="absolute inset-0 flex items-center justify-center text-pi-muted">
-                    Chart visualization would be rendered here
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-elixia text-gradient">Chart Info</h3>
-                    <div className="space-y-1 text-sm">
-                      <p>Type: <span className="text-pi capitalize">{chart.chart_type}</span></p>
-                      <p>System: <span className="text-pi capitalize">{chart.zodiac_type}</span></p>
-                      <p>Houses: <span className="text-pi capitalize">{chart.house_system}</span></p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-elixia text-gradient">Subject</h3>
-                    <div className="space-y-1 text-sm">
-                      <p>Name: <span className="text-pi">{chart.client_name}</span></p>
-                      <p>Birth Date: <span className="text-pi">{new Date(chart.birth_date).toLocaleDateString()}</span></p>
-                      <p>Birth Time: <span className="text-pi">{chart.birth_time}</span></p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-elixia text-gradient">Location</h3>
-                    <div className="space-y-1 text-sm">
-                      <p>Place: <span className="text-pi">{chart.birth_location}</span></p>
-                      {chart.latitude && chart.longitude && (
-                        <>
-                          <p>Lat: <span className="text-pi">{chart.latitude}°</span></p>
-                          <p>Long: <span className="text-pi">{chart.longitude}°</span></p>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <ChartVisual chart={chart} />
               </TabsContent>
               
               <TabsContent value="positions" className="mt-0">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-xl font-elixia text-gradient mb-4">Planetary Positions</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                      {planetaryPositions.map((planet) => {
-                        const PlanetIcon = planet.icon;
-                        return (
-                          <div key={planet.name} className="flex items-start p-3 bg-dark-secondary/30 rounded-lg">
-                            <div className="mr-3">
-                              <PlanetIcon size={24} className="text-pi-focus" />
-                            </div>
-                            <div>
-                              <h4 className="font-medium">{planet.name}</h4>
-                              <div className="text-sm text-pi-muted">
-                                <p>{planet.sign} {planet.degree}° (House {planet.house})</p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-xl font-elixia text-gradient mb-4">House Cusps</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {houses.map((house) => (
-                        <div key={house.house} className="p-3 bg-dark-secondary/30 rounded-lg text-center">
-                          <div className="text-lg font-medium">House {house.house}</div>
-                          <div className="text-sm text-pi-muted">{house.sign} {house.degree}°</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-xl font-elixia text-gradient mb-4">Major Aspects</h3>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-dark-accent">
-                        <thead>
-                          <tr>
-                            <th className="px-4 py-2 text-left">Planets</th>
-                            <th className="px-4 py-2 text-left">Aspect</th>
-                            <th className="px-4 py-2 text-left">Orb</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-dark-accent">
-                          {aspects.map((aspect, idx) => (
-                            <tr key={idx}>
-                              <td className="px-4 py-2">{aspect.planet1} - {aspect.planet2}</td>
-                              <td className="px-4 py-2">{aspect.aspect}</td>
-                              <td className="px-4 py-2">{aspect.orb}°</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
+                <ChartPositions 
+                  planetaryPositions={planetaryPositions}
+                  houses={houses}
+                  aspects={aspects}
+                />
               </TabsContent>
               
               <TabsContent value="report" className="mt-0">
-                {isEditing ? (
-                  <Textarea
-                    value={reportContent}
-                    onChange={(e) => setReportContent(e.target.value)}
-                    className="min-h-[500px] font-mono text-sm"
-                  />
-                ) : (
-                  <div className="prose prose-invert max-w-none">
-                    <pre className="whitespace-pre-wrap">{reportContent}</pre>
-                  </div>
-                )}
+                <ReportContent 
+                  reportContent={reportContent}
+                  isEditing={isEditing}
+                  setReportContent={setReportContent}
+                />
               </TabsContent>
             </div>
           </Tabs>
