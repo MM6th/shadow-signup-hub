@@ -1,16 +1,56 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { RtcTokenBuilder, RtcRole } from "https://esm.sh/agora-token@2.0.3";
 
-// Agora token generation
-// This is a placeholder implementation that should be replaced with the actual Agora token generator
+const AGORA_APP_ID = "0763309372ab4637918e71cb13f52323";
+// In a production environment, this would be a secret
+const AGORA_APP_CERTIFICATE = ""; // You should add this as a secret in Supabase
+
 function generateAgoraToken(channelName: string, uid: string, role: string, expirationTimeInSeconds: number) {
-  // In a production environment, you should use the Agora token generator SDK
-  // and your actual Agora App ID and App Certificate
-  // const appID = Deno.env.get("AGORA_APP_ID") || "";
-  // const appCertificate = Deno.env.get("AGORA_APP_CERTIFICATE") || "";
+  // For now using a placeholder token to enable development
+  // This should be replaced with actual Agora token generation in production
+  const appID = AGORA_APP_ID;
+  const appCertificate = AGORA_APP_CERTIFICATE;
   
-  // For now, return a mock token to enable development
-  return `mock-agora-token-${channelName}-${uid}-${Date.now()}`;
+  if (!appCertificate) {
+    console.log("WARNING: Using mock token as App Certificate is not set");
+    return `mock-agora-token-${channelName}-${uid}-${Date.now()}`;
+  }
+  
+  try {
+    // Use the Agora Token Builder
+    const tokenExpirationInSeconds = expirationTimeInSeconds;
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const privilegeExpiredTs = currentTimestamp + tokenExpirationInSeconds;
+    
+    // Build the token
+    let rtcToken;
+    if (role === 'publisher') {
+      rtcToken = RtcTokenBuilder.buildTokenWithUid(
+        appID,
+        appCertificate,
+        channelName,
+        parseInt(uid),
+        RtcRole.PUBLISHER,
+        privilegeExpiredTs
+      );
+    } else {
+      rtcToken = RtcTokenBuilder.buildTokenWithUid(
+        appID,
+        appCertificate,
+        channelName,
+        parseInt(uid),
+        RtcRole.SUBSCRIBER,
+        privilegeExpiredTs
+      );
+    }
+    
+    return rtcToken;
+  } catch (error) {
+    console.error("Error generating Agora token:", error);
+    return null;
+  }
 }
 
 const corsHeaders = {
@@ -65,6 +105,10 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate the token
     const token = generateAgoraToken(channelName, uid, role, expirationTimeInSeconds);
 
+    if (!token) {
+      throw new Error('Failed to generate token');
+    }
+
     return new Response(
       JSON.stringify({ 
         token,
@@ -96,6 +140,3 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 serve(handler);
-
-// Missing createClient function that was needed
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";

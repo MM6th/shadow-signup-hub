@@ -18,7 +18,7 @@ interface AppointmentDialogProps {
   isFreeConsultation?: boolean;
 }
 
-const AppointmentDialog: React.FC<AppointmentDialogProps> = ({
+export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({
   open,
   onOpenChange,
   productId,

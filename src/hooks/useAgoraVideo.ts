@@ -46,25 +46,50 @@ export const useAgoraVideo = (appointmentId: string) => {
     }
   }, [appointmentId, toast]);
 
-  // This is a placeholder function that you would implement with the actual Agora SDK
+  // This function would be implemented with the actual Agora SDK
   const joinChannel = useCallback(async (localAudioTrack: any, localVideoTrack: any, remoteContainer: HTMLElement) => {
+    if (!token || !channelName) {
+      console.error("Token or channel name is missing");
+      return {
+        leave: async () => { console.log("Cannot leave: not connected"); }
+      };
+    }
+
     console.log("Joining channel with:", { token, channelName, localAudioTrack, localVideoTrack, remoteContainer });
     
-    // In a production environment, you would use the Agora Web SDK to join the channel
-    // Example code (to be replaced with actual SDK implementation):
-    // const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-    // await client.join(appId, channelName, token, uid);
-    // await client.publish([localAudioTrack, localVideoTrack]);
-    
-    return {
-      leave: async () => {
-        // Placeholder for leaving the channel
-        console.log("Leaving channel:", channelName);
-        // In a production environment:
-        // await client.unpublish([localAudioTrack, localVideoTrack]);
-        // await client.leave();
-      }
-    };
+    try {
+      // In a production environment, you would use the Agora Web SDK to join the channel
+      // Example code using Agora Web SDK:
+      // First, you would need to import AgoraRTC from 'agora-rtc-sdk-ng'
+      // const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+      // await client.join(AGORA_APP_ID, channelName, token, uid);
+      // await client.publish([localAudioTrack, localVideoTrack]);
+      // client.on('user-published', async (user, mediaType) => {
+      //   await client.subscribe(user, mediaType);
+      //   if (mediaType === 'video') {
+      //     const remoteVideoTrack = user.videoTrack;
+      //     remoteVideoTrack.play(remoteContainer);
+      //   }
+      //   if (mediaType === 'audio') {
+      //     const remoteAudioTrack = user.audioTrack;
+      //     remoteAudioTrack.play();
+      //   }
+      // });
+      
+      // For now, we'll just return a mock implementation
+      return {
+        leave: async () => {
+          // Placeholder for leaving the channel
+          console.log("Leaving channel:", channelName);
+          // In a production environment:
+          // await client.unpublish([localAudioTrack, localVideoTrack]);
+          // await client.leave();
+        }
+      };
+    } catch (error) {
+      console.error("Error joining Agora channel:", error);
+      throw error;
+    }
   }, [token, channelName]);
 
   return {
