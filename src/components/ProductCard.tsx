@@ -8,10 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 import AppointmentDialog from "./AppointmentDialog";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { QrCode, Copy, Phone, Star, RefreshCw } from 'lucide-react';
+import { QrCode, Copy, Phone, Star, RefreshCw, CreditCard } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import ReviewDialog from "./ReviewDialog";
 import { formatCurrency, convertPrice } from "@/lib/utils";
+import PaymentDialog from "./PaymentDialog";
 
 interface ProductCardProps {
   product: {
@@ -26,6 +27,8 @@ interface ProductCardProps {
     contact_phone?: string;
     price_currency?: string;
     original_price?: number;
+    enable_paypal?: boolean;
+    paypal_client_id?: string;
   };
   onClick?: () => void;
   showEditButton?: boolean;
@@ -38,6 +41,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState<string>(product.price_currency || 'usd');
@@ -45,10 +49,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const ADMIN_EMAIL = "cmooregee@gmail.com";
   const isAdminUser = user?.email === ADMIN_EMAIL;
   const isService = product.type === 'service';
+  const hasCryptoEnabled = true; // We'll keep crypto enabled by default for now but won't show buttons if no addresses
 
   const { adminWalletAddresses, isLoading } = useWalletAddresses(user, product.id, isAdminUser);
-
-  const selectedWalletAddress = adminWalletAddresses.length > 0 ? adminWalletAddresses[0] : null;
+  const hasWalletAddresses = adminWalletAddresses.length > 0;
+  const selectedWalletAddress = hasWalletAddresses ? adminWalletAddresses[0] : null;
+  const hasPayPalEnabled = product.enable_paypal || false;
 
   useEffect(() => {
     const fetchCryptoPrices = async () => {
@@ -120,12 +126,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
       return;
     }
     
-    if (!selectedWalletAddress) {
+    if (!selectedWalletAddress && !hasPayPalEnabled) {
       toast({
         title: "Error",
         description: "No payment options available. Please contact the administrator.",
         variant: "destructive",
       });
+      return;
+    }
+
+    if (hasPayPalEnabled || (!selectedWalletAddress && hasPayPalEnabled)) {
+      // If PayPal is enabled or if crypto is not available but PayPal is
+      setIsPaymentDialogOpen(true);
       return;
     }
 
@@ -170,6 +182,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
         variant: "destructive",
       });
     }
+  };
+
+  const handleShowPaymentOptions = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsPaymentDialogOpen(true);
   };
 
   const handleSchedulingComplete = () => {
@@ -242,6 +259,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
     
     return formatCurrency(converted, selectedCurrency);
   };
+
+  // Check if any payment method is available
+  const hasPaymentMethods = hasWalletAddresses || hasPayPalEnabled;
 
   return (
     <Card 
@@ -325,33 +345,49 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
             </Button>
           ) : (
             <div className="space-y-2">
-              <Button onClick={handleCopyWallet} className="w-full">
-                <Copy size={16} className="mr-2" /> Buy Now
-              </Button>
+              {hasPaymentMethods ? (
+                <Button onClick={handleShowPaymentOptions} className="w-full">
+                  {hasPayPalEnabled ? (
+                    <>
+                      <CreditCard size={16} className="mr-2" /> Pay Now
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={16} className="mr-2" /> Buy Now
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button disabled className="w-full">
+                  No Payment Methods
+                </Button>
+              )}
               
               <div className="flex justify-between">
-                <Popover open={showQRCode} onOpenChange={setShowQRCode}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" onClick={handleShowQR}>
-                      <QrCode size={16} className="mr-2" /> Show QR
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="bg-white p-2 w-auto">
-                    {qrCodeUrl ? (
-                      <img 
-                        src={qrCodeUrl} 
-                        alt="QR Code" 
-                        className="h-32 w-32"
-                      />
-                    ) : (
-                      <div className="h-32 w-32 flex items-center justify-center text-sm text-gray-500">
-                        No wallet address available
-                      </div>
-                    )}
-                  </PopoverContent>
-                </Popover>
+                {hasWalletAddresses && (
+                  <Popover open={showQRCode} onOpenChange={setShowQRCode}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" onClick={handleShowQR}>
+                        <QrCode size={16} className="mr-2" /> Show QR
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="bg-white p-2 w-auto">
+                      {qrCodeUrl ? (
+                        <img 
+                          src={qrCodeUrl} 
+                          alt="QR Code" 
+                          className="h-32 w-32"
+                        />
+                      ) : (
+                        <div className="h-32 w-32 flex items-center justify-center text-sm text-gray-500">
+                          No wallet address available
+                        </div>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+                )}
                 
-                <Button variant="outline" size="sm" onClick={handleOpenReviewDialog}>
+                <Button variant="outline" size="sm" onClick={handleOpenReviewDialog} className={hasWalletAddresses ? "" : "w-full"}>
                   <Star size={16} className="mr-2" /> Review
                 </Button>
               </div>
@@ -382,6 +418,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
         productId={product.id}
         sellerId={product.user_id}
         user={user}
+      />
+
+      <PaymentDialog
+        open={isPaymentDialogOpen}
+        onOpenChange={setIsPaymentDialogOpen}
+        product={{
+          id: product.id,
+          title: product.title,
+          price: product.price,
+          enable_paypal: product.enable_paypal,
+          paypal_client_id: product.paypal_client_id
+        }}
+        walletData={selectedWalletAddress}
       />
     </Card>
   );

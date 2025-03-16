@@ -75,6 +75,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const [imagePreview, setImagePreview] = useState<string | null>(initialValues?.image_url || null);
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
+  const [cryptoPaymentsEnabled, setCryptoPaymentsEnabled] = useState<boolean>(initialWalletAddresses.length > 0);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -197,6 +198,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   const removeWalletAddress = (id: string) => {
     setWalletAddresses(walletAddresses.filter(wallet => wallet.id !== id));
+    
+    if (walletAddresses.length === 1) {
+      setCryptoPaymentsEnabled(false);
+    }
   };
 
   const updateWalletAddress = (id: string, field: 'cryptoType' | 'address', value: string) => {
@@ -250,10 +255,14 @@ const ProductForm: React.FC<ProductFormProps> = ({
   };
 
   const validateWalletAddresses = (): boolean => {
+    if (!cryptoPaymentsEnabled) {
+      return true;
+    }
+    
     if (walletAddresses.length === 0) {
       toast({
         title: "Wallet address required",
-        description: "Please add at least one wallet address",
+        description: "Please add at least one wallet address or disable crypto payments",
         variant: "destructive",
       });
       return false;
@@ -283,10 +292,14 @@ const ProductForm: React.FC<ProductFormProps> = ({
       return;
     }
     
-    if (!validateWalletAddresses() && !values.enablePaypal) {
+    if (cryptoPaymentsEnabled && !values.enablePaypal && !validateWalletAddresses()) {
+      return;
+    }
+    
+    if (!cryptoPaymentsEnabled && !values.enablePaypal) {
       toast({
         title: "Payment method required",
-        description: "Please add at least one wallet address or enable PayPal payments",
+        description: "Please enable either crypto payments or PayPal payments",
         variant: "destructive",
       });
       return;
@@ -359,7 +372,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
         product = newProduct;
       }
       
-      if (walletAddresses.length > 0) {
+      if (cryptoPaymentsEnabled && walletAddresses.length > 0) {
         const walletData = walletAddresses.map(wallet => ({
           product_id: product.id,
           crypto_type: wallet.cryptoType,
@@ -651,88 +664,110 @@ const ProductForm: React.FC<ProductFormProps> = ({
           />
           
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center">
-                <h3 className="text-lg font-medium">Cryptocurrency Wallet Addresses</h3>
-                {form.watch('enablePaypal') && (
-                  <span className="ml-2 text-xs bg-amber-500/20 text-amber-500 px-2 py-1 rounded-full">
-                    Optional with PayPal enabled
-                  </span>
-                )}
+            <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <h3 className="text-base font-medium">Enable Cryptocurrency Payments</h3>
+                <p className="text-sm text-muted-foreground">
+                  Accept payments in various cryptocurrencies
+                </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addWalletAddress}
-                disabled={walletAddresses.length >= 3}
-              >
-                <Plus size={16} className="mr-2" /> Add Wallet
-              </Button>
+              <Switch
+                checked={cryptoPaymentsEnabled}
+                onCheckedChange={(checked) => {
+                  setCryptoPaymentsEnabled(checked);
+                  if (checked && walletAddresses.length === 0) {
+                    addWalletAddress();
+                  }
+                }}
+              />
             </div>
             
-            <FormDescription>
-              Add up to 3 wallet addresses for different cryptocurrencies
-            </FormDescription>
-            
-            {walletAddresses.length === 0 && (
-              <div className="p-4 rounded-md border border-gray-600 bg-dark-secondary text-center text-pi-muted">
-                {form.watch('enablePaypal') ? (
-                  <>
-                    <CreditCard className="mx-auto mb-2" size={24} />
-                    <p>PayPal payments are enabled</p>
-                    <p className="text-sm">You can also add crypto wallet addresses as an alternative payment method</p>
-                  </>
-                ) : (
-                  <>
-                    <ShoppingBag className="mx-auto mb-2" size={24} />
-                    <p>No wallet addresses added yet</p>
-                    <p className="text-sm">Click "Add Wallet" to add a payment method</p>
-                  </>
-                )}
-              </div>
-            )}
-            
-            {walletAddresses.map((wallet, index) => (
-              <div key={wallet.id} className="p-4 rounded-md border border-gray-600 bg-dark-secondary space-y-3">
+            {cryptoPaymentsEnabled && (
+              <>
                 <div className="flex justify-between items-center">
-                  <h4 className="font-medium">Wallet #{index + 1}</h4>
+                  <div className="flex items-center">
+                    <h3 className="text-lg font-medium">Cryptocurrency Wallet Addresses</h3>
+                    {form.watch('enablePaypal') && (
+                      <span className="ml-2 text-xs bg-amber-500/20 text-amber-500 px-2 py-1 rounded-full">
+                        Optional with PayPal enabled
+                      </span>
+                    )}
+                  </div>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    onClick={() => removeWalletAddress(wallet.id)}
-                    className="text-destructive hover:text-destructive"
+                    onClick={addWalletAddress}
+                    disabled={walletAddresses.length >= 3}
                   >
-                    <Minus size={16} className="mr-2" /> Remove
+                    <Plus size={16} className="mr-2" /> Add Wallet
                   </Button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Cryptocurrency</label>
-                    <select
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={wallet.cryptoType}
-                      onChange={(e) => updateWalletAddress(wallet.id, 'cryptoType', e.target.value)}
-                    >
-                      <option value="">Select a cryptocurrency</option>
-                      {CRYPTO_OPTIONS.map(option => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
+                <FormDescription>
+                  Add up to 3 wallet addresses for different cryptocurrencies
+                </FormDescription>
+                
+                {walletAddresses.length === 0 && (
+                  <div className="p-4 rounded-md border border-gray-600 bg-dark-secondary text-center text-pi-muted">
+                    {form.watch('enablePaypal') ? (
+                      <>
+                        <CreditCard className="mx-auto mb-2" size={24} />
+                        <p>PayPal payments are enabled</p>
+                        <p className="text-sm">You can also add crypto wallet addresses as an alternative payment method</p>
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag className="mx-auto mb-2" size={24} />
+                        <p>No wallet addresses added yet</p>
+                        <p className="text-sm">Click "Add Wallet" to add a payment method</p>
+                      </>
+                    )}
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">Wallet Address</label>
-                    <Input
-                      placeholder="Enter wallet address"
-                      value={wallet.address}
-                      onChange={(e) => updateWalletAddress(wallet.id, 'address', e.target.value)}
-                    />
+                )}
+                
+                {walletAddresses.map((wallet, index) => (
+                  <div key={wallet.id} className="p-4 rounded-md border border-gray-600 bg-dark-secondary space-y-3">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-medium">Wallet #{index + 1}</h4>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeWalletAddress(wallet.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Minus size={16} className="mr-2" /> Remove
+                      </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">Cryptocurrency</label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          value={wallet.cryptoType}
+                          onChange={(e) => updateWalletAddress(wallet.id, 'cryptoType', e.target.value)}
+                        >
+                          <option value="">Select a cryptocurrency</option>
+                          {CRYPTO_OPTIONS.map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Wallet Address</label>
+                        <Input
+                          placeholder="Enter wallet address"
+                          value={wallet.address}
+                          onChange={(e) => updateWalletAddress(wallet.id, 'address', e.target.value)}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                ))}
+              </>
+            )}
           </div>
           
           <div className="flex justify-end space-x-2">

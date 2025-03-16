@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +14,8 @@ interface PaymentDialogProps {
     id: string;
     title: string;
     price: number;
+    enable_paypal?: boolean;
+    paypal_client_id?: string;
   };
   walletData: {
     wallet_address: string;
@@ -30,8 +33,15 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const [qrCode, setQrCode] = useState<string | null>(null);
   const { toast } = useToast();
   
-  // PayPal client ID
-  const PAYPAL_CLIENT_ID = "AbGYIHsjPxcCNhgce9MZsTQ7Mou5ZqJljgpEc-7-_owsvr5InFhhEDyEPEGlWQPzzaW1b_52EU-Gbn-l";
+  // Default PayPal client ID if none is provided
+  const DEFAULT_PAYPAL_CLIENT_ID = "AbGYIHsjPxcCNhgce9MZsTQ7Mou5ZqJljgpEc-7-_owsvr5InFhhEDyEPEGlWQPzzaW1b_52EU-Gbn-l";
+  const clientId = product?.paypal_client_id || DEFAULT_PAYPAL_CLIENT_ID;
+  
+  // Flag to show the PayPal tab
+  const showPayPal = product?.enable_paypal || false;
+  
+  // Default to PayPal tab if crypto payment not available but PayPal is enabled
+  const defaultTab = !walletData && showPayPal ? "paypal" : "crypto";
 
   const generateQRCode = async (walletAddress: string) => {
     try {
@@ -132,10 +142,10 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <Tabs defaultValue="crypto" className="w-full">
+        <Tabs defaultValue={defaultTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="crypto">Cryptocurrency</TabsTrigger>
-            <TabsTrigger value="paypal">PayPal</TabsTrigger>
+            <TabsTrigger value="paypal" disabled={!showPayPal}>PayPal</TabsTrigger>
           </TabsList>
           
           <TabsContent value="crypto" className="space-y-4">
@@ -155,7 +165,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
             
             {!walletData && (
               <p className="text-center text-destructive text-sm">
-                No cryptocurrency payment options available. Please contact the administrator or try PayPal.
+                {showPayPal 
+                  ? "No cryptocurrency payment options available. Try PayPal instead."
+                  : "No payment options available. Please contact the administrator."}
               </p>
             )}
           </TabsContent>
@@ -171,7 +183,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
               productId={product.id}
               amount={product.price}
               onSuccess={handlePayPalSuccess}
-              clientId={PAYPAL_CLIENT_ID}
+              clientId={clientId}
             />
           </TabsContent>
         </Tabs>
