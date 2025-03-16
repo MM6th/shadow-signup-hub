@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, ShoppingCart, Star, QrCode, User, Phone, Video, Shield, Play } from 'lucide-react';
+import { Search, Filter, ShoppingCart, Star, QrCode, User, Phone, Video, Shield, Play, Tags } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -10,6 +9,7 @@ import FeaturedServices from '@/components/FeaturedServices';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import AdDisplay from '@/components/AdDisplay';
 
 // Admin access email
 const ADMIN_EMAILS = ['cmooregee@gmail.com'];
@@ -38,6 +38,8 @@ const Marketplace: React.FC = () => {
   const [walletAddresses, setWalletAddresses] = useState<Record<string, any[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [videos, setVideos] = useState<any[]>([]);
+  const [ads, setAds] = useState<any[]>([]);
+  const [isLoadingAds, setIsLoadingAds] = useState(true);
 
   // Check if user is admin
   const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
@@ -88,15 +90,26 @@ const Marketplace: React.FC = () => {
           
           setVideos(videoData || []);
         }
+        
+        // Fetch ads
+        const { data: adsData, error: adsError } = await supabase
+          .from('ads')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (adsError) throw adsError;
+        
+        setAds(adsData || []);
       } catch (error) {
-        console.error('Error fetching products:', error);
+        console.error('Error fetching marketplace data:', error);
         toast({
-          title: "Error loading products",
-          description: "There was a problem loading the products. Please try again later.",
+          title: "Error loading marketplace data",
+          description: "There was a problem loading the data. Please try again later.",
           variant: "destructive",
         });
       } finally {
         setIsLoading(false);
+        setIsLoadingAds(false);
       }
     };
     
@@ -116,6 +129,12 @@ const Marketplace: React.FC = () => {
     if (selectedCategory !== 'all' && selectedCategory !== 'video') return false;
     return video.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
           (video.description && video.description.toLowerCase().includes(searchTerm.toLowerCase()));
+  });
+
+  // Filter ads based on search term
+  const filteredAds = ads.filter(ad => {
+    return ad.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+           (ad.industry && ad.industry.toLowerCase().includes(searchTerm.toLowerCase()));
   });
 
   const handleProductClick = (product: any) => {
@@ -206,19 +225,31 @@ const Marketplace: React.FC = () => {
           </div>
         </div>
 
+        {/* Ads Section */}
+        {!isLoadingAds && filteredAds.length > 0 && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-6">
+              <Tags className="h-6 w-6 text-primary" />
+              <h2 className="text-2xl font-medium">Featured Advertisements</h2>
+            </div>
+            
+            <AdDisplay ads={filteredAds} />
+          </div>
+        )}
+
         {/* Product & Video Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin h-12 w-12 border-4 border-pi-focus rounded-full border-t-transparent"></div>
           </div>
-        ) : filteredProducts.length === 0 && filteredVideos.length === 0 ? (
+        ) : filteredProducts.length === 0 && filteredVideos.length === 0 && filteredAds.length === 0 ? (
           <div className="glass-card p-12 text-center">
             <ShoppingCart className="h-16 w-16 mx-auto text-pi-muted mb-4" />
-            <h2 className="text-2xl font-medium mb-2">No Products Found</h2>
+            <h2 className="text-2xl font-medium mb-2">No Items Found</h2>
             <p className="text-pi-muted mb-6">
               {searchTerm || selectedCategory !== 'all' 
-                ? "No products match your current filters. Try adjusting your search criteria."
-                : "There are no products available in the marketplace yet."}
+                ? "No items match your current filters. Try adjusting your search criteria."
+                : "There are no items available in the marketplace yet."}
             </p>
             <Button onClick={() => navigate('/create-product')}>Create Your Own Product</Button>
           </div>

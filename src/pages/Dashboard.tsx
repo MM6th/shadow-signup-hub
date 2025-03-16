@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -10,6 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import VideoUploader from '@/components/VideoUploader';
 import { ChartButton } from '@/components/charts/ChartButton';
 import { ScreenplayModal } from '@/components/charts/ScreenplayModal';
+import AdsList from '@/components/AdsList';
+import { Tags } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const { user, profile, isLoading, hasProfile, signOut } = useAuth();
@@ -101,11 +102,12 @@ const Dashboard: React.FC = () => {
             </div>
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
-              <TabsList className="grid grid-cols-4 w-full max-w-2xl mx-auto mb-6">
+              <TabsList className="grid grid-cols-5 w-full max-w-2xl mx-auto mb-6">
                 <TabsTrigger value="profile">Profile Details</TabsTrigger>
                 <TabsTrigger value="products">My Products</TabsTrigger>
                 <TabsTrigger value="videos">My Videos</TabsTrigger>
                 <TabsTrigger value="screenplays">My Screenplays</TabsTrigger>
+                <TabsTrigger value="ads">My Ads</TabsTrigger>
               </TabsList>
               
               <TabsContent value="profile">
@@ -197,6 +199,22 @@ const Dashboard: React.FC = () => {
                 
                 <ScreenplayList userId={user.id} />
               </TabsContent>
+              
+              <TabsContent value="ads">
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="text-lg font-medium">My Advertisements</h2>
+                  <div className="flex gap-2">
+                    <ShadcnButton 
+                      onClick={() => navigate('/marketplace')} 
+                      className="flex items-center"
+                    >
+                      <Tags size={16} className="mr-2" /> View in Marketplace
+                    </ShadcnButton>
+                  </div>
+                </div>
+                
+                <AdsList userId={user.id} />
+              </TabsContent>
             </Tabs>
             
             <div className="flex justify-end space-x-4 mt-6">
@@ -208,7 +226,6 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
       
-      {/* Screenplay Modal */}
       <ScreenplayModal 
         open={isScreenplayModalOpen}
         onOpenChange={setIsScreenplayModalOpen}
