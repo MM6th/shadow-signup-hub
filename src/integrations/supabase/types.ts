@@ -316,6 +316,7 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           description: string
+          enable_crypto: boolean | null
           enable_paypal: boolean | null
           id: string
           image_url: string | null
@@ -333,6 +334,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           description: string
+          enable_crypto?: boolean | null
           enable_paypal?: boolean | null
           id?: string
           image_url?: string | null
@@ -350,6 +352,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           description?: string
+          enable_crypto?: boolean | null
           enable_paypal?: boolean | null
           id?: string
           image_url?: string | null
