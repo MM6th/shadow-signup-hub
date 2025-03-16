@@ -16,6 +16,7 @@ interface AppointmentDialogProps {
   onSchedulingComplete: () => void;
   user: any;
   isFreeConsultation?: boolean;
+  productPrice?: number;
 }
 
 export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({
@@ -26,12 +27,13 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({
   sellerId,
   onSchedulingComplete,
   user,
-  isFreeConsultation = false
+  isFreeConsultation = false,
+  productPrice = 0
 }) => {
   const { toast } = useToast();
   const [enableNotifications, setEnableNotifications] = useState(true);
 
-  const handleScheduleAppointment = async (date: Date, timeSlot: string) => {
+  const handleScheduleAppointment = async (date: Date, timeSlot: string, timeZone: string) => {
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -57,18 +59,40 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({
             buyer_name: user.user_metadata?.full_name || user.email,
             appointment_date: formattedDate,
             appointment_time: timeSlot,
+            time_zone: timeZone,
             status: 'scheduled',
             is_free_consultation: isFreeConsultation,
-            enable_notifications: enableNotifications
+            enable_notifications: enableNotifications,
+            hourly_rate: isFreeConsultation ? 0 : productPrice
           }
         ])
         .select();
 
       if (error) throw error;
 
+      // Send email notification (this would call the edge function)
+      try {
+        await supabase.functions.invoke('send-purchase-confirmation', {
+          body: {
+            productTitle,
+            appointmentDate: formattedDate,
+            appointmentTime: timeSlot,
+            timeZone,
+            buyerName: user.user_metadata?.full_name || user.email,
+            buyerId: user.id,
+            sellerId,
+            productId,
+            isAdminUser: false
+          },
+        });
+      } catch (emailError) {
+        console.error('Error sending email notification:', emailError);
+        // Continue even if email fails
+      }
+
       toast({
         title: "Appointment Scheduled",
-        description: `Your appointment has been scheduled for ${formattedDate} at ${timeSlot}.`,
+        description: `Your appointment has been scheduled for ${formattedDate} at ${timeSlot} in your local time zone.`,
       });
 
       if (onSchedulingComplete) {
@@ -101,6 +125,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({
               productTitle={productTitle}
               sellerId={sellerId}
               onScheduleSelected={handleScheduleAppointment}
+              hourlyRate={isFreeConsultation ? 0 : productPrice}
             />
             
             <div className="flex items-center space-x-2 mt-4">

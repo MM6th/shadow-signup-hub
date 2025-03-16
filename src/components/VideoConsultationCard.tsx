@@ -93,7 +93,8 @@ const VideoConsultationCard: React.FC<VideoConsultationCardProps> = ({
       return;
     }
     
-    setIsPaymentDialogOpen(true);
+    setIsFreeConsultation(false);
+    setIsSchedulerOpen(true);
   };
 
   return (
@@ -175,6 +176,7 @@ const VideoConsultationCard: React.FC<VideoConsultationCardProps> = ({
         onSchedulingComplete={handleSchedulingComplete}
         user={user}
         isFreeConsultation={isFreeConsultation}
+        productPrice={product.price}
       />
 
       <PaymentDialog

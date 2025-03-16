@@ -1,5 +1,5 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,16 +8,18 @@ const corsHeaders = {
 
 interface PurchaseConfirmationRequest {
   productTitle: string;
-  productPrice: number;
-  walletAddress: string;
-  cryptoType: string;
+  productPrice?: number;
+  walletAddress?: string;
+  cryptoType?: string;
   appointmentDate?: string;
   appointmentTime?: string;
+  timeZone?: string;
   buyerName?: string;
   sellerId?: string;
   productId?: string;
   buyerId?: string;
-  isAdminUser?: boolean; // Flag to identify if this is the admin user
+  isAdminUser?: boolean;
+  contactPhone?: string;
 }
 
 // Admin email to check against
@@ -40,27 +42,22 @@ serve(async (req) => {
       cryptoType,
       appointmentDate,
       appointmentTime,
+      timeZone,
       buyerName,
       sellerId,
       productId,
       buyerId,
-      isAdminUser
+      isAdminUser,
+      contactPhone
     }: PurchaseConfirmationRequest = await req.json();
 
-    console.log(`Request data received: product=${productTitle}, crypto=${cryptoType}`);
+    console.log(`Request data received: product=${productTitle}, type=${appointmentDate ? 'appointment' : 'purchase'}`);
 
-    if (!productTitle || !walletAddress || !cryptoType) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        { 
-          status: 400, 
-          headers: { 
-            "Content-Type": "application/json",
-            ...corsHeaders 
-          } 
-        }
-      );
-    }
+    // Create Supabase client with Deno fetch (for email sending later)
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
 
     // Format the date for record keeping
     const purchaseDate = new Date().toLocaleDateString('en-US', {
@@ -83,14 +80,34 @@ serve(async (req) => {
 
     // If this is a consultation purchase with appointment data, log it
     if (appointmentDate && appointmentTime) {
-      console.log(`Appointment scheduled for ${appointmentDate} at ${appointmentTime}`);
-      
-      // In a real implementation, this would store the appointment in a database
-      // For demo purposes, we'll just log it
-      console.log(`Appointment details - Buyer: ${buyerName}, Seller: ${sellerId}, Product: ${productId}`);
+      console.log(`Appointment scheduled for ${appointmentDate} at ${appointmentTime} in ${timeZone}`);
+
+      // Here we would add code to send email notifications
+      try {
+        // In a real implementation, you would send an email to the buyer and the seller
+        console.log(`Would send emails to buyer (${buyerId}) and seller (${sellerId})`);
+        
+        // Get seller's email from profiles table
+        const { data: sellerData, error: sellerError } = await supabaseClient
+          .from('profiles')
+          .select('email')
+          .eq('id', sellerId)
+          .single();
+        
+        if (sellerError) {
+          console.error("Error getting seller information:", sellerError);
+        } else if (sellerData) {
+          console.log(`Would send email to seller at ${sellerData.email}`);
+        }
+        
+        // Email logic would go here
+        // In future implementations, use a service like Resend to send emails
+      } catch (emailError) {
+        console.error("Error sending email notifications:", emailError);
+      }
     }
 
-    console.log("Purchase recorded successfully");
+    console.log("Purchase/appointment recorded successfully");
     
     return new Response(
       JSON.stringify({ 
@@ -101,7 +118,8 @@ serve(async (req) => {
           cryptoType,
           date: purchaseDate,
           appointmentDate,
-          appointmentTime
+          appointmentTime,
+          timeZone
         }
       }),
       { 
