@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Video, VideoOff, Mic, MicOff } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from 'react-router-dom';
 
 interface VideoConferenceSetupProps {
   appointmentId: string;
@@ -24,6 +25,7 @@ const VideoConferenceSetup: React.FC<VideoConferenceSetupProps> = ({
   const [isJoining, setIsJoining] = useState(false);
   const [appointmentDetails, setAppointmentDetails] = useState<any>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Fetch appointment details
@@ -64,14 +66,6 @@ const VideoConferenceSetup: React.FC<VideoConferenceSetupProps> = ({
     try {
       setIsJoining(true);
       
-      // In a real implementation, you would:
-      // 1. Generate an Agora token from your server/edge function
-      // 2. Initialize the Agora SDK
-      // 3. Join the channel
-      
-      // For now, we'll simulate the process
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       // Update appointment status if seller joins
       if (isSeller && appointmentDetails) {
         await supabase
@@ -80,8 +74,8 @@ const VideoConferenceSetup: React.FC<VideoConferenceSetupProps> = ({
           .eq('id', appointmentId);
       }
       
-      // Redirect to the video conference room
-      window.location.href = `/video-conference/${appointmentId}?video=${isVideoEnabled}&audio=${isAudioEnabled}`;
+      // Navigate to the video conference room with the settings as URL parameters
+      navigate(`/video-conference/${appointmentId}?video=${isVideoEnabled}&audio=${isAudioEnabled}`);
       
     } catch (error: any) {
       console.error('Error joining meeting:', error);

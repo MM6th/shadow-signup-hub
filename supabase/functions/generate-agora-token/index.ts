@@ -4,20 +4,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { RtcTokenBuilder, RtcRole } from "https://esm.sh/agora-token@2.0.3";
 
 const AGORA_APP_ID = "0763309372ab4637918e71cb13f52323";
-// In a production environment, this would be a secret
-const AGORA_APP_CERTIFICATE = ""; // You should add this as a secret in Supabase
 
-function generateAgoraToken(channelName: string, uid: string, role: string, expirationTimeInSeconds: number) {
-  // For now using a placeholder token to enable development
-  // This should be replaced with actual Agora token generation in production
-  const appID = AGORA_APP_ID;
-  const appCertificate = AGORA_APP_CERTIFICATE;
-  
-  if (!appCertificate) {
-    console.log("WARNING: Using mock token as App Certificate is not set");
-    return `mock-agora-token-${channelName}-${uid}-${Date.now()}`;
-  }
-  
+function generateAgoraToken(channelName: string, uid: string, role: string, expirationTimeInSeconds: number, appCertificate: string) {
   try {
     // Use the Agora Token Builder
     const tokenExpirationInSeconds = expirationTimeInSeconds;
@@ -28,7 +16,7 @@ function generateAgoraToken(channelName: string, uid: string, role: string, expi
     let rtcToken;
     if (role === 'publisher') {
       rtcToken = RtcTokenBuilder.buildTokenWithUid(
-        appID,
+        AGORA_APP_ID,
         appCertificate,
         channelName,
         parseInt(uid),
@@ -37,7 +25,7 @@ function generateAgoraToken(channelName: string, uid: string, role: string, expi
       );
     } else {
       rtcToken = RtcTokenBuilder.buildTokenWithUid(
-        appID,
+        AGORA_APP_ID,
         appCertificate,
         channelName,
         parseInt(uid),
@@ -102,8 +90,15 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('User ID is required');
     }
 
+    // Get the App Certificate from environment variables/secrets
+    const appCertificate = Deno.env.get("AGORA_APP_CERTIFICATE");
+    
+    if (!appCertificate) {
+      throw new Error('Agora App Certificate is not configured in Edge Function secrets');
+    }
+
     // Generate the token
-    const token = generateAgoraToken(channelName, uid, role, expirationTimeInSeconds);
+    const token = generateAgoraToken(channelName, uid, role, expirationTimeInSeconds, appCertificate);
 
     if (!token) {
       throw new Error('Failed to generate token');
