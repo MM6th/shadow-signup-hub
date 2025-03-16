@@ -11,7 +11,7 @@ const CreateProduct = () => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [paypalClientId, setPaypalClientId] = useState('');
+  const [paypalClientId, setPaypalClientId] = useState('AbGYIHsjPxcCNhgce9MZsTQ7Mou5ZqJljgpEc-7-_owsvr5InFhhEDyEPEGlWQPzzaW1b_52EU-Gbn-l');
   
   const ADMIN_EMAIL = "cmooregee@gmail.com";
   const isAdminUser = user?.email === ADMIN_EMAIL;
@@ -65,7 +65,7 @@ const CreateProduct = () => {
         
         <div className="glass-card p-6 mb-6">
           <h2 className="text-xl font-elixia text-gradient mb-4">PayPal Integration</h2>
-          <p className="text-pi-muted mb-4">Enter your PayPal Client ID to enable PayPal payments for all products.</p>
+          <p className="text-pi-muted mb-4">Your PayPal Client ID is configured for all products.</p>
           
           <div className="mb-4">
             <label htmlFor="paypal-client-id" className="block text-sm font-medium mb-1">

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -32,7 +31,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const { toast } = useToast();
   
   // PayPal client ID
-  const PAYPAL_CLIENT_ID = "YOUR_PAYPAL_CLIENT_ID"; // Replace with your actual client ID
+  const PAYPAL_CLIENT_ID = "AbGYIHsjPxcCNhgce9MZsTQ7Mou5ZqJljgpEc-7-_owsvr5InFhhEDyEPEGlWQPzzaW1b_52EU-Gbn-l";
 
   const generateQRCode = async (walletAddress: string) => {
     try {
