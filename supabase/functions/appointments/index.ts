@@ -14,13 +14,57 @@ serve(async (req) => {
   }
 
   try {
-    const message = "The appointments feature has been removed";
-    console.log(message);
+    // Create Supabase client with Deno fetch
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        global: {
+          headers: { Authorization: req.headers.get("Authorization")! },
+        },
+      }
+    );
+
+    // Get user ID from JWT token
+    const {
+      data: { user },
+    } = await supabaseClient.auth.getUser();
+
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    // Extract parameters from request
+    const { userId, isSeller } = await req.json();
     
+    if (userId !== user.id) {
+      throw new Error("Unauthorized access");
+    }
+
+    let query;
+    
+    // Fetch appointments based on role
+    if (isSeller) {
+      query = supabaseClient
+        .from('appointments')
+        .select('*')
+        .eq('seller_id', userId)
+        .order('appointment_date', { ascending: true });
+    } else {
+      query = supabaseClient
+        .from('appointments')
+        .select('*')
+        .eq('buyer_id', userId)
+        .order('appointment_date', { ascending: true });
+    }
+
+    const { data: appointments, error } = await query;
+
+    if (error) throw error;
+
     return new Response(
       JSON.stringify({ 
-        message,
-        status: "removed" 
+        appointments
       }),
       { 
         status: 200, 

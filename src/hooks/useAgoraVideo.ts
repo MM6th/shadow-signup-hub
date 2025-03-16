@@ -46,15 +46,23 @@ export const useAgoraVideo = (appointmentId: string) => {
     }
   }, [appointmentId, toast]);
 
+  // This is a placeholder function that you would implement with the actual Agora SDK
   const joinChannel = useCallback(async (localAudioTrack: any, localVideoTrack: any, remoteContainer: HTMLElement) => {
-    // This is a placeholder function that you would implement with the actual Agora SDK
     console.log("Joining channel with:", { token, channelName, localAudioTrack, localVideoTrack, remoteContainer });
-    // In actual implementation, you would use the Agora Web SDK to join the channel
+    
+    // In a production environment, you would use the Agora Web SDK to join the channel
+    // Example code (to be replaced with actual SDK implementation):
+    // const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+    // await client.join(appId, channelName, token, uid);
+    // await client.publish([localAudioTrack, localVideoTrack]);
     
     return {
       leave: async () => {
         // Placeholder for leaving the channel
         console.log("Leaving channel:", channelName);
+        // In a production environment:
+        // await client.unpublish([localAudioTrack, localVideoTrack]);
+        // await client.leave();
       }
     };
   }, [token, channelName]);

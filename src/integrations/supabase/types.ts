@@ -9,6 +9,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          appointment_date: string
+          appointment_time: string
+          buyer_id: string
+          buyer_name: string
+          created_at: string
+          enable_notifications: boolean
+          id: string
+          is_free_consultation: boolean
+          product_id: string
+          product_title: string
+          seller_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          appointment_time: string
+          buyer_id: string
+          buyer_name: string
+          created_at?: string
+          enable_notifications?: boolean
+          id?: string
+          is_free_consultation?: boolean
+          product_id: string
+          product_title: string
+          seller_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          appointment_time?: string
+          buyer_id?: string
+          buyer_name?: string
+          created_at?: string
+          enable_notifications?: boolean
+          id?: string
+          is_free_consultation?: boolean
+          product_id?: string
+          product_title?: string
+          seller_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       astro_charts: {
         Row: {
           birth_date: string

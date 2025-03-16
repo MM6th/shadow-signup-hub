@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Video, VideoOff, Mic, MicOff, Phone } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -30,7 +30,7 @@ const VideoConferenceSetup: React.FC<VideoConferenceSetupProps> = ({
     const fetchAppointmentDetails = async () => {
       const { data, error } = await supabase
         .from('appointments')
-        .select('*, product:products(*)')
+        .select('*, products(*)')
         .eq('id', appointmentId)
         .single();
 

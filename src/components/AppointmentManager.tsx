@@ -23,18 +23,28 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ isSeller = fals
       try {
         setIsLoading(true);
         
-        // Use the correct format for function invocation with parameters in the body
-        const { data, error } = await supabase.functions.invoke('appointments', {
-          method: 'GET',
-          body: { 
-            userId: user.id,
-            isSeller: isSeller
-          }
-        });
+        // Query appointments directly from the database
+        let query;
+        
+        if (isSeller) {
+          query = supabase
+            .from('appointments')
+            .select('*')
+            .eq('seller_id', user.id)
+            .order('appointment_date', { ascending: true });
+        } else {
+          query = supabase
+            .from('appointments')
+            .select('*')
+            .eq('buyer_id', user.id)
+            .order('appointment_date', { ascending: true });
+        }
+        
+        const { data, error } = await query;
         
         if (error) throw error;
         
-        setAppointments(data.appointments || []);
+        setAppointments(data || []);
       } catch (error) {
         console.error('Error fetching appointments:', error);
         toast({
