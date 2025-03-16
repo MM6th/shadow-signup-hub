@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,9 +48,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const ADMIN_EMAIL = "cmooregee@gmail.com";
   const isAdminUser = user?.email === ADMIN_EMAIL;
   const isService = product.type === 'service';
-  const hasCryptoEnabled = true; // We'll keep crypto enabled by default for now but won't show buttons if no addresses
+  
+  const hasCryptoEnabled = true; // Will be checked by wallet addresses
 
-  const { adminWalletAddresses, isLoading } = useWalletAddresses(user, product.id, isAdminUser);
+  const { adminWalletAddresses, isLoading } = useWalletAddresses(user, product.id, false);
   const hasWalletAddresses = adminWalletAddresses.length > 0;
   const selectedWalletAddress = hasWalletAddresses ? adminWalletAddresses[0] : null;
   const hasPayPalEnabled = product.enable_paypal || false;
@@ -67,19 +67,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
         }
         const data = await response.json();
         
-        // Format data to make it easier to use
         const prices: Record<string, number> = {};
         Object.entries(data).forEach(([cryptoId, priceData]: [string, any]) => {
           prices[cryptoId] = priceData.usd;
         });
         
-        // Add USD as 1 for easy conversion
         prices['usd'] = 1;
         
         setCryptoPrices(prices);
       } catch (error) {
         console.error('Error fetching crypto prices:', error);
-        // Set some fallback values
         setCryptoPrices({
           usd: 1,
           bitcoin: 65000,
@@ -136,16 +133,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
     }
 
     if (hasPayPalEnabled || (!selectedWalletAddress && hasPayPalEnabled)) {
-      // If PayPal is enabled or if crypto is not available but PayPal is
       setIsPaymentDialogOpen(true);
       return;
     }
 
     try {
-      // Copy wallet address to clipboard
       await navigator.clipboard.writeText(selectedWalletAddress.wallet_address);
       
-      // Calculate the equivalent price in the selected crypto
       let priceToPay = product.price;
       if (product.price_currency !== selectedWalletAddress.crypto_type) {
         const convertedPrice = convertPrice(
@@ -159,7 +153,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
         }
       }
       
-      // Record the purchase
       await supabase.functions.invoke('send-purchase-confirmation', {
         body: {
           productTitle: product.title,
@@ -243,7 +236,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
 
   const qrCodeUrl = selectedWalletAddress ? generateQRCode(selectedWalletAddress.wallet_address) : '';
   
-  // Display the price in the selected currency
   const displayPrice = () => {
     const baseCurrency = product.price_currency || 'usd';
     const basePrice = product.original_price || product.price;
@@ -260,7 +252,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
     return formatCurrency(converted, selectedCurrency);
   };
 
-  // Check if any payment method is available
   const hasPaymentMethods = hasWalletAddresses || hasPayPalEnabled;
 
   return (

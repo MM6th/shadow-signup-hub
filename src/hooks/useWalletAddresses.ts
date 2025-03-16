@@ -43,41 +43,32 @@ export const useWalletAddresses = (
           return;
         }
 
-        // If no wallet addresses found for this product, find admin wallet addresses
+        // If no wallet addresses found for this product and user is logged in
+        // We'll try to find some default wallet addresses
         if (user) {
-          // Get the admin user ID (always fetch from the user with email cmooregee@gmail.com)
-          const { data: adminData } = await supabase
-            .from('profiles')
+          // Get any products with wallet addresses
+          const { data: products } = await supabase
+            .from('products')
             .select('id')
-            .eq('id', isAdminUser ? user?.id : null)
-            .maybeSingle();
-
-          // If we're not the admin, try to find any products created by admin
-          if (!adminData && !isAdminUser) {
-            // Fallback: find a product owned by admin and get its wallet addresses
-            const { data: products } = await supabase
-              .from('products')
-              .select('id, user_id')
-              .limit(10);
+            .limit(10);
               
-            if (products && products.length > 0) {
-              // Try to get wallet addresses from any product
-              const { data: allWalletData } = await supabase
-                .from('wallet_addresses')
-                .select('*')
-                .in('product_id', products.map(p => p.id));
+          if (products && products.length > 0) {
+            // Try to get wallet addresses from any product
+            const { data: allWalletData } = await supabase
+              .from('wallet_addresses')
+              .select('*')
+              .in('product_id', products.map(p => p.id));
                 
-              if (allWalletData && allWalletData.length > 0) {
-                // Get unique wallet addresses by crypto type
-                const uniqueWallets: Record<string, any> = {};
-                allWalletData.forEach(wallet => {
-                  if (!uniqueWallets[wallet.crypto_type]) {
-                    uniqueWallets[wallet.crypto_type] = wallet;
-                  }
-                });
+            if (allWalletData && allWalletData.length > 0) {
+              // Get unique wallet addresses by crypto type
+              const uniqueWallets: Record<string, any> = {};
+              allWalletData.forEach(wallet => {
+                if (!uniqueWallets[wallet.crypto_type]) {
+                  uniqueWallets[wallet.crypto_type] = wallet;
+                }
+              });
                 
-                setAdminWalletAddresses(Object.values(uniqueWallets));
-              }
+              setAdminWalletAddresses(Object.values(uniqueWallets));
             }
           }
         }
@@ -89,7 +80,7 @@ export const useWalletAddresses = (
     };
 
     fetchWalletAddresses();
-  }, [user, productId, isAdminUser, toast]);
+  }, [user, productId, toast]);
 
   return { adminWalletAddresses, isLoading };
 };
