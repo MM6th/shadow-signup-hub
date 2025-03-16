@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -16,14 +15,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
-// Schema for form validation
 const adFormSchema = z.object({
   title: z.string().max(245, "Title must be 245 characters or less").min(1, "Title is required"),
   mediaType: z.enum(["image", "video"]),
   productUrl: z.string().optional(),
 });
 
-// Maximum file sizes
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB for a short 10-second video
 
@@ -41,7 +38,6 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Initialize form with react-hook-form and zod validation
   const form = useForm<z.infer<typeof adFormSchema>>({
     resolver: zodResolver(adFormSchema),
     defaultValues: {
@@ -53,7 +49,6 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
 
   const mediaType = form.watch("mediaType");
 
-  // Fetch user's products to populate the product URL dropdown
   useEffect(() => {
     const fetchProducts = async () => {
       if (!user) return;
@@ -83,12 +78,10 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
     fetchProducts();
   }, [user, toast]);
 
-  // Handle media file selection
   const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Validate file size based on media type
     const isImage = file.type.startsWith('image/');
     const isVideo = file.type.startsWith('video/');
     const maxSize = isImage ? MAX_IMAGE_SIZE : MAX_VIDEO_SIZE;
@@ -119,13 +112,11 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
     }
   };
 
-  // Remove selected media file
   const removeMedia = () => {
     setMediaFile(null);
     setMediaPreview(null);
   };
 
-  // Upload media file to Supabase storage
   const uploadMedia = async (): Promise<string | null> => {
     if (!mediaFile || !user) return null;
     
@@ -152,7 +143,6 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
     }
   };
 
-  // Form submission handler
   const onSubmit = async (values: z.infer<typeof adFormSchema>) => {
     if (!user) {
       toast({
@@ -175,14 +165,12 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
     setIsSubmitting(true);
     
     try {
-      // Upload media file
       const mediaUrl = await uploadMedia();
       
       if (!mediaUrl) {
         throw new Error("Failed to upload media");
       }
       
-      // Create ad record in database
       const { data: ad, error: adError } = await supabase
         .from('ads')
         .insert({
@@ -203,7 +191,6 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
         description: "Your ad has been created and will be displayed in the marketplace",
       });
       
-      // Reset form
       form.reset();
       setMediaFile(null);
       setMediaPreview(null);
@@ -361,7 +348,7 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
                         <SelectValue placeholder="Select a product to link" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="-">None</SelectItem>
                         {products.map(product => (
                           <SelectItem key={product.id} value={product.id}>
                             {product.title}
