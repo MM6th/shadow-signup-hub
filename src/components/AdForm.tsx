@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -11,13 +10,12 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 const adFormSchema = z.object({
-  title: z.string().max(245, "Title must be 245 characters or less").min(1, "Title is required"),
+  title: z.string().max(75, "Caption must be 75 characters or less").min(1, "Caption is required"),
   mediaType: z.enum(["image", "video"]),
   productUrl: z.string().optional(),
 });
@@ -230,21 +228,21 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
             name="title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Advertisement Title</FormLabel>
+                <FormLabel>Caption</FormLabel>
                 <FormControl>
                   <div className="relative">
                     <Input 
-                      placeholder="Enter a captivating title for your ad" 
+                      placeholder="Enter a captivating caption for your ad" 
                       {...field} 
-                      maxLength={245}
+                      maxLength={75}
                     />
                     <div className="absolute right-2 top-2 text-xs text-muted-foreground">
-                      {charCount}/245
+                      {charCount}/75
                     </div>
                   </div>
                 </FormControl>
                 <FormDescription>
-                  Maximum 245 characters
+                  Maximum 75 characters
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -365,7 +363,7 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
                         <SelectValue placeholder="Select a product to link" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="-">None</SelectItem>
+                        <SelectItem value="">None</SelectItem>
                         {products.map(product => (
                           <SelectItem key={product.id} value={product.id}>
                             {product.title}

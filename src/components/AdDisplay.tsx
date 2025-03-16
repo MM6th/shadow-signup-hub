@@ -1,11 +1,14 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Image, Video, ExternalLink, Tags, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useProfile } from '@/hooks/useProfile';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ProductCard from '@/components/ProductCard';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Ad {
   id: string;
@@ -27,16 +30,38 @@ interface AdDisplayProps {
 const AdCard = ({ ad, onProductClick }: { ad: Ad, onProductClick?: (productId: string) => void }) => {
   const { profile, isLoading } = useProfile(ad.user_id);
   const navigate = useNavigate();
+  const [productData, setProductData] = useState<any>(null);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   
-  const handleProductClick = () => {
-    if (ad.product_url && onProductClick) {
-      onProductClick(ad.product_url);
+  const handleProductClick = async () => {
+    if (ad.product_url) {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', ad.product_url)
+          .single();
+          
+        if (error) {
+          console.error('Error fetching product:', error);
+          return;
+        }
+        
+        setProductData(data);
+        setIsProductModalOpen(true);
+        
+        if (onProductClick) {
+          onProductClick(ad.product_url);
+        }
+      } catch (error) {
+        console.error('Error handling product click:', error);
+      }
     }
   };
 
   return (
     <div className="glass-card overflow-hidden group">
-      <div className="h-64 bg-dark-secondary relative overflow-hidden">
+      <div className="h-80 bg-dark-secondary relative overflow-hidden">
         {ad.media_type === 'image' ? (
           <img 
             src={ad.media_url} 
@@ -94,6 +119,17 @@ const AdCard = ({ ad, onProductClick }: { ad: Ad, onProductClick?: (productId: s
           </Button>
         )}
       </div>
+      
+      {productData && (
+        <Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen}>
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{productData.title}</DialogTitle>
+            </DialogHeader>
+            <ProductCard product={productData} showBuyButton={true} />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
