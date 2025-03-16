@@ -28,6 +28,7 @@ interface ProductCardProps {
     original_price?: number;
     enable_paypal?: boolean;
     paypal_client_id?: string;
+    enable_free_consultation?: boolean;
   };
   onClick?: () => void;
   showEditButton?: boolean;
@@ -49,6 +50,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const ADMIN_EMAIL = "cmooregee@gmail.com";
   const isAdminUser = user?.email === ADMIN_EMAIL;
   const isService = product.type === 'service';
+  const isVideoConsultation = product.type === 'video_consultation';
   
   const { adminWalletAddresses, hasPayPalEnabled, paypalClientId, isLoading } = useWalletAddresses(
     user, 
@@ -199,6 +201,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
 
   const handleShowPaymentOptions = (e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    if (isVideoConsultation) {
+      if (product.enable_free_consultation) {
+        setIsSchedulerOpen(true);
+        return;
+      }
+    }
+    
     setIsPaymentDialogOpen(true);
   };
 
@@ -226,6 +236,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
 
   const handleScheduleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    if (isVideoConsultation && product.enable_free_consultation) {
+      toast({
+        title: "Free Consultation Available",
+        description: "This product offers free consultation sessions. Schedule one now?",
+      });
+    }
+    
     setIsSchedulerOpen(true);
   };
   
@@ -271,6 +289,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
     
     return formatCurrency(converted, selectedCurrency);
   };
+
+  if (isVideoConsultation) {
+    const VideoConsultationCard = require('./VideoConsultationCard').default;
+    return (
+      <VideoConsultationCard
+        product={product}
+        onClick={onClick}
+        showEditButton={showEditButton}
+      />
+    );
+  }
 
   return (
     <Card 
@@ -425,6 +454,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
         sellerId={product.user_id}
         onSchedulingComplete={handleSchedulingComplete}
         user={user}
+        isFreeConsultation={isVideoConsultation && product.enable_free_consultation}
       />
 
       <ReviewDialog
