@@ -210,11 +210,11 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   };
 
   return (
-    <div className="space-y-4 glass-card p-4">
+    <div className="space-y-4 glass-card p-4 bg-background/95 rounded-lg shadow-sm">
       <h3 className="text-lg font-medium">Schedule Your Consultation</h3>
-      <p className="text-sm text-pi-muted">Please select a date and time for your virtual consultation</p>
+      <p className="text-sm text-muted-foreground mb-4">Please select a date and time for your virtual consultation</p>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="text-sm font-medium block mb-2">Select Date</label>
           <div className="flex space-x-2">
@@ -257,7 +257,7 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
             <Select value={selectedTimeZone} onValueChange={handleTimeZoneChange}>
               <SelectTrigger className="w-full">
                 <div className="flex items-center">
-                  <Globe className="h-4 w-4 mr-2 text-pi-muted" />
+                  <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
                   <SelectValue placeholder="Select time zone" />
                 </div>
               </SelectTrigger>
@@ -271,12 +271,12 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
             </Select>
           </div>
           
-          {hourlyRate !== undefined && (
-            <div className="mt-4 p-3 border border-pi-focus/20 rounded bg-pi-focus/5">
+          {hourlyRate !== undefined && hourlyRate > 0 && (
+            <div className="mt-4 p-3 border border-primary/20 rounded bg-primary/5">
               <p className="text-sm font-medium">
-                Consultation Fee: <span className="text-pi-focus">${hourlyRate.toFixed(2)}/hour</span>
+                Consultation Fee: <span className="text-primary">${hourlyRate.toFixed(2)}/hour</span>
               </p>
-              <p className="text-xs text-pi-muted mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 You will be charged after the consultation is completed
               </p>
             </div>
@@ -292,7 +292,7 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                 id="custom-time"
                 checked={isCustomTime}
                 onChange={e => setIsCustomTime(e.target.checked)}
-                className="rounded border-gray-300 text-pi-focus focus:ring-pi-focus"
+                className="rounded border-gray-300 text-primary focus:ring-primary"
               />
               <label htmlFor="custom-time" className="text-sm">Enter custom time</label>
             </div>
@@ -323,8 +323,8 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                         variant={selectedTimeSlot === timeSlot ? "default" : "outline"}
                         size="sm"
                         className={cn(
-                          "w-full",
-                          selectedTimeSlot === timeSlot && "bg-pi-focus text-white",
+                          "w-full justify-center",
+                          selectedTimeSlot === timeSlot && "bg-primary text-primary-foreground",
                           isPastTime && "opacity-50"
                         )}
                         onClick={() => handleTimeSelect(timeSlot)}
@@ -336,7 +336,7 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-pi-muted">Please select a date first</p>
+                <p className="text-sm text-muted-foreground">Please select a date first</p>
               )
             )}
           </div>
