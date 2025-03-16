@@ -11,15 +11,34 @@ export const useWalletAddresses = (
 ) => {
   const [adminWalletAddresses, setAdminWalletAddresses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasPayPalEnabled, setHasPayPalEnabled] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Fetch wallet addresses for the specific product
+    // Fetch wallet addresses and payment methods for the specific product
     const fetchWalletAddresses = async () => {
       try {
         setIsLoading(true);
         
-        // First, try to get wallet addresses directly for this product
+        // First, get the product details to check for PayPal
+        const { data: productData, error: productError } = await supabase
+          .from('products')
+          .select('enable_paypal, paypal_client_id')
+          .eq('id', productId)
+          .single();
+
+        if (productError) {
+          console.error('Error fetching product details:', productError);
+          setIsLoading(false);
+          return;
+        }
+
+        // Set PayPal status
+        setHasPayPalEnabled(
+          productData?.enable_paypal && !!productData?.paypal_client_id
+        );
+        
+        // Get wallet addresses for this specific product
         const { data: walletData, error: walletError } = await supabase
           .from('wallet_addresses')
           .select('*')
@@ -43,38 +62,11 @@ export const useWalletAddresses = (
           return;
         }
 
-        // If no wallet addresses found for this product and user is logged in
-        // We'll try to find some default wallet addresses
-        if (user) {
-          // Get any products with wallet addresses
-          const { data: products } = await supabase
-            .from('products')
-            .select('id')
-            .limit(10);
-              
-          if (products && products.length > 0) {
-            // Try to get wallet addresses from any product
-            const { data: allWalletData } = await supabase
-              .from('wallet_addresses')
-              .select('*')
-              .in('product_id', products.map(p => p.id));
-                
-            if (allWalletData && allWalletData.length > 0) {
-              // Get unique wallet addresses by crypto type
-              const uniqueWallets: Record<string, any> = {};
-              allWalletData.forEach(wallet => {
-                if (!uniqueWallets[wallet.crypto_type]) {
-                  uniqueWallets[wallet.crypto_type] = wallet;
-                }
-              });
-                
-              setAdminWalletAddresses(Object.values(uniqueWallets));
-            }
-          }
-        }
+        // No wallet addresses found for this specific product
+        setAdminWalletAddresses([]);
+        setIsLoading(false);
       } catch (error) {
         console.error('Error in fetchWalletAddresses:', error);
-      } finally {
         setIsLoading(false);
       }
     };
@@ -82,5 +74,5 @@ export const useWalletAddresses = (
     fetchWalletAddresses();
   }, [user, productId, toast]);
 
-  return { adminWalletAddresses, isLoading };
+  return { adminWalletAddresses, hasPayPalEnabled, isLoading };
 };

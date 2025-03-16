@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,57 +45,72 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState<string>(product.price_currency || 'usd');
+  const [showCurrencyConverter, setShowCurrencyConverter] = useState(false);
   
   const ADMIN_EMAIL = "cmooregee@gmail.com";
   const isAdminUser = user?.email === ADMIN_EMAIL;
   const isService = product.type === 'service';
   
-  const hasCryptoEnabled = true; // Will be checked by wallet addresses
-
-  const { adminWalletAddresses, isLoading } = useWalletAddresses(user, product.id, false);
+  const { adminWalletAddresses, hasPayPalEnabled, isLoading } = useWalletAddresses(
+    user, 
+    product.id, 
+    isAdminUser
+  );
+  
   const hasWalletAddresses = adminWalletAddresses.length > 0;
   const selectedWalletAddress = hasWalletAddresses ? adminWalletAddresses[0] : null;
-  const hasPayPalEnabled = product.enable_paypal || false;
+
+  // Check if any payment method is available
+  const hasPaymentMethods = hasWalletAddresses || hasPayPalEnabled;
+
+  // Determine if we should show the currency converter
+  useEffect(() => {
+    // Only show currency converter if there are crypto wallet addresses available
+    setShowCurrencyConverter(hasWalletAddresses);
+  }, [hasWalletAddresses]);
 
   useEffect(() => {
-    const fetchCryptoPrices = async () => {
-      try {
-        setIsLoadingPrices(true);
-        const cryptoIds = 'bitcoin,ethereum,solana,cardano,polkadot,litecoin,usdc,bnb';
-        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds}&vs_currencies=usd`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch crypto prices');
+    // Only fetch crypto prices if there are wallet addresses
+    if (hasWalletAddresses) {
+      const fetchCryptoPrices = async () => {
+        try {
+          setIsLoadingPrices(true);
+          const cryptoIds = 'bitcoin,ethereum,solana,cardano,polkadot,litecoin,usdc,bnb';
+          const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds}&vs_currencies=usd`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch crypto prices');
+          }
+          const data = await response.json();
+          
+          const prices: Record<string, number> = {};
+          Object.entries(data).forEach(([cryptoId, priceData]: [string, any]) => {
+            prices[cryptoId] = priceData.usd;
+          });
+          
+          prices['usd'] = 1;
+          
+          setCryptoPrices(prices);
+        } catch (error) {
+          console.error('Error fetching crypto prices:', error);
+          setCryptoPrices({
+            usd: 1,
+            bitcoin: 65000,
+            ethereum: 3500,
+            solana: 140,
+            cardano: 0.5,
+            polkadot: 7,
+            litecoin: 80,
+            usdc: 1,
+            bnb: 600
+          });
+        } finally {
+          setIsLoadingPrices(false);
         }
-        const data = await response.json();
-        
-        const prices: Record<string, number> = {};
-        Object.entries(data).forEach(([cryptoId, priceData]: [string, any]) => {
-          prices[cryptoId] = priceData.usd;
-        });
-        
-        prices['usd'] = 1;
-        
-        setCryptoPrices(prices);
-      } catch (error) {
-        console.error('Error fetching crypto prices:', error);
-        setCryptoPrices({
-          usd: 1,
-          bitcoin: 65000,
-          ethereum: 3500,
-          solana: 140,
-          cardano: 0.5,
-          polkadot: 7,
-          litecoin: 80,
-          usdc: 1,
-          bnb: 600
-        });
-      } finally {
-        setIsLoadingPrices(false);
-      }
-    };
+      };
 
-    fetchCryptoPrices();
-  }, []);
+      fetchCryptoPrices();
+    }
+  }, [hasWalletAddresses]);
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -252,8 +268,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
     return formatCurrency(converted, selectedCurrency);
   };
 
-  const hasPaymentMethods = hasWalletAddresses || hasPayPalEnabled;
-
   return (
     <Card 
       className="overflow-hidden h-[500px] flex flex-col"
@@ -292,38 +306,40 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
               {product.type !== 'tangible' ? '/hr' : ''}
             </p>
             
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <RefreshCw size={16} className="mr-1" />
-                  Convert
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="p-2 w-48">
-                <div className="text-sm font-medium mb-2">Display price in:</div>
-                <div className="space-y-1">
-                  <Button 
-                    variant={selectedCurrency === 'usd' ? 'default' : 'ghost'} 
-                    size="sm" 
-                    className="w-full justify-start"
-                    onClick={() => handleChangeCurrency('usd')}
-                  >
-                    USD ($)
+            {showCurrencyConverter && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <RefreshCw size={16} className="mr-1" />
+                    Convert
                   </Button>
-                  {Object.keys(cryptoPrices).filter(key => key !== 'usd').map(crypto => (
-                    <Button
-                      key={crypto}
-                      variant={selectedCurrency === crypto ? 'default' : 'ghost'}
-                      size="sm"
+                </PopoverTrigger>
+                <PopoverContent className="p-2 w-48">
+                  <div className="text-sm font-medium mb-2">Display price in:</div>
+                  <div className="space-y-1">
+                    <Button 
+                      variant={selectedCurrency === 'usd' ? 'default' : 'ghost'} 
+                      size="sm" 
                       className="w-full justify-start"
-                      onClick={() => handleChangeCurrency(crypto)}
+                      onClick={() => handleChangeCurrency('usd')}
                     >
-                      {crypto.toUpperCase()}
+                      USD ($)
                     </Button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
+                    {Object.keys(cryptoPrices).filter(key => key !== 'usd').map(crypto => (
+                      <Button
+                        key={crypto}
+                        variant={selectedCurrency === crypto ? 'default' : 'ghost'}
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={() => handleChangeCurrency(crypto)}
+                      >
+                        {crypto.toUpperCase()}
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
           
           {isAdminUser && (showEditButton !== false) ? (
@@ -336,7 +352,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
             </Button>
           ) : (
             <div className="space-y-2">
-              {hasPaymentMethods ? (
+              {isLoading ? (
+                <Button disabled className="w-full">
+                  <RefreshCw size={16} className="animate-spin mr-2" /> Loading...
+                </Button>
+              ) : hasPaymentMethods ? (
                 <Button onClick={handleShowPaymentOptions} className="w-full">
                   {hasPayPalEnabled ? (
                     <>
