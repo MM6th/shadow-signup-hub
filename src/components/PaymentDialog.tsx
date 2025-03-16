@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import PayPalButton from './PayPalButton';
 
 interface PaymentDialogProps {
   open: boolean;
@@ -28,6 +30,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // PayPal client ID
+  const PAYPAL_CLIENT_ID = "YOUR_PAYPAL_CLIENT_ID"; // Replace with your actual client ID
 
   const generateQRCode = async (walletAddress: string) => {
     try {
@@ -91,37 +96,86 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     }
   };
 
+  const handlePayPalSuccess = async (details: any) => {
+    try {
+      // Record the purchase
+      await supabase.functions.invoke('send-purchase-confirmation', {
+        body: {
+          productTitle: product.title,
+          productPrice: product.price,
+          paymentMethod: 'paypal',
+          paypalDetails: {
+            transactionId: details.id,
+            payerEmail: details.payer.email_address,
+            status: details.status
+          }
+        },
+      });
+      
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error('Error recording PayPal purchase:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to record purchase",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Complete Your Purchase</DialogTitle>
           <DialogDescription>
-            Click the button below to copy the payment address to your clipboard
+            Choose your preferred payment method to complete the purchase
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
-          {qrCode && (
-            <div className="flex justify-center">
-              <img src={qrCode} alt="Payment QR Code" className="max-w-full" />
+        <Tabs defaultValue="crypto" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="crypto">Cryptocurrency</TabsTrigger>
+            <TabsTrigger value="paypal">PayPal</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="crypto" className="space-y-4">
+            {qrCode && (
+              <div className="flex justify-center">
+                <img src={qrCode} alt="Payment QR Code" className="max-w-full" />
+              </div>
+            )}
+            
+            <Button 
+              onClick={handleCopyAddress} 
+              className="w-full"
+              disabled={isLoading || !walletData}
+            >
+              {isLoading ? "Processing..." : "Copy Crypto Address"}
+            </Button>
+            
+            {!walletData && (
+              <p className="text-center text-destructive text-sm">
+                No cryptocurrency payment options available. Please contact the administrator or try PayPal.
+              </p>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="paypal" className="space-y-4">
+            <div className="rounded-md bg-muted p-4 mb-4">
+              <p className="text-sm text-center">
+                Pay securely with PayPal - Amount: ${product.price.toFixed(2)} USD
+              </p>
             </div>
-          )}
-          
-          <Button 
-            onClick={handleCopyAddress} 
-            className="w-full"
-            disabled={isLoading || !walletData}
-          >
-            {isLoading ? "Processing..." : "Copy Payment Address"}
-          </Button>
-          
-          {!walletData && (
-            <p className="text-center text-destructive text-sm">
-              No payment options available. Please contact the administrator.
-            </p>
-          )}
-        </div>
+            
+            <PayPalButton 
+              productId={product.id}
+              amount={product.price}
+              onSuccess={handlePayPalSuccess}
+              clientId={PAYPAL_CLIENT_ID}
+            />
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

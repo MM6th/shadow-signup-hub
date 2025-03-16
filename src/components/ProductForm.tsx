@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Minus, ShoppingBag, Upload, X } from 'lucide-react';
+import { Plus, Minus, ShoppingBag, Upload, X, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -12,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -46,6 +46,7 @@ const formSchema = z.object({
   category: z.string().min(1, 'Please select a category'),
   contact_phone: z.string().min(10, 'Phone number must be at least 10 digits'),
   image: z.any().optional(),
+  enablePaypal: z.boolean().default(false),
 });
 
 interface WalletAddress {
@@ -58,12 +59,14 @@ interface ProductFormProps {
   initialValues?: any;
   initialWalletAddresses?: WalletAddress[];
   isEditing?: boolean;
+  paypalClientId?: string;
 }
 
 const ProductForm: React.FC<ProductFormProps> = ({ 
   initialValues = null, 
   initialWalletAddresses = [], 
-  isEditing = false 
+  isEditing = false,
+  paypalClientId = ''
 }) => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,7 +102,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
           throw new Error('Failed to fetch crypto prices');
         }
         const data = await response.json();
-        // Format data to make it easier to use
         const prices: Record<string, number> = {};
         Object.entries(data).forEach(([cryptoId, priceData]: [string, any]) => {
           prices[cryptoId] = priceData.usd;
@@ -112,7 +114,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
           description: "Using estimated conversions instead",
           variant: "destructive",
         });
-        // Set some fallback values
         setCryptoPrices({
           bitcoin: 65000,
           ethereum: 3500,
@@ -145,34 +146,30 @@ const ProductForm: React.FC<ProductFormProps> = ({
       priceCurrency: initialValues?.price_currency || 'usd',
       category: initialValues?.category || '',
       contact_phone: initialValues?.contact_phone || '',
+      enablePaypal: initialValues?.enable_paypal || false,
     },
   });
 
   const watchPrice = form.watch('price');
   const watchPriceCurrency = form.watch('priceCurrency');
   
-  // Function to convert price to different cryptocurrencies
   const convertPrice = (price: string, fromCurrency: string, toCurrency: string): string => {
     if (!price || isNaN(parseFloat(price))) return '0';
     
     const numericPrice = parseFloat(price);
     
-    // If both currencies are the same, return the original price
     if (fromCurrency === toCurrency) return numericPrice.toFixed(2);
     
-    // If converting from USD to crypto
     if (fromCurrency === 'usd' && toCurrency !== 'usd') {
       if (!cryptoPrices[toCurrency]) return 'N/A';
       return (numericPrice / cryptoPrices[toCurrency]).toFixed(6);
     }
     
-    // If converting from crypto to USD
     if (fromCurrency !== 'usd' && toCurrency === 'usd') {
       if (!cryptoPrices[fromCurrency]) return 'N/A';
       return (numericPrice * cryptoPrices[fromCurrency]).toFixed(2);
     }
     
-    // If converting between cryptos
     if (fromCurrency !== 'usd' && toCurrency !== 'usd') {
       if (!cryptoPrices[fromCurrency] || !cryptoPrices[toCurrency]) return 'N/A';
       const usdValue = numericPrice * cryptoPrices[fromCurrency];
@@ -286,14 +283,20 @@ const ProductForm: React.FC<ProductFormProps> = ({
       return;
     }
     
-    if (!validateWalletAddresses()) return;
+    if (!validateWalletAddresses() && !values.enablePaypal) {
+      toast({
+        title: "Payment method required",
+        description: "Please add at least one wallet address or enable PayPal payments",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsSubmitting(true);
     
     try {
       const imageUrl = await uploadImage();
       
-      // Convert price to USD for storage if needed
       let priceInUSD = parseFloat(values.price);
       if (values.priceCurrency !== 'usd' && cryptoPrices[values.priceCurrency]) {
         priceInUSD = parseFloat(values.price) * cryptoPrices[values.priceCurrency];
@@ -314,6 +317,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
             category: values.category,
             image_url: imageUrl,
             contact_phone: values.contact_phone,
+            enable_paypal: values.enablePaypal,
+            paypal_client_id: values.enablePaypal ? paypalClientId : null,
           })
           .eq('id', initialValues.id)
           .select()
@@ -322,12 +327,14 @@ const ProductForm: React.FC<ProductFormProps> = ({
         if (updateError) throw new Error(updateError.message);
         product = updatedProduct;
         
-        const { error: deleteWalletsError } = await supabase
-          .from('wallet_addresses')
-          .delete()
-          .eq('product_id', initialValues.id);
-          
-        if (deleteWalletsError) throw new Error(deleteWalletsError.message);
+        if (!values.enablePaypal) {
+          const { error: deleteWalletsError } = await supabase
+            .from('wallet_addresses')
+            .delete()
+            .eq('product_id', initialValues.id);
+            
+          if (deleteWalletsError) throw new Error(deleteWalletsError.message);
+        }
       } else {
         const { data: newProduct, error: productError } = await supabase
           .from('products')
@@ -342,6 +349,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
             category: values.category,
             image_url: imageUrl,
             contact_phone: values.contact_phone,
+            enable_paypal: values.enablePaypal,
+            paypal_client_id: values.enablePaypal ? paypalClientId : null,
           })
           .select()
           .single();
@@ -350,17 +359,19 @@ const ProductForm: React.FC<ProductFormProps> = ({
         product = newProduct;
       }
       
-      const walletData = walletAddresses.map(wallet => ({
-        product_id: product.id,
-        crypto_type: wallet.cryptoType,
-        wallet_address: wallet.address,
-      }));
-      
-      const { error: walletError } = await supabase
-        .from('wallet_addresses')
-        .insert(walletData);
+      if (walletAddresses.length > 0) {
+        const walletData = walletAddresses.map(wallet => ({
+          product_id: product.id,
+          crypto_type: wallet.cryptoType,
+          wallet_address: wallet.address,
+        }));
         
-      if (walletError) throw new Error(walletError.message);
+        const { error: walletError } = await supabase
+          .from('wallet_addresses')
+          .insert(walletData);
+          
+        if (walletError) throw new Error(walletError.message);
+      }
       
       toast({
         title: isEditing ? "Product updated successfully" : "Product created successfully",
@@ -516,7 +527,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
             />
           </div>
           
-          {/* Price Conversion Preview */}
           {watchPrice && !isNaN(parseFloat(watchPrice)) && (
             <div className="p-4 bg-dark-secondary rounded-lg">
               <h3 className="text-md font-semibold mb-2">Price Conversions:</h3>
@@ -611,9 +621,45 @@ const ProductForm: React.FC<ProductFormProps> = ({
             )}
           />
           
+          <FormField
+            control={form.control}
+            name="enablePaypal"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">Enable PayPal Payments</FormLabel>
+                  <FormDescription>
+                    Allow customers to pay with PayPal in USD.
+                  </FormDescription>
+                  {paypalClientId ? (
+                    <p className="text-xs text-green-500">PayPal Client ID is set</p>
+                  ) : (
+                    <p className="text-xs text-amber-500">
+                      PayPal Client ID is not set. Enter it above to enable PayPal payments.
+                    </p>
+                  )}
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    disabled={!paypalClientId}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium">Wallet Addresses</h3>
+              <div className="flex items-center">
+                <h3 className="text-lg font-medium">Cryptocurrency Wallet Addresses</h3>
+                {form.watch('enablePaypal') && (
+                  <span className="ml-2 text-xs bg-amber-500/20 text-amber-500 px-2 py-1 rounded-full">
+                    Optional with PayPal enabled
+                  </span>
+                )}
+              </div>
               <Button
                 type="button"
                 variant="outline"
@@ -631,9 +677,19 @@ const ProductForm: React.FC<ProductFormProps> = ({
             
             {walletAddresses.length === 0 && (
               <div className="p-4 rounded-md border border-gray-600 bg-dark-secondary text-center text-pi-muted">
-                <ShoppingBag className="mx-auto mb-2" size={24} />
-                <p>No wallet addresses added yet</p>
-                <p className="text-sm">Click "Add Wallet" to add a payment method</p>
+                {form.watch('enablePaypal') ? (
+                  <>
+                    <CreditCard className="mx-auto mb-2" size={24} />
+                    <p>PayPal payments are enabled</p>
+                    <p className="text-sm">You can also add crypto wallet addresses as an alternative payment method</p>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="mx-auto mb-2" size={24} />
+                    <p>No wallet addresses added yet</p>
+                    <p className="text-sm">Click "Add Wallet" to add a payment method</p>
+                  </>
+                )}
               </div>
             )}
             
