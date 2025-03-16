@@ -28,6 +28,7 @@ interface Appointment {
   product_title: string;
   buyer_name: string;
   buyer_id: string;
+  seller_id: string;
   appointment_date: string;
   appointment_time: string;
   status: string;
@@ -82,7 +83,7 @@ const AppointmentMessaging: React.FC = () => {
       // For buyers, get all appointments where they are the buyer
       const { data, error } = await supabase
         .from('appointments')
-        .select('id, product_title, buyer_name, buyer_id, appointment_date, appointment_time, status')
+        .select('id, product_title, buyer_name, buyer_id, seller_id, appointment_date, appointment_time, status')
         .or(`seller_id.eq.${user?.id},buyer_id.eq.${user?.id}`)
         .order('appointment_date', { ascending: false });
         
