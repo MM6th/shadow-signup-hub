@@ -9,6 +9,7 @@ interface CallHeaderProps {
   isHost?: boolean;
   callDuration?: number;
   appointmentTitle?: string;
+  appointmentTime?: string;
 }
 
 const CallHeader: React.FC<CallHeaderProps> = ({ 
@@ -17,7 +18,8 @@ const CallHeader: React.FC<CallHeaderProps> = ({
   isConnected,
   isHost = false,
   callDuration = 0,
-  appointmentTitle
+  appointmentTitle,
+  appointmentTime
 }) => {
   // Format call duration from seconds to mm:ss
   const formatDuration = (seconds: number) => {
@@ -34,6 +36,9 @@ const CallHeader: React.FC<CallHeaderProps> = ({
         </h3>
         {appointmentTitle && (
           <p className="text-sm text-pi-muted mt-1">{appointmentTitle}</p>
+        )}
+        {appointmentTime && (
+          <p className="text-xs text-pi-muted">Scheduled: {appointmentTime}</p>
         )}
       </div>
       <div className="flex items-center space-x-3">

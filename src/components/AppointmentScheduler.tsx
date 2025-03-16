@@ -252,7 +252,7 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
             </Select>
           </div>
           
-          {hourlyRate && (
+          {hourlyRate !== undefined && (
             <div className="mt-4 p-3 border border-pi-focus/20 rounded bg-pi-focus/5">
               <p className="text-sm font-medium">
                 Consultation Fee: <span className="text-pi-focus">${hourlyRate.toFixed(2)}/hour</span>
@@ -266,9 +266,9 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         
         <div>
           <label className="text-sm font-medium block mb-2">Select Time</label>
-          <div className="space-y-2">
+          <div>
             {selectedDate ? (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {TIME_SLOTS.map((timeSlot) => {
                   const isPastTime = isTimeInPast(timeSlot);
                   return (

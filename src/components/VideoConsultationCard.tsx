@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Video, Calendar, Clock, Star } from 'lucide-react';
+import { Video, Calendar, Clock, Star, DollarSign } from 'lucide-react';
 import AppointmentDialog from "./AppointmentDialog";
 import PaymentDialog from "./PaymentDialog";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
@@ -138,9 +138,18 @@ const VideoConsultationCard: React.FC<VideoConsultationCardProps> = ({
           </div>
           
           <div className="flex justify-between items-center">
-            <p className="text-lg font-bold">
-              ${product.price.toFixed(2)}/hr
-            </p>
+            <div className="flex items-center">
+              <DollarSign size={16} className="text-green-500" />
+              <p className="text-lg font-bold">
+                ${product.price.toFixed(2)}/hr
+              </p>
+            </div>
+            
+            {hasPayPalEnabled && (
+              <div className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                PayPal Enabled
+              </div>
+            )}
           </div>
           
           {user?.id === product.user_id || showEditButton ? (
