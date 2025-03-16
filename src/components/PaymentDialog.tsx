@@ -40,8 +40,17 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   // Flag to show the PayPal tab
   const showPayPal = product?.enable_paypal || false;
   
-  // Default to PayPal tab if crypto payment not available but PayPal is enabled
-  const defaultTab = !walletData && showPayPal ? "paypal" : "crypto";
+  // Choose default tab based on available payment methods
+  const [activeTab, setActiveTab] = useState<string>(!walletData && showPayPal ? "paypal" : "crypto");
+
+  useEffect(() => {
+    // Update the active tab when payment methods availability changes
+    if (!walletData && showPayPal) {
+      setActiveTab("paypal");
+    } else if (walletData) {
+      setActiveTab("crypto");
+    }
+  }, [walletData, showPayPal]);
 
   const generateQRCode = async (walletAddress: string) => {
     try {
@@ -107,6 +116,8 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
   const handlePayPalSuccess = async (details: any) => {
     try {
+      console.log("PayPal payment successful:", details);
+      
       // Record the purchase
       await supabase.functions.invoke('send-purchase-confirmation', {
         body: {
@@ -121,6 +132,11 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
         },
       });
       
+      toast({
+        title: "Payment successful!",
+        description: `Thank you for your purchase of ${product.title}.`,
+      });
+      
       onOpenChange(false);
     } catch (error: any) {
       console.error('Error recording PayPal purchase:', error);
@@ -132,6 +148,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     }
   };
 
+  // Check if we have any payment methods available
+  const hasPaymentMethods = showPayPal || walletData;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -142,51 +161,70 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <Tabs defaultValue={defaultTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="crypto">Cryptocurrency</TabsTrigger>
-            <TabsTrigger value="paypal" disabled={!showPayPal}>PayPal</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="crypto" className="space-y-4">
-            {qrCode && (
-              <div className="flex justify-center">
-                <img src={qrCode} alt="Payment QR Code" className="max-w-full" />
+        {hasPaymentMethods ? (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger 
+                value="crypto" 
+                disabled={!walletData}
+              >
+                Cryptocurrency
+              </TabsTrigger>
+              <TabsTrigger 
+                value="paypal" 
+                disabled={!showPayPal}
+              >
+                PayPal
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="crypto" className="space-y-4">
+              {qrCode && (
+                <div className="flex justify-center">
+                  <img src={qrCode} alt="Payment QR Code" className="max-w-full" />
+                </div>
+              )}
+              
+              <Button 
+                onClick={handleCopyAddress} 
+                className="w-full"
+                disabled={isLoading || !walletData}
+              >
+                {isLoading ? "Processing..." : "Copy Crypto Address"}
+              </Button>
+              
+              {!walletData && (
+                <p className="text-center text-destructive text-sm">
+                  {showPayPal 
+                    ? "No cryptocurrency payment options available. Try PayPal instead."
+                    : "No payment options available. Please contact the administrator."}
+                </p>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="paypal" className="space-y-4">
+              <div className="rounded-md bg-muted p-4 mb-4">
+                <p className="text-sm text-center">
+                  Pay securely with PayPal - Amount: ${product.price.toFixed(2)} USD
+                </p>
               </div>
-            )}
-            
-            <Button 
-              onClick={handleCopyAddress} 
-              className="w-full"
-              disabled={isLoading || !walletData}
-            >
-              {isLoading ? "Processing..." : "Copy Crypto Address"}
-            </Button>
-            
-            {!walletData && (
-              <p className="text-center text-destructive text-sm">
-                {showPayPal 
-                  ? "No cryptocurrency payment options available. Try PayPal instead."
-                  : "No payment options available. Please contact the administrator."}
-              </p>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="paypal" className="space-y-4">
-            <div className="rounded-md bg-muted p-4 mb-4">
-              <p className="text-sm text-center">
-                Pay securely with PayPal - Amount: ${product.price.toFixed(2)} USD
-              </p>
-            </div>
-            
-            <PayPalButton 
-              productId={product.id}
-              amount={product.price}
-              onSuccess={handlePayPalSuccess}
-              clientId={clientId}
-            />
-          </TabsContent>
-        </Tabs>
+              
+              <PayPalButton 
+                productId={product.id}
+                amount={product.price}
+                onSuccess={handlePayPalSuccess}
+                clientId={clientId}
+              />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="py-6">
+            <p className="text-center text-destructive">
+              No payment methods are available for this product.
+              Please contact the administrator.
+            </p>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

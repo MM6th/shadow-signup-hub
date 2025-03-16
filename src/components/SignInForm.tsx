@@ -37,9 +37,6 @@ const SignInForm: React.FC<SignInFormProps> = ({ mode, onToggleMode, onClose }) 
       if (mode === 'signin') {
         await signIn(formData.email, formData.password);
         if (onClose) onClose();
-        
-        // After signing in, let the auth state change handler in AuthContext handle the redirect
-        // The router protection will automatically redirect to the appropriate page
       } else {
         await signUp(formData.email, formData.password);
         toast({
