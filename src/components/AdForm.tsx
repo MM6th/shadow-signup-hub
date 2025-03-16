@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -35,6 +36,7 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [charCount, setCharCount] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -48,6 +50,12 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
   });
 
   const mediaType = form.watch("mediaType");
+  const title = form.watch("title");
+
+  // Update character count when title changes
+  useEffect(() => {
+    setCharCount(title.length);
+  }, [title]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -224,7 +232,16 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
               <FormItem>
                 <FormLabel>Advertisement Title</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter a captivating title for your ad" {...field} />
+                  <div className="relative">
+                    <Input 
+                      placeholder="Enter a captivating title for your ad" 
+                      {...field} 
+                      maxLength={245}
+                    />
+                    <div className="absolute right-2 top-2 text-xs text-muted-foreground">
+                      {charCount}/245
+                    </div>
+                  </div>
                 </FormControl>
                 <FormDescription>
                   Maximum 245 characters
@@ -279,7 +296,7 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
             <FormLabel>Upload {mediaType}</FormLabel>
             <div className="mt-1">
               {mediaPreview ? (
-                <div className="relative w-full h-48 rounded-md overflow-hidden mb-2 bg-dark-secondary">
+                <div className="relative w-full h-64 rounded-md overflow-hidden mb-2 bg-dark-secondary">
                   {mediaType === 'image' ? (
                     <img 
                       src={mediaPreview} 
@@ -305,7 +322,7 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
                 <div>
                   <label
                     htmlFor="media-upload"
-                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-500 rounded-md cursor-pointer hover:border-primary transition-colors"
+                    className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-500 rounded-md cursor-pointer hover:border-primary transition-colors"
                   >
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="mb-2 text-muted-foreground" size={24} />

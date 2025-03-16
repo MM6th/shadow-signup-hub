@@ -11,10 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import AdDisplay from '@/components/AdDisplay';
 
-// Admin access email
 const ADMIN_EMAILS = ['cmooregee@gmail.com'];
 
-// Categories for filtering
 const categories = [
   { id: 'all', name: 'All Services' },
   { id: 'reading', name: 'Personal Readings' },
@@ -41,7 +39,6 @@ const Marketplace: React.FC = () => {
   const [ads, setAds] = useState<any[]>([]);
   const [isLoadingAds, setIsLoadingAds] = useState(true);
 
-  // Check if user is admin
   const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
 
   useEffect(() => {
@@ -57,7 +54,6 @@ const Marketplace: React.FC = () => {
         
         setProducts(data || []);
         
-        // Fetch wallet addresses for all products
         if (data && data.length > 0) {
           const productIds = data.map(product => product.id);
           const { data: walletData, error: walletError } = await supabase
@@ -67,7 +63,6 @@ const Marketplace: React.FC = () => {
             
           if (walletError) throw walletError;
           
-          // Group wallet addresses by product_id
           const walletsByProduct = (walletData || []).reduce((acc: any, wallet: any) => {
             if (!acc[wallet.product_id]) {
               acc[wallet.product_id] = [];
@@ -79,7 +74,6 @@ const Marketplace: React.FC = () => {
           setWalletAddresses(walletsByProduct);
         }
 
-        // Fetch uploaded videos if user is authenticated
         if (user) {
           const { data: videoData, error: videoError } = await supabase
             .from('video_metadata')
@@ -91,7 +85,6 @@ const Marketplace: React.FC = () => {
           setVideos(videoData || []);
         }
         
-        // Fetch ads
         const { data: adsData, error: adsError } = await supabase
           .from('ads')
           .select('*')
@@ -116,7 +109,6 @@ const Marketplace: React.FC = () => {
     fetchProducts();
   }, [toast, user]);
 
-  // Filter products based on search term and category
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -124,31 +116,36 @@ const Marketplace: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  // Filter videos based on search term when video category is selected
   const filteredVideos = videos.filter(video => {
     if (selectedCategory !== 'all' && selectedCategory !== 'video') return false;
     return video.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
           (video.description && video.description.toLowerCase().includes(searchTerm.toLowerCase()));
   });
 
-  // Filter ads based on search term
   const filteredAds = ads.filter(ad => {
     return ad.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
            (ad.industry && ad.industry.toLowerCase().includes(searchTerm.toLowerCase()));
   });
 
-  const handleProductClick = (product: any) => {
-    setSelectedProduct(product);
-    setIsDialogOpen(true);
+  const handleProductClick = (productId: string) => {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      setSelectedProduct(product);
+      setIsDialogOpen(true);
+    } else {
+      toast({
+        title: "Product not found",
+        description: "The linked product could not be found.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleVideoClick = (video: any) => {
-    // Get the video URL
     const videoUrl = supabase.storage
       .from('profile_videos')
       .getPublicUrl(video.video_path).data.publicUrl;
     
-    // Open the video in a new tab
     window.open(videoUrl, '_blank');
   };
 
@@ -193,10 +190,8 @@ const Marketplace: React.FC = () => {
           </div>
         </div>
 
-        {/* Featured Services Carousel */}
         <FeaturedServices />
 
-        {/* Search and Filter */}
         <div className="glass-card p-6 mb-8">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-6">
             <div className="relative w-full md:w-1/2">
@@ -225,7 +220,6 @@ const Marketplace: React.FC = () => {
           </div>
         </div>
 
-        {/* Ads Section */}
         {!isLoadingAds && filteredAds.length > 0 && (
           <div className="mb-10">
             <div className="flex items-center gap-3 mb-6">
@@ -233,11 +227,10 @@ const Marketplace: React.FC = () => {
               <h2 className="text-2xl font-medium">Featured Advertisements</h2>
             </div>
             
-            <AdDisplay ads={filteredAds} />
+            <AdDisplay ads={filteredAds} onProductClick={handleProductClick} />
           </div>
         )}
 
-        {/* Product & Video Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin h-12 w-12 border-4 border-pi-focus rounded-full border-t-transparent"></div>
@@ -255,7 +248,6 @@ const Marketplace: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* Display products */}
             {filteredProducts.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
                 {filteredProducts.map(product => (
@@ -272,14 +264,13 @@ const Marketplace: React.FC = () => {
                       type: product.type,
                       contact_phone: product.contact_phone,
                     }} 
-                    onClick={() => handleProductClick(product)} 
+                    onClick={() => handleProductClick(product.id)} 
                     showEditButton={true}
                   />
                 ))}
               </div>
             )}
             
-            {/* Display videos if filtered or if video category is selected */}
             {filteredVideos.length > 0 && (
               <>
                 {filteredProducts.length > 0 && (
@@ -328,7 +319,6 @@ const Marketplace: React.FC = () => {
           </>
         )}
 
-        {/* Product Detail Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="bg-dark-secondary border-dark-accent max-w-3xl">
             {selectedProduct && (
@@ -365,7 +355,6 @@ const Marketplace: React.FC = () => {
                       </div>
                     )}
                     
-                    {/* Payment Options */}
                     {walletAddresses[selectedProduct.id] && walletAddresses[selectedProduct.id].length > 0 && (
                       <div className="mb-6">
                         <h3 className="text-sm font-medium mb-2">Payment Options:</h3>
@@ -384,7 +373,6 @@ const Marketplace: React.FC = () => {
                                     onClick={() => {
                                       navigator.clipboard.writeText(wallet.wallet_address);
                                       
-                                      // Record the purchase
                                       supabase.functions.invoke('send-purchase-confirmation', {
                                         body: {
                                           productTitle: selectedProduct.title,
