@@ -40,11 +40,13 @@ const TIME_ZONES = [
 const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({ 
   onScheduleSelected, 
   onSchedulingComplete,
-  hourlyRate
+  hourlyRate = 0
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [dateInputValue, setDateInputValue] = useState<string>("");
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const [customTimeInput, setCustomTimeInput] = useState<string>("");
+  const [isCustomTime, setIsCustomTime] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
@@ -89,6 +91,10 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   
   const handleTimeZoneChange = (value: string) => {
     setSelectedTimeZone(value);
+  };
+
+  const handleCustomTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomTimeInput(e.target.value);
   };
 
   const handleTimeSelect = async (timeSlot: string) => {
@@ -143,6 +149,19 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCustomTimeSubmit = () => {
+    if (!customTimeInput.trim()) {
+      toast({
+        title: "Invalid Time",
+        description: "Please enter a valid time",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    handleTimeSelect(customTimeInput);
   };
 
   // Disable past dates and weekends
@@ -266,31 +285,59 @@ const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         
         <div>
           <label className="text-sm font-medium block mb-2">Select Time</label>
-          <div>
-            {selectedDate ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {TIME_SLOTS.map((timeSlot) => {
-                  const isPastTime = isTimeInPast(timeSlot);
-                  return (
-                    <Button
-                      key={timeSlot}
-                      variant={selectedTimeSlot === timeSlot ? "default" : "outline"}
-                      size="sm"
-                      className={cn(
-                        "w-full",
-                        selectedTimeSlot === timeSlot && "bg-pi-focus text-white",
-                        isPastTime && "opacity-50"
-                      )}
-                      onClick={() => handleTimeSelect(timeSlot)}
-                      disabled={isSubmitting || isPastTime}
-                    >
-                      <Clock className="mr-1 h-3 w-3" /> {timeSlot}
-                    </Button>
-                  );
-                })}
+          <div className="mb-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <input 
+                type="checkbox" 
+                id="custom-time"
+                checked={isCustomTime}
+                onChange={e => setIsCustomTime(e.target.checked)}
+                className="rounded border-gray-300 text-pi-focus focus:ring-pi-focus"
+              />
+              <label htmlFor="custom-time" className="text-sm">Enter custom time</label>
+            </div>
+            
+            {isCustomTime ? (
+              <div className="flex space-x-2">
+                <Input
+                  placeholder="Enter time (e.g. 10:30 AM)"
+                  value={customTimeInput}
+                  onChange={handleCustomTimeChange}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={handleCustomTimeSubmit}
+                  disabled={isSubmitting || !customTimeInput}
+                >
+                  Set
+                </Button>
               </div>
             ) : (
-              <p className="text-sm text-pi-muted">Please select a date first</p>
+              selectedDate ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {TIME_SLOTS.map((timeSlot) => {
+                    const isPastTime = isTimeInPast(timeSlot);
+                    return (
+                      <Button
+                        key={timeSlot}
+                        variant={selectedTimeSlot === timeSlot ? "default" : "outline"}
+                        size="sm"
+                        className={cn(
+                          "w-full",
+                          selectedTimeSlot === timeSlot && "bg-pi-focus text-white",
+                          isPastTime && "opacity-50"
+                        )}
+                        onClick={() => handleTimeSelect(timeSlot)}
+                        disabled={isSubmitting || isPastTime}
+                      >
+                        <Clock className="mr-1 h-3 w-3" /> {timeSlot}
+                      </Button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-pi-muted">Please select a date first</p>
+              )
             )}
           </div>
         </div>

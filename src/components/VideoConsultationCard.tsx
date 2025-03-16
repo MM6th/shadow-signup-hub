@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Video, Calendar, Clock, Star, DollarSign } from 'lucide-react';
+import { Video, Calendar, Clock, Star, DollarSign, Wallet } from 'lucide-react';
 import AppointmentDialog from "./AppointmentDialog";
 import PaymentDialog from "./PaymentDialog";
 import { useWalletAddresses } from "@/hooks/useWalletAddresses";
@@ -20,6 +20,7 @@ interface VideoConsultationCardProps {
     user_id: string;
     enable_free_consultation?: boolean;
     enable_paypal?: boolean;
+    enable_crypto?: boolean;
     paypal_client_id?: string;
   };
   onClick?: () => void;
@@ -47,6 +48,7 @@ const VideoConsultationCard: React.FC<VideoConsultationCardProps> = ({
   
   const selectedWalletAddress = adminWalletAddresses.length > 0 ? adminWalletAddresses[0] : null;
   const hasPaymentMethods = adminWalletAddresses.length > 0 || hasPayPalEnabled;
+  const hasCryptoEnabled = product.enable_crypto && adminWalletAddresses.length > 0;
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -137,6 +139,23 @@ const VideoConsultationCard: React.FC<VideoConsultationCardProps> = ({
             </div>
           </div>
           
+          <div className="flex flex-wrap gap-2 text-xs">
+            {hasPayPalEnabled && (
+              <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                PayPal
+              </div>
+            )}
+            
+            {hasCryptoEnabled && (
+              <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                <span className="flex items-center">
+                  <Wallet size={12} className="mr-1" />
+                  Crypto
+                </span>
+              </div>
+            )}
+          </div>
+          
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <DollarSign size={16} className="text-green-500" />
@@ -144,12 +163,6 @@ const VideoConsultationCard: React.FC<VideoConsultationCardProps> = ({
                 ${product.price.toFixed(2)}/hr
               </p>
             </div>
-            
-            {hasPayPalEnabled && (
-              <div className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                PayPal Enabled
-              </div>
-            )}
           </div>
           
           {user?.id === product.user_id || showEditButton ? (

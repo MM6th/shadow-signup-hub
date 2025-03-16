@@ -14,21 +14,24 @@ interface ConsultationSettingsProps {
   initialEnableFreeConsultation: boolean;
   initialEnablePaypal: boolean;
   initialPaypalClientId?: string;
+  initialEnableCrypto?: boolean;
   onSettingsUpdated?: () => void;
 }
 
 const ConsultationSettings: React.FC<ConsultationSettingsProps> = ({
   productId,
-  initialHourlyRate,
-  initialEnableFreeConsultation,
-  initialEnablePaypal,
-  initialPaypalClientId,
+  initialHourlyRate = 0,
+  initialEnableFreeConsultation = false,
+  initialEnablePaypal = false,
+  initialPaypalClientId = '',
+  initialEnableCrypto = false,
   onSettingsUpdated
 }) => {
   const [hourlyRate, setHourlyRate] = useState(initialHourlyRate);
   const [enableFreeConsultation, setEnableFreeConsultation] = useState(initialEnableFreeConsultation);
   const [enablePaypal, setEnablePaypal] = useState(initialEnablePaypal);
   const [paypalClientId, setPaypalClientId] = useState(initialPaypalClientId || '');
+  const [enableCrypto, setEnableCrypto] = useState(initialEnableCrypto);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -43,7 +46,8 @@ const ConsultationSettings: React.FC<ConsultationSettingsProps> = ({
           price: hourlyRate,
           enable_free_consultation: enableFreeConsultation,
           enable_paypal: enablePaypal,
-          paypal_client_id: enablePaypal ? paypalClientId : null
+          paypal_client_id: enablePaypal ? paypalClientId : null,
+          enable_crypto: enableCrypto
         })
         .eq('id', productId);
 
@@ -138,6 +142,20 @@ const ConsultationSettings: React.FC<ConsultationSettingsProps> = ({
               </p>
             </div>
           )}
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="enableCrypto">Enable Cryptocurrency Payments</Label>
+              <Switch
+                id="enableCrypto"
+                checked={enableCrypto}
+                onCheckedChange={setEnableCrypto}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Allow clients to pay for sessions using cryptocurrency (configure wallet addresses in Product settings)
+            </p>
+          </div>
 
           <Button type="submit" disabled={isSubmitting} className="w-full">
             {isSubmitting ? "Saving..." : "Save Settings"}
