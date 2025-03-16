@@ -227,9 +227,11 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           description: string
+          enable_paypal: boolean | null
           id: string
           image_url: string | null
           original_price: number | null
+          paypal_client_id: string | null
           price: number
           price_currency: string | null
           title: string
@@ -242,9 +244,11 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           description: string
+          enable_paypal?: boolean | null
           id?: string
           image_url?: string | null
           original_price?: number | null
+          paypal_client_id?: string | null
           price: number
           price_currency?: string | null
           title: string
@@ -257,9 +261,11 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           description?: string
+          enable_paypal?: boolean | null
           id?: string
           image_url?: string | null
           original_price?: number | null
+          paypal_client_id?: string | null
           price?: number
           price_currency?: string | null
           title?: string

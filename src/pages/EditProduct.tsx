@@ -16,6 +16,7 @@ const EditProduct = () => {
   const [product, setProduct] = useState(null);
   const [walletAddresses, setWalletAddresses] = useState([]);
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
+  const [paypalClientId, setPaypalClientId] = useState('');
   
   const ADMIN_EMAIL = "cmooregee@gmail.com";
   const isAdminUser = user?.email === ADMIN_EMAIL;
@@ -59,6 +60,14 @@ const EditProduct = () => {
         }
         
         setProduct(productData);
+        
+        // Set PayPal client ID if available
+        if (productData.paypal_client_id) {
+          setPaypalClientId(productData.paypal_client_id);
+        } else {
+          // Use the default value from CreateProduct
+          setPaypalClientId('AbGYIHsjPxcCNhgce9MZsTQ7Mou5ZqJljgpEc-7-_owsvr5InFhhEDyEPEGlWQPzzaW1b_52EU-Gbn-l');
+        }
         
         // Fetch wallet addresses
         const { data: walletData, error: walletError } = await supabase
@@ -130,11 +139,34 @@ const EditProduct = () => {
           <p className="text-pi-muted">Update your product details in the cosmic marketplace.</p>
         </div>
         
+        <div className="glass-card p-6 mb-6">
+          <h2 className="text-xl font-elixia text-gradient mb-4">PayPal Integration</h2>
+          <p className="text-pi-muted mb-4">Your PayPal Client ID is configured for all products.</p>
+          
+          <div className="mb-4">
+            <label htmlFor="paypal-client-id" className="block text-sm font-medium mb-1">
+              PayPal Client ID
+            </label>
+            <input
+              id="paypal-client-id"
+              type="text"
+              value={paypalClientId}
+              onChange={(e) => setPaypalClientId(e.target.value)}
+              placeholder="Enter your PayPal Client ID"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+            <p className="text-xs text-pi-muted mt-1">
+              This will be used for all products in your marketplace.
+            </p>
+          </div>
+        </div>
+        
         {product && (
           <ProductForm 
             initialValues={product}
             initialWalletAddresses={walletAddresses}
             isEditing={true}
+            paypalClientId={paypalClientId}
           />
         )}
       </div>

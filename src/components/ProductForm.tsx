@@ -327,7 +327,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
         if (updateError) throw new Error(updateError.message);
         product = updatedProduct;
         
-        if (!values.enablePaypal) {
+        if (initialWalletAddresses.length > 0) {
           const { error: deleteWalletsError } = await supabase
             .from('wallet_addresses')
             .delete()
