@@ -12,6 +12,7 @@ export const useWalletAddresses = (
   const [adminWalletAddresses, setAdminWalletAddresses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasPayPalEnabled, setHasPayPalEnabled] = useState(false);
+  const [paypalClientId, setPaypalClientId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -33,10 +34,12 @@ export const useWalletAddresses = (
           return;
         }
 
+        console.log('Product payment data:', productData);
+        
         // Set PayPal status
-        setHasPayPalEnabled(
-          productData?.enable_paypal && !!productData?.paypal_client_id
-        );
+        const paypalEnabled = productData?.enable_paypal === true && !!productData?.paypal_client_id;
+        setHasPayPalEnabled(paypalEnabled);
+        setPaypalClientId(productData?.paypal_client_id || null);
         
         // Get wallet addresses for this specific product
         const { data: walletData, error: walletError } = await supabase
@@ -58,12 +61,11 @@ export const useWalletAddresses = (
         if (walletData && walletData.length > 0) {
           console.log('Found wallet addresses for product:', walletData);
           setAdminWalletAddresses(walletData);
-          setIsLoading(false);
-          return;
+        } else {
+          // No wallet addresses found for this specific product
+          setAdminWalletAddresses([]);
         }
-
-        // No wallet addresses found for this specific product
-        setAdminWalletAddresses([]);
+        
         setIsLoading(false);
       } catch (error) {
         console.error('Error in fetchWalletAddresses:', error);
@@ -71,8 +73,17 @@ export const useWalletAddresses = (
       }
     };
 
-    fetchWalletAddresses();
+    if (productId) {
+      fetchWalletAddresses();
+    } else {
+      setIsLoading(false);
+    }
   }, [user, productId, toast]);
 
-  return { adminWalletAddresses, hasPayPalEnabled, isLoading };
+  return { 
+    adminWalletAddresses, 
+    hasPayPalEnabled, 
+    paypalClientId,
+    isLoading 
+  };
 };

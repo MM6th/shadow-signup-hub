@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,26 +50,31 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const isAdminUser = user?.email === ADMIN_EMAIL;
   const isService = product.type === 'service';
   
-  const { adminWalletAddresses, hasPayPalEnabled, isLoading } = useWalletAddresses(
+  const { adminWalletAddresses, hasPayPalEnabled, paypalClientId, isLoading } = useWalletAddresses(
     user, 
     product.id, 
     isAdminUser
   );
   
+  useEffect(() => {
+    console.log("Product card data:", {
+      productId: product.id,
+      hasPayPalEnabled,
+      paypalClientId,
+      walletAddresses: adminWalletAddresses
+    });
+  }, [product.id, hasPayPalEnabled, paypalClientId, adminWalletAddresses]);
+  
   const hasWalletAddresses = adminWalletAddresses.length > 0;
   const selectedWalletAddress = hasWalletAddresses ? adminWalletAddresses[0] : null;
 
-  // Check if any payment method is available
   const hasPaymentMethods = hasWalletAddresses || hasPayPalEnabled;
 
-  // Determine if we should show the currency converter
   useEffect(() => {
-    // Only show currency converter if there are crypto wallet addresses available
     setShowCurrencyConverter(hasWalletAddresses);
   }, [hasWalletAddresses]);
 
   useEffect(() => {
-    // Only fetch crypto prices if there are wallet addresses
     if (hasWalletAddresses) {
       const fetchCryptoPrices = async () => {
         try {
@@ -438,8 +442,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
           id: product.id,
           title: product.title,
           price: product.price,
-          enable_paypal: product.enable_paypal,
-          paypal_client_id: product.paypal_client_id
+          enable_paypal: hasPayPalEnabled,
+          paypal_client_id: paypalClientId || undefined
         }}
         walletData={selectedWalletAddress}
       />

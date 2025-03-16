@@ -37,8 +37,8 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const DEFAULT_PAYPAL_CLIENT_ID = "AbGYIHsjPxcCNhgce9MZsTQ7Mou5ZqJljgpEc-7-_owsvr5InFhhEDyEPEGlWQPzzaW1b_52EU-Gbn-l";
   const clientId = product?.paypal_client_id || DEFAULT_PAYPAL_CLIENT_ID;
   
-  // Flag to show the PayPal tab
-  const showPayPal = product?.enable_paypal || false;
+  // Flag to show the PayPal tab - now explicitly check enable_paypal property
+  const showPayPal = product?.enable_paypal === true;
   
   // Choose default tab based on available payment methods
   const [activeTab, setActiveTab] = useState<string>(!walletData && showPayPal ? "paypal" : "crypto");
@@ -51,6 +51,17 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
       setActiveTab("crypto");
     }
   }, [walletData, showPayPal]);
+
+  useEffect(() => {
+    // Debug log to help diagnose issues
+    console.log("PaymentDialog props:", { 
+      productId: product?.id,
+      showPayPal,
+      enablePayPal: product?.enable_paypal,
+      clientId: product?.paypal_client_id,
+      hasWalletData: !!walletData
+    });
+  }, [product, walletData]);
 
   const generateQRCode = async (walletAddress: string) => {
     try {
