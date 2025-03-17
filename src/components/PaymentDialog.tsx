@@ -16,6 +16,7 @@ interface PaymentDialogProps {
     price: number;
     enable_paypal?: boolean;
     paypal_client_id?: string;
+    contact_phone?: string;
   };
   walletData: {
     wallet_address: string;
@@ -56,10 +57,12 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     // Debug log to help diagnose issues
     console.log("PaymentDialog props:", { 
       productId: product?.id,
+      productPrice: product?.price,
       showPayPal,
       enablePayPal: product?.enable_paypal,
       clientId: product?.paypal_client_id,
-      hasWalletData: !!walletData
+      hasWalletData: !!walletData,
+      contactPhone: product?.contact_phone
     });
   }, [product, walletData]);
 
@@ -104,7 +107,8 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
           productTitle: product.title,
           productPrice: product.price,
           walletAddress: walletData.wallet_address,
-          cryptoType: walletData.crypto_type
+          cryptoType: walletData.crypto_type,
+          contactPhone: product.contact_phone || "Not provided"
         },
       });
 
@@ -162,6 +166,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   // Check if we have any payment methods available
   const hasPaymentMethods = showPayPal || walletData;
 
+  // Ensure product price is properly displayed
+  const displayPrice = product && typeof product.price === 'number' ? product.price.toFixed(2) : '0.00';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -216,8 +223,13 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
             <TabsContent value="paypal" className="space-y-4">
               <div className="rounded-md bg-muted p-4 mb-4">
                 <p className="text-sm text-center">
-                  Pay securely with PayPal - Amount: ${product.price.toFixed(2)} USD
+                  Pay securely with PayPal - Amount: ${displayPrice} USD
                 </p>
+                {product.contact_phone && (
+                  <p className="text-sm text-center mt-2">
+                    Contact seller: {product.contact_phone}
+                  </p>
+                )}
               </div>
               
               <PayPalButton 

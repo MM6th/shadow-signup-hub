@@ -80,7 +80,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
       if (product.price > 0 || isLoading) return;
       
       try {
-        const { supabase } = await import('@/integrations/supabase/client');
         const { data, error } = await supabase
           .from('products')
           .select('*')
@@ -105,12 +104,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   useEffect(() => {
     console.log("Product card data:", {
       productId: product.id,
+      productPrice: product.price,
       hasPayPalEnabled,
       paypalClientId,
       walletAddresses: adminWalletAddresses,
-      displayProduct
+      displayProduct,
+      contactPhone: product.contact_phone
     });
-  }, [product.id, hasPayPalEnabled, paypalClientId, adminWalletAddresses, displayProduct]);
+  }, [product.id, product.price, hasPayPalEnabled, paypalClientId, adminWalletAddresses, displayProduct]);
   
   useEffect(() => {
     setShowCurrencyConverter(hasWalletAddresses);
@@ -415,6 +416,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
             )}
           </div>
           
+          {displayProduct.contact_phone && (
+            <div className="text-sm text-gray-600 mb-2 flex items-center">
+              <Phone size={14} className="mr-1" /> {displayProduct.contact_phone}
+            </div>
+          )}
+          
           {isAdminUser && (showEditButton !== false) ? (
             <Button onClick={handleEdit} className="w-full">
               Edit
@@ -476,7 +483,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
                 </Button>
               </div>
 
-              {product.contact_phone && (
+              {displayProduct.contact_phone && (
                 <Button variant="outline" size="sm" onClick={handleContactSeller} className="w-full">
                   <Phone size={16} className="mr-1" /> Contact Seller
                 </Button>
@@ -513,7 +520,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
           title: product.title,
           price: product.price,
           enable_paypal: hasPayPalEnabled,
-          paypal_client_id: paypalClientId || undefined
+          paypal_client_id: paypalClientId || undefined,
+          contact_phone: displayProduct.contact_phone
         }}
         walletData={selectedWalletAddress}
       />

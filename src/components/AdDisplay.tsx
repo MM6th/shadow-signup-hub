@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Image, Video, ExternalLink, Tags } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import ProductCard from '@/components/ProductCard';
 import { useProfile } from '@/hooks/useProfile';
+import { supabase } from "@/integrations/supabase/client";
 
 interface Ad {
   id: string;
@@ -26,7 +27,15 @@ interface AdDisplayProps {
 const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false }) => {
   const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [productData, setProductData] = useState<any>(null);
   const { profile } = useProfile(selectedAd?.user_id);
+
+  // Fetch product data when an ad is selected
+  useEffect(() => {
+    if (selectedAd && selectedAd.product_url && isDialogOpen) {
+      fetchProductData(selectedAd.product_url);
+    }
+  }, [selectedAd, isDialogOpen]);
 
   if (isLoading) {
     return (
@@ -55,12 +64,14 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false }) => {
     }
   };
 
-  // Fetch product info from Supabase directly when an ad is clicked
-  const fetchProductInfoFromSupabase = async (productId: string) => {
-    if (!productId) return null;
+  // Fetch product info from Supabase directly
+  const fetchProductData = async (productId: string) => {
+    if (!productId) {
+      setProductData(null);
+      return;
+    }
     
     try {
-      const { supabase } = await import('@/integrations/supabase/client');
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -68,10 +79,11 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false }) => {
         .single();
         
       if (error) throw error;
-      return data;
+      console.log("Fetched product data:", data);
+      setProductData(data);
     } catch (error) {
       console.error('Error fetching product info:', error);
-      return null;
+      setProductData(null);
     }
   };
 
@@ -139,16 +151,9 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false }) => {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl bg-background">
           <DialogTitle className="sr-only">Product Details</DialogTitle>
-          {selectedAd && selectedAd.product_url && (
+          {selectedAd && selectedAd.product_url && productData && (
             <ProductCard 
-              product={{
-                id: selectedAd.product_url,
-                title: selectedAd.title,
-                description: "",
-                price: 0,
-                image_url: selectedAd.media_url,
-                user_id: selectedAd.user_id || "",
-              }}
+              product={productData}
               showBuyButton={true}
               onClick={() => {}}
             />
