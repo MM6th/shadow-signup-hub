@@ -502,6 +502,33 @@ export type Database = {
         }
         Relationships: []
       }
+      video_demand_meters: {
+        Row: {
+          created_at: string | null
+          id: string
+          temperature: number
+          updated_at: string | null
+          user_id: string
+          video_path: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          temperature?: number
+          updated_at?: string | null
+          user_id: string
+          video_path: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          temperature?: number
+          updated_at?: string | null
+          user_id?: string
+          video_path?: string
+        }
+        Relationships: []
+      }
       video_metadata: {
         Row: {
           created_at: string | null
@@ -530,6 +557,27 @@ export type Database = {
           thumbnail_url?: string | null
           title?: string
           updated_at?: string | null
+          user_id?: string
+          video_path?: string
+        }
+        Relationships: []
+      }
+      video_transit_records: {
+        Row: {
+          created_at: string | null
+          id: string
+          user_id: string
+          video_path: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          user_id: string
+          video_path: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
           user_id?: string
           video_path?: string
         }
