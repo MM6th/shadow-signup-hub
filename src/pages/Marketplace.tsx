@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, ShoppingCart, Star, QrCode, User, Phone, Video, Shield, Play, Tags } from 'lucide-react';
@@ -34,6 +33,7 @@ const Marketplace: React.FC = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
@@ -42,6 +42,9 @@ const Marketplace: React.FC = () => {
   const [videos, setVideos] = useState<any[]>([]);
   const [ads, setAds] = useState<any[]>([]);
   const [isLoadingAds, setIsLoadingAds] = useState(true);
+  
+  // Video player state
+  const [isVideoDialogOpen, setIsVideoDialogOpen] = useState(false);
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   const [activeVideoTitle, setActiveVideoTitle] = useState('');
   const [activeVideoId, setActiveVideoId] = useState('');
@@ -157,6 +160,7 @@ const Marketplace: React.FC = () => {
     setActiveVideoTitle(video.title);
     setActiveVideoId(video.video_path);
     setActiveVideoUserId(video.user_id);
+    setIsVideoDialogOpen(true);
   };
 
   const getQRCodeUrl = (text: string) => {
@@ -231,19 +235,6 @@ const Marketplace: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Active Video Player */}
-        {activeVideoUrl && (
-          <div className="mb-8">
-            <VideoPlayer 
-              src={activeVideoUrl} 
-              title={activeVideoTitle}
-              videoId={activeVideoId}
-              userId={activeVideoUserId}
-              onClose={() => setActiveVideoUrl(null)}
-            />
-          </div>
-        )}
 
         {/* Ads Section */}
         {!isLoadingAds && filteredAds.length > 0 && (
@@ -464,6 +455,22 @@ const Marketplace: React.FC = () => {
                   </div>
                 </div>
               </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Video Player Dialog */}
+        <Dialog open={isVideoDialogOpen} onOpenChange={setIsVideoDialogOpen}>
+          <DialogContent className="bg-dark-secondary border-dark-accent p-0 max-w-4xl">
+            {activeVideoUrl && (
+              <VideoPlayer 
+                src={activeVideoUrl} 
+                title={activeVideoTitle}
+                videoId={activeVideoId}
+                userId={activeVideoUserId}
+                onClose={() => setIsVideoDialogOpen(false)}
+                inDialog={true}
+              />
             )}
           </DialogContent>
         </Dialog>

@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, X, ThumbsUp } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, X, ThumbsUp, Maximize, Minimize } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -11,16 +11,26 @@ interface VideoPlayerProps {
   videoId: string;
   userId: string;
   onClose?: () => void;
+  inDialog?: boolean;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, title, videoId, userId, onClose }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
+  src, 
+  title, 
+  videoId, 
+  userId, 
+  onClose,
+  inDialog = false
+}) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentVolume, setCurrentVolume] = useState(0.7);
   const [temperature, setTemperature] = useState(0);
   const [hasVoted, setHasVoted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   // Fetch the current temperature for this video
@@ -184,15 +194,44 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, title, videoId, userId, 
     }
   };
 
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  // Listen for fullscreen change events
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   const temperatureColor = calculateGradient();
   
   return (
-    <div className="relative bg-dark-secondary rounded-lg overflow-hidden">
+    <div 
+      ref={containerRef} 
+      className={`relative bg-dark-secondary rounded-lg overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}
+    >
       {/* Video Element */}
       <video
         ref={videoRef}
         src={src}
-        className="w-full rounded-t-lg"
+        className={`w-full ${inDialog ? 'h-auto aspect-video' : 'rounded-t-lg'}`}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}
@@ -233,12 +272,23 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, title, videoId, userId, 
           </div>
         </div>
         
-        <button
-          onClick={onClose}
-          className="p-2 rounded-full hover:bg-dark-accent"
-        >
-          <X size={20} />
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={toggleFullscreen}
+            className="p-2 rounded-full hover:bg-dark-accent"
+          >
+            {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+          </button>
+          
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-2 rounded-full hover:bg-dark-accent"
+            >
+              <X size={20} />
+            </button>
+          )}
+        </div>
       </div>
       
       {/* Demand Meter */}
