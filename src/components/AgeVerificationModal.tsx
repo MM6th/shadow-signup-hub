@@ -30,6 +30,11 @@ const AgeVerificationModal: React.FC = () => {
     setIsOpen(false);
   };
 
+  const handleReject = () => {
+    // If the user is under 18, redirect them away from the site
+    window.location.href = 'https://www.google.com';
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="glass-card sm:max-w-md">
@@ -50,10 +55,17 @@ const AgeVerificationModal: React.FC = () => {
           </p>
         </div>
         
-        <DialogFooter>
+        <DialogFooter className="flex flex-col sm:flex-row sm:justify-between gap-2">
+          <Button 
+            variant="outline"
+            onClick={handleReject} 
+            className="w-full sm:w-auto"
+          >
+            I am under 18
+          </Button>
           <Button 
             onClick={handleAccept} 
-            className="w-full"
+            className="w-full sm:w-auto"
           >
             I am 18 or older - Continue
           </Button>

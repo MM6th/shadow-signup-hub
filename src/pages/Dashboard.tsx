@@ -138,9 +138,11 @@ const Dashboard: React.FC = () => {
             </div>
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
-              <TabsList className={`grid grid-cols-${tabTriggers.length} w-full max-w-2xl mx-auto mb-6`}>
+              <TabsList className="w-full flex mb-6">
                 {tabTriggers.map(tab => (
-                  <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
+                  <TabsTrigger key={tab.value} value={tab.value} className="flex-1">
+                    {tab.label}
+                  </TabsTrigger>
                 ))}
               </TabsList>
               
