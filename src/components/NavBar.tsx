@@ -38,18 +38,6 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenAuthModal }) => {
           </a>
         </div>
 
-        <nav className="hidden md:flex items-center space-x-8">
-          <a href="#services" className="text-pi-muted hover:text-pi transition-colors">
-            Services
-          </a>
-          <a href="#about" className="text-pi-muted hover:text-pi transition-colors">
-            About
-          </a>
-          <a href="#contact" className="text-pi-muted hover:text-pi transition-colors">
-            Contact
-          </a>
-        </nav>
-
         <div className="hidden md:flex items-center space-x-4">
           <Button 
             variant="ghost" 
@@ -77,27 +65,6 @@ const NavBar: React.FC<NavBarProps> = ({ onOpenAuthModal }) => {
       {isMenuOpen && (
         <div className="md:hidden absolute top-full left-0 right-0 backdrop-blur-xl bg-dark/95 border-t border-white/10 animate-fade-in">
           <div className="py-4 px-6 space-y-4">
-            <a 
-              href="#services" 
-              className="block py-2 text-pi-muted hover:text-pi transition-colors"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Services
-            </a>
-            <a 
-              href="#about" 
-              className="block py-2 text-pi-muted hover:text-pi transition-colors"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              About
-            </a>
-            <a 
-              href="#contact" 
-              className="block py-2 text-pi-muted hover:text-pi transition-colors"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Contact
-            </a>
             <div className="pt-4 flex flex-col space-y-3">
               <Button 
                 variant="outline" 

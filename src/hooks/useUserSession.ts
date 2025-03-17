@@ -24,6 +24,7 @@ export const useUserSession = () => {
     fetchSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session ? 'Has session' : 'No session');
       setSession(session);
       setUser(session?.user || null);
       setIsLoading(false);

@@ -88,12 +88,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      // First clear the local session state to prevent UI issues
+      clearSession();
+      
+      // Then attempt to sign out from Supabase
       const { error } = await supabase.auth.signOut();
       
-      if (error) throw error;
-      
-      // Clear the local session state
-      clearSession();
+      if (error) {
+        console.warn('Sign out API error (continued with local signout):', error);
+      }
       
       toast({
         title: "Signed out",
@@ -104,11 +107,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       navigate('/');
     } catch (error: any) {
       console.error('Sign out error:', error);
+      
+      // Even if there's an error with the API call, we still want to clear local state
+      clearSession();
+      
       toast({
-        title: "Sign out failed",
-        description: error.message,
-        variant: "destructive",
+        title: "Signed out",
+        description: "Local session cleared.",
       });
+      
+      navigate('/');
     }
   };
 

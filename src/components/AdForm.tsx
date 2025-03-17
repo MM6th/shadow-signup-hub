@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -26,9 +27,10 @@ const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB for a short 10-second video
 
 interface AdFormProps {
   onAdCreated?: () => void;
+  onCancel?: () => void;
 }
 
-const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
+const AdForm: React.FC<AdFormProps> = ({ onAdCreated, onCancel }) => {
   const { user, profile } = useAuth();
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
@@ -211,6 +213,14 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
     }
   };
 
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   return (
     <div className="glass-card p-6">
       <h2 className="text-xl font-elixia text-gradient mb-6">Create New Advertisement</h2>
@@ -367,7 +377,11 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
           />
           
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={() => navigate('/dashboard')}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleCancel}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>

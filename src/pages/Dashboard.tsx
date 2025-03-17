@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Briefcase, Tag, PenSquare, ShoppingBag, Plus, User, Film } from 'lucide-react';
+import { Briefcase, Tag, PenSquare, ShoppingBag, Plus, User, Film, Trash2 } from 'lucide-react';
 import Button from '@/components/Button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button as ShadcnButton } from '@/components/ui/button';
@@ -11,6 +11,17 @@ import { ChartButton } from '@/components/charts/ChartButton';
 import { ScreenplayModal } from '@/components/charts/ScreenplayModal';
 import AdsList from '@/components/AdsList';
 import { Tags } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Dashboard: React.FC = () => {
   const { user, profile, isLoading, hasProfile, signOut } = useAuth();
@@ -237,28 +248,77 @@ const Dashboard: React.FC = () => {
 const ProductsList = ({ userId }: { userId: string }) => {
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
+  const fetchProducts = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      toast({
+        title: "Error",
+        description: "Could not load your products. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
-          
-        if (error) throw error;
-        setProducts(data || []);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     fetchProducts();
   }, [userId]);
+  
+  const handleDelete = async () => {
+    if (!deleteProductId) return;
+    
+    try {
+      // Delete product
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', deleteProductId);
+        
+      if (error) throw error;
+      
+      // Delete associated wallet addresses
+      const { error: walletError } = await supabase
+        .from('wallet_addresses')
+        .delete()
+        .eq('product_id', deleteProductId);
+        
+      if (walletError) console.error('Warning: Could not delete wallet addresses:', walletError);
+      
+      toast({
+        title: "Product deleted",
+        description: "The product has been deleted successfully",
+      });
+      
+      // Refresh products list
+      fetchProducts();
+    } catch (error: any) {
+      console.error('Error deleting product:', error);
+      toast({
+        title: "Delete failed",
+        description: error.message || "An error occurred while deleting the product",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteProductId(null);
+      setDeleteDialogOpen(false);
+    }
+  };
   
   if (isLoading) {
     return (
@@ -282,38 +342,74 @@ const ProductsList = ({ userId }: { userId: string }) => {
     );
   }
   
+  const isAdmin = userId === '3a25fea8-ec60-4e52-ae40-63f2b1ce89d9';
+  
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {products.map(product => (
-        <div key={product.id} className="glass-card p-4 flex">
-          <div className="w-16 h-16 bg-dark-secondary rounded-md overflow-hidden mr-4 flex-shrink-0">
-            {product.image_url ? (
-              <img src={product.image_url} alt={product.title} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <ShoppingBag size={24} className="text-pi-muted" />
-              </div>
-            )}
-          </div>
-          <div className="flex-grow">
-            <h3 className="font-medium line-clamp-1">{product.title}</h3>
-            <p className="text-sm text-pi-muted line-clamp-1">{product.description}</p>
-            <div className="flex justify-between items-center mt-2">
-              <span className="font-medium">${product.price.toFixed(2)}</span>
-              <div className="flex gap-2">
-                <ShadcnButton 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => navigate(`/edit-product/${product.id}`)}
-                >
-                  Edit
-                </ShadcnButton>
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {products.map(product => (
+          <div key={product.id} className="glass-card p-4 flex">
+            <div className="w-16 h-16 bg-dark-secondary rounded-md overflow-hidden mr-4 flex-shrink-0">
+              {product.image_url ? (
+                <img src={product.image_url} alt={product.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <ShoppingBag size={24} className="text-pi-muted" />
+                </div>
+              )}
+            </div>
+            <div className="flex-grow">
+              <h3 className="font-medium line-clamp-1">{product.title}</h3>
+              <p className="text-sm text-pi-muted line-clamp-1">{product.description}</p>
+              <div className="flex justify-between items-center mt-2">
+                <span className="font-medium">${product.price.toFixed(2)}</span>
+                <div className="flex gap-2">
+                  <ShadcnButton 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate(`/edit-product/${product.id}`)}
+                  >
+                    Edit
+                  </ShadcnButton>
+                  {isAdmin && (
+                    <ShadcnButton 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={() => {
+                        setDeleteProductId(product.id);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </ShadcnButton>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+      
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the product
+              and all its associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteProductId(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

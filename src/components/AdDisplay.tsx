@@ -72,15 +72,30 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false }) => {
     }
     
     try {
-      const { data, error } = await supabase
+      const { data: productData, error: productError } = await supabase
         .from('products')
         .select('*')
         .eq('id', productId)
         .single();
         
-      if (error) throw error;
-      console.log("Fetched product data:", data);
-      setProductData(data);
+      if (productError) throw productError;
+      
+      // Also fetch wallet addresses for the product
+      const { data: walletData, error: walletError } = await supabase
+        .from('wallet_addresses')
+        .select('*')
+        .eq('product_id', productId);
+        
+      if (walletError) throw walletError;
+      
+      // Combine the data
+      const fullProductData = {
+        ...productData,
+        wallet_addresses: walletData || []
+      };
+      
+      console.log("Fetched product data:", fullProductData);
+      setProductData(fullProductData);
     } catch (error) {
       console.error('Error fetching product info:', error);
       setProductData(null);
@@ -125,7 +140,7 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false }) => {
               {ad.industry && (
                 <div className="text-xs text-muted-foreground mb-3 flex items-center">
                   <Tags size={12} className="mr-1" />
-                  {ad.industry}
+                  <span>{ad.industry}</span>
                 </div>
               )}
               

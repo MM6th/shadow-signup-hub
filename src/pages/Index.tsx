@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Star, Wallet } from 'lucide-react';
+import { ArrowRight, Star } from 'lucide-react';
 import NavBar from '../components/NavBar';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
@@ -50,27 +50,6 @@ const Index: React.FC = () => {
                   Discover a digital ecosystem where entrepreneurs, influencers, and knowledge workers
                   connect, collaborate, and create new economic opportunities.
                 </p>
-                
-                {/* Crypto-only banner */}
-                <div className="bg-gradient-to-r from-amber-500/20 to-amber-700/20 border border-amber-500/30 rounded-lg p-4 mb-8">
-                  <div className="flex items-center gap-3">
-                    <Wallet className="h-6 w-6 text-amber-400" />
-                    <div>
-                      <h3 className="font-medium text-white">Crypto Transactions Only</h3>
-                      <p className="text-sm text-pi-muted">
-                        P.I.E. exclusively uses cryptocurrency for all transactions. 
-                        <a 
-                          href="https://metamask.io/download/" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="ml-2 text-amber-400 hover:text-amber-300 underline font-medium"
-                        >
-                          Get MetaMask →
-                        </a>
-                      </p>
-                    </div>
-                  </div>
-                </div>
                 
                 <div className="flex flex-wrap gap-4">
                   <Button size="lg" onClick={() => handleOpenAuthModal('signup')}>
