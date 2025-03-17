@@ -1,14 +1,8 @@
 
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Image, Video, ExternalLink, Tags, User } from 'lucide-react';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Image, Video, ExternalLink, Tags } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar } from '@/components/ui/avatar';
-import { useProfile } from '@/hooks/useProfile';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import ProductCard from '@/components/ProductCard';
-import { supabase } from '@/integrations/supabase/client';
 
 interface Ad {
   id: string;
@@ -18,135 +12,14 @@ interface Ad {
   product_url: string | null;
   industry: string | null;
   created_at: string;
-  user_id: string;
 }
 
 interface AdDisplayProps {
   ads: Ad[];
   isLoading?: boolean;
-  onProductClick?: (productId: string) => void;
 }
 
-const AdCard = ({ ad, onProductClick }: { ad: Ad, onProductClick?: (productId: string) => void }) => {
-  const { profile, isLoading } = useProfile(ad.user_id);
-  const navigate = useNavigate();
-  const [productData, setProductData] = useState<any>(null);
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  
-  console.log("Ad user profile:", { profile, userId: ad.user_id, isLoading });
-  
-  const handleProductClick = async () => {
-    if (ad.product_url) {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('id', ad.product_url)
-          .single();
-          
-        if (error) {
-          console.error('Error fetching product:', error);
-          return;
-        }
-        
-        setProductData(data);
-        setIsProductModalOpen(true);
-        
-        if (onProductClick) {
-          onProductClick(ad.product_url);
-        }
-      } catch (error) {
-        console.error('Error handling product click:', error);
-      }
-    }
-  };
-
-  return (
-    <div className="glass-card overflow-hidden group">
-      <div className="h-96 bg-dark-secondary relative overflow-hidden">
-        {ad.media_type === 'image' ? (
-          <img 
-            src={ad.media_url} 
-            alt={ad.title} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        ) : (
-          <video 
-            src={ad.media_url} 
-            controls 
-            className="w-full h-full object-cover"
-          />
-        )}
-        <div className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-md flex items-center text-xs">
-          {ad.media_type === 'image' ? (
-            <><Image size={12} className="mr-1" /> Image</>
-          ) : (
-            <><Video size={12} className="mr-1" /> Video</>
-          )}
-        </div>
-      </div>
-      
-      <div className="p-4">
-        <div className="flex items-center space-x-2 mb-3">
-          <Avatar className="w-8 h-8">
-            {profile?.profile_photo_url ? (
-              <img 
-                src={profile.profile_photo_url} 
-                alt={profile?.username || 'user'} 
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <User className="h-4 w-4" />
-            )}
-          </Avatar>
-          <span className="text-sm font-medium">
-            {isLoading ? "Loading..." : profile?.username || "Anonymous"}
-          </span>
-        </div>
-        
-        <h3 className="text-lg font-medium line-clamp-2 mb-2">{ad.title}</h3>
-        
-        {ad.industry && (
-          <div className="text-xs text-muted-foreground mb-3 flex items-center">
-            <Tags size={12} className="mr-1" />
-            {ad.industry}
-          </div>
-        )}
-        
-        {ad.product_url && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full flex items-center justify-center"
-            onClick={handleProductClick}
-          >
-            <ExternalLink size={14} className="mr-1" />
-            View Product
-          </Button>
-        )}
-      </div>
-      
-      {/* Only one modal for product display */}
-      {productData && (
-        <Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-background border border-border">
-            <DialogHeader>
-              <DialogTitle>{productData.title}</DialogTitle>
-              <DialogDescription>
-                Product details
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <ProductCard product={productData} showBuyButton={true} />
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
-  );
-};
-
-const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false, onProductClick }) => {
+const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false }) => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -170,7 +43,55 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false, onProduct
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {ads.map((ad) => (
-        <AdCard key={ad.id} ad={ad} onProductClick={onProductClick} />
+        <div key={ad.id} className="glass-card overflow-hidden group">
+          <div className="h-48 bg-dark-secondary relative overflow-hidden">
+            {ad.media_type === 'image' ? (
+              <img 
+                src={ad.media_url} 
+                alt={ad.title} 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+            ) : (
+              <video 
+                src={ad.media_url} 
+                controls 
+                className="w-full h-full object-cover"
+              />
+            )}
+            <div className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-md flex items-center text-xs">
+              {ad.media_type === 'image' ? (
+                <><Image size={12} className="mr-1" /> Image</>
+              ) : (
+                <><Video size={12} className="mr-1" /> Video</>
+              )}
+            </div>
+          </div>
+          
+          <div className="p-4">
+            <h3 className="text-lg font-medium line-clamp-2 mb-2">{ad.title}</h3>
+            
+            {ad.industry && (
+              <div className="text-xs text-muted-foreground mb-3 flex items-center">
+                <Tags size={12} className="mr-1" />
+                {ad.industry}
+              </div>
+            )}
+            
+            {ad.product_url && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full flex items-center justify-center"
+                asChild
+              >
+                <Link to={`/marketplace?product=${ad.product_url}`}>
+                  <ExternalLink size={14} className="mr-1" />
+                  View Product
+                </Link>
+              </Button>
+            )}
+          </div>
+        </div>
       ))}
     </div>
   );

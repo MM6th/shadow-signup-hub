@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tags, Plus, Link as LinkIcon, Trash2 } from 'lucide-react';
@@ -45,15 +46,12 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
   useEffect(() => {
     fetchAds();
   }, [userId]);
-
-  const handleCreateAdClick = () => {
-    setIsAdFormOpen(true);
-  };
   
   const handleDeleteAd = async () => {
     if (!adToDelete) return;
     
     try {
+      // Delete the ad from the database
       const { error } = await supabase
         .from('ads')
         .delete()
@@ -61,12 +59,15 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
         
       if (error) throw error;
       
+      // Get the ad to find the media URL
       const adToDeleteObj = ads.find(ad => ad.id === adToDelete);
       if (adToDeleteObj && adToDeleteObj.media_url) {
+        // Extract the path from the URL
         const url = new URL(adToDeleteObj.media_url);
         const pathParts = url.pathname.split('/');
         const mediaPath = pathParts[pathParts.length - 2] + '/' + pathParts[pathParts.length - 1];
         
+        // Delete the media file from storage
         const { error: storageError } = await supabase.storage
           .from('ad_media')
           .remove([mediaPath]);
@@ -81,6 +82,7 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
         description: "Your ad has been deleted successfully."
       });
       
+      // Refresh the ads list
       fetchAds();
     } catch (error) {
       console.error('Error deleting ad:', error);
@@ -109,17 +111,14 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
         <Tags size={48} className="mx-auto text-muted-foreground mb-4" />
         <h3 className="text-xl font-medium mb-2">No Ads Yet</h3>
         <p className="text-muted-foreground mb-6">You haven't created any advertisements yet.</p>
-        <Button onClick={handleCreateAdClick}>
+        <Button onClick={() => setIsAdFormOpen(true)}>
           <Plus size={16} className="mr-2" /> Create Your First Ad
         </Button>
         
         <Dialog open={isAdFormOpen} onOpenChange={setIsAdFormOpen}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-background border border-border">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Advertisement</DialogTitle>
-              <DialogDescription>
-                Create a new ad to promote your products or services
-              </DialogDescription>
             </DialogHeader>
             <AdForm onAdCreated={() => {
               setIsAdFormOpen(false);
@@ -175,18 +174,15 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
       </div>
       
       <div className="mt-6 flex justify-end">
-        <Button onClick={handleCreateAdClick}>
+        <Button onClick={() => setIsAdFormOpen(true)}>
           <Plus size={16} className="mr-2" /> Create New Ad
         </Button>
       </div>
       
       <Dialog open={isAdFormOpen} onOpenChange={setIsAdFormOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-background border border-border">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Advertisement</DialogTitle>
-            <DialogDescription>
-              Create a new ad to promote your products or services
-            </DialogDescription>
           </DialogHeader>
           <AdForm onAdCreated={() => {
             setIsAdFormOpen(false);
@@ -196,7 +192,7 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
       </Dialog>
       
       <Dialog open={!!adToDelete} onOpenChange={() => setAdToDelete(null)}>
-        <DialogContent className="bg-background border border-border">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Advertisement</DialogTitle>
             <DialogDescription>

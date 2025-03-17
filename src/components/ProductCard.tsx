@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,6 @@ interface ProductCardProps {
   };
   onClick?: () => void;
   showEditButton?: boolean;
-  showBuyButton?: boolean; // Add this prop to the interface
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditButton }) => {

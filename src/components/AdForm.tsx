@@ -10,12 +10,13 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 const adFormSchema = z.object({
-  title: z.string().max(75, "Caption must be 75 characters or less").min(1, "Caption is required"),
+  title: z.string().max(245, "Title must be 245 characters or less").min(1, "Title is required"),
   mediaType: z.enum(["image", "video"]),
   productUrl: z.string().optional(),
 });
@@ -34,7 +35,6 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-  const [charCount, setCharCount] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -48,12 +48,6 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
   });
 
   const mediaType = form.watch("mediaType");
-  const title = form.watch("title");
-
-  // Update character count when title changes
-  useEffect(() => {
-    setCharCount(title.length);
-  }, [title]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -228,21 +222,12 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
             name="title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Caption</FormLabel>
+                <FormLabel>Advertisement Title</FormLabel>
                 <FormControl>
-                  <div className="relative">
-                    <Input 
-                      placeholder="Enter a captivating caption for your ad" 
-                      {...field} 
-                      maxLength={75}
-                    />
-                    <div className="absolute right-2 top-2 text-xs text-muted-foreground">
-                      {charCount}/75
-                    </div>
-                  </div>
+                  <Input placeholder="Enter a captivating title for your ad" {...field} />
                 </FormControl>
                 <FormDescription>
-                  Maximum 75 characters
+                  Maximum 245 characters
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -294,7 +279,7 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
             <FormLabel>Upload {mediaType}</FormLabel>
             <div className="mt-1">
               {mediaPreview ? (
-                <div className="relative w-full h-64 rounded-md overflow-hidden mb-2 bg-dark-secondary">
+                <div className="relative w-full h-48 rounded-md overflow-hidden mb-2 bg-dark-secondary">
                   {mediaType === 'image' ? (
                     <img 
                       src={mediaPreview} 
@@ -320,7 +305,7 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
                 <div>
                   <label
                     htmlFor="media-upload"
-                    className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-500 rounded-md cursor-pointer hover:border-primary transition-colors"
+                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-500 rounded-md cursor-pointer hover:border-primary transition-colors"
                   >
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="mb-2 text-muted-foreground" size={24} />
@@ -363,7 +348,7 @@ const AdForm: React.FC<AdFormProps> = ({ onAdCreated }) => {
                         <SelectValue placeholder="Select a product to link" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="-">None</SelectItem>
                         {products.map(product => (
                           <SelectItem key={product.id} value={product.id}>
                             {product.title}

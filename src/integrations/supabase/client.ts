@@ -12,10 +12,10 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Create a Supabase client
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Create storage buckets if they don't exist
+// Create a storage bucket for media if it doesn't exist
 (async () => {
   try {
-    // First check if the buckets exist
+    // First check if the bucket exists
     const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
     
     if (bucketsError) {
@@ -23,87 +23,24 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
       return;
     }
     
-    // Check for media bucket
     const mediaBucketExists = buckets?.some(bucket => bucket.name === 'media');
-    
-    // Check for ad_media bucket
-    const adMediaBucketExists = buckets?.some(bucket => bucket.name === 'ad_media');
-    
-    // Check for profiles bucket
-    const profilesBucketExists = buckets?.some(bucket => bucket.name === 'profiles');
     
     // If media bucket doesn't exist, create it
     if (!mediaBucketExists) {
       console.log('Media bucket does not exist, creating it now...');
-      try {
-        const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('media', {
-          public: true,
-          fileSizeLimit: 5242880 // 5MB
-        });
-        
-        if (bucketError) {
-          console.error('Error creating media bucket:', bucketError);
-        } else {
-          console.log('Media storage bucket created successfully');
-        }
-      } catch (err) {
-        console.error('Error creating media bucket:', err);
+      const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('media', {
+        public: true
+      });
+      
+      if (bucketError) {
+        console.error('Error creating media bucket:', bucketError);
+      } else {
+        console.log('Media storage bucket created successfully');
       }
     } else {
       console.log('Media bucket already exists');
     }
-    
-    // If ad_media bucket doesn't exist, create it
-    if (!adMediaBucketExists) {
-      console.log('Ad media bucket does not exist, creating it now...');
-      try {
-        const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('ad_media', {
-          public: true,
-          fileSizeLimit: 10485760 // 10MB
-        });
-        
-        if (bucketError) {
-          console.error('Error creating ad_media bucket:', bucketError);
-        } else {
-          console.log('Ad media storage bucket created successfully');
-        }
-      } catch (err) {
-        console.error('Error creating ad_media bucket:', err);
-      }
-    } else {
-      console.log('Ad media bucket already exists');
-    }
-    
-    // If profiles bucket doesn't exist, create it
-    if (!profilesBucketExists) {
-      console.log('Profiles bucket does not exist, creating it now...');
-      try {
-        const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('profiles', {
-          public: true,
-          fileSizeLimit: 5242880 // 5MB
-        });
-        
-        if (bucketError) {
-          console.error('Error creating profiles bucket:', bucketError);
-        } else {
-          console.log('Profiles storage bucket created successfully');
-          
-          // Set public bucket policy to allow reading files
-          const { error: policyError } = await supabase.storage.from('profiles').createSignedUrl(
-            'test.txt', 60, { transform: { width: 100, height: 100 } }
-          );
-          
-          if (policyError && policyError.message !== "The resource was not found") {
-            console.error('Error setting profiles bucket policy:', policyError);
-          }
-        }
-      } catch (err) {
-        console.error('Error creating profiles bucket:', err);
-      }
-    } else {
-      console.log('Profiles bucket already exists');
-    }
   } catch (err) {
-    console.error('Error initializing storage buckets:', err);
+    console.error('Error initializing storage bucket:', err);
   }
 })();
