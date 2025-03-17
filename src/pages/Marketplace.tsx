@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, ShoppingCart, Star, QrCode, User, Phone, Video, Shield, Play, Tags } from 'lucide-react';
@@ -10,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import AdDisplay from '@/components/AdDisplay';
+import VideoPlayer from '@/components/VideoPlayer';
 
 // Admin access email
 const ADMIN_EMAILS = ['cmooregee@gmail.com'];
@@ -40,6 +42,10 @@ const Marketplace: React.FC = () => {
   const [videos, setVideos] = useState<any[]>([]);
   const [ads, setAds] = useState<any[]>([]);
   const [isLoadingAds, setIsLoadingAds] = useState(true);
+  const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
+  const [activeVideoTitle, setActiveVideoTitle] = useState('');
+  const [activeVideoId, setActiveVideoId] = useState('');
+  const [activeVideoUserId, setActiveVideoUserId] = useState('');
 
   // Check if user is admin
   const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
@@ -79,17 +85,15 @@ const Marketplace: React.FC = () => {
           setWalletAddresses(walletsByProduct);
         }
 
-        // Fetch uploaded videos if user is authenticated
-        if (user) {
-          const { data: videoData, error: videoError } = await supabase
-            .from('video_metadata')
-            .select('*')
-            .order('created_at', { ascending: false });
-            
-          if (videoError) throw videoError;
+        // Fetch uploaded videos
+        const { data: videoData, error: videoError } = await supabase
+          .from('video_metadata')
+          .select('*')
+          .order('created_at', { ascending: false });
           
-          setVideos(videoData || []);
-        }
+        if (videoError) throw videoError;
+        
+        setVideos(videoData || []);
         
         // Fetch ads
         const { data: adsData, error: adsError } = await supabase
@@ -148,8 +152,11 @@ const Marketplace: React.FC = () => {
       .from('profile_videos')
       .getPublicUrl(video.video_path).data.publicUrl;
     
-    // Open the video in a new tab
-    window.open(videoUrl, '_blank');
+    // Set active video information
+    setActiveVideoUrl(videoUrl);
+    setActiveVideoTitle(video.title);
+    setActiveVideoId(video.video_path);
+    setActiveVideoUserId(video.user_id);
   };
 
   const getQRCodeUrl = (text: string) => {
@@ -225,6 +232,19 @@ const Marketplace: React.FC = () => {
           </div>
         </div>
 
+        {/* Active Video Player */}
+        {activeVideoUrl && (
+          <div className="mb-8">
+            <VideoPlayer 
+              src={activeVideoUrl} 
+              title={activeVideoTitle}
+              videoId={activeVideoId}
+              userId={activeVideoUserId}
+              onClose={() => setActiveVideoUrl(null)}
+            />
+          </div>
+        )}
+
         {/* Ads Section */}
         {!isLoadingAds && filteredAds.length > 0 && (
           <div className="mb-10">
@@ -279,7 +299,7 @@ const Marketplace: React.FC = () => {
               </div>
             )}
             
-            {/* Display videos if filtered or if video category is selected */}
+            {/* Display videos */}
             {filteredVideos.length > 0 && (
               <>
                 {filteredProducts.length > 0 && (
