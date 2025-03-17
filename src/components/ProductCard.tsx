@@ -47,6 +47,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState<string>(product.price_currency || 'usd');
   const [showCurrencyConverter, setShowCurrencyConverter] = useState(false);
+  const [fullProductData, setFullProductData] = useState<any>(null);
   
   const ADMIN_EMAIL = "cmooregee@gmail.com";
   const isAdminUser = user?.email === ADMIN_EMAIL;
@@ -60,19 +61,42 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   );
   
   useEffect(() => {
+    const fetchCompleteProductData = async () => {
+      if (product.price > 0 || isLoading) return;
+      
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', product.id)
+          .single();
+          
+        if (error) throw error;
+        if (data) {
+          console.log("Fetched complete product data:", data);
+          setFullProductData(data);
+        }
+      } catch (err) {
+        console.error("Error fetching complete product data:", err);
+      }
+    };
+    
+    fetchCompleteProductData();
+  }, [product.id, product.price, isLoading]);
+  
+  const displayProduct = fullProductData || product;
+  
+  useEffect(() => {
     console.log("Product card data:", {
       productId: product.id,
       hasPayPalEnabled,
       paypalClientId,
-      walletAddresses: adminWalletAddresses
+      walletAddresses: adminWalletAddresses,
+      displayProduct
     });
-  }, [product.id, hasPayPalEnabled, paypalClientId, adminWalletAddresses]);
+  }, [product.id, hasPayPalEnabled, paypalClientId, adminWalletAddresses, displayProduct]);
   
-  const hasWalletAddresses = adminWalletAddresses.length > 0;
-  const selectedWalletAddress = hasWalletAddresses ? adminWalletAddresses[0] : null;
-
-  const hasPaymentMethods = hasWalletAddresses || hasPayPalEnabled;
-
   useEffect(() => {
     setShowCurrencyConverter(hasWalletAddresses);
   }, [hasWalletAddresses]);
@@ -276,8 +300,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const qrCodeUrl = selectedWalletAddress ? generateQRCode(selectedWalletAddress.wallet_address) : '';
   
   const displayPrice = () => {
-    const baseCurrency = product.price_currency || 'usd';
-    const basePrice = product.original_price || product.price;
+    const baseCurrency = displayProduct.price_currency || 'usd';
+    const basePrice = displayProduct.original_price || displayProduct.price;
     
     if (selectedCurrency === baseCurrency) {
       return formatCurrency(basePrice, baseCurrency);
@@ -295,7 +319,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
     const VideoConsultationCard = require('./VideoConsultationCard').default;
     return (
       <VideoConsultationCard
-        product={product}
+        product={displayProduct}
         onClick={onClick}
         showEditButton={showEditButton}
       />
@@ -304,14 +328,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
 
   return (
     <Card 
-      className="overflow-hidden h-[550px] flex flex-col"
+      className="overflow-hidden h-[600px] flex flex-col"
       onClick={handleCardClick}
     >
-      <div className="relative h-80 overflow-hidden">
-        {product.image_url ? (
+      <div className="relative h-96 overflow-hidden">
+        {displayProduct.image_url ? (
           <img
-            src={product.image_url}
-            alt={product.title}
+            src={displayProduct.image_url}
+            alt={displayProduct.title}
             className="w-full h-full object-cover"
           />
         ) : (
@@ -322,9 +346,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
       </div>
       
       <CardContent className="p-4 flex flex-col flex-grow" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold mb-2">{product.title}</h3>
+        <h3 className="text-lg font-semibold mb-2">{displayProduct.title}</h3>
         <p className="text-gray-600 mb-4 flex-grow overflow-y-auto">
-          {product.description}
+          {displayProduct.description}
         </p>
         <div className="mt-auto">
           <div className="flex items-center justify-between mb-4">
@@ -337,7 +361,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
               ) : (
                 displayPrice()
               )}
-              {product.type !== 'tangible' ? '/hr' : ''}
+              {displayProduct.type === 'service' ? '/hr' : ''}
             </p>
             
             {showCurrencyConverter && (

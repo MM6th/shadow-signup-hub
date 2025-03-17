@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Image, Video, ExternalLink, Tags } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import ProductCard from '@/components/ProductCard';
 import { useProfile } from '@/hooks/useProfile';
 
@@ -55,6 +55,26 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false }) => {
     }
   };
 
+  // Fetch product info from Supabase directly when an ad is clicked
+  const fetchProductInfoFromSupabase = async (productId: string) => {
+    if (!productId) return null;
+    
+    try {
+      const { data: supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', productId)
+        .single();
+        
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching product info:', error);
+      return null;
+    }
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -64,7 +84,7 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false }) => {
             className="glass-card overflow-hidden group cursor-pointer"
             onClick={() => handleAdClick(ad)}
           >
-            <div className="h-64 bg-dark-secondary relative overflow-hidden">
+            <div className="h-80 bg-dark-secondary relative overflow-hidden">
               {ad.media_type === 'image' ? (
                 <img 
                   src={ad.media_url} 
@@ -118,6 +138,7 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false }) => {
       {/* Product Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl bg-background">
+          <DialogTitle className="sr-only">Product Details</DialogTitle>
           {selectedAd && selectedAd.product_url && (
             <ProductCard 
               product={{
@@ -129,6 +150,7 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false }) => {
                 user_id: selectedAd.user_id || "",
               }}
               showBuyButton={true}
+              onClick={() => {}}
             />
           )}
         </DialogContent>
