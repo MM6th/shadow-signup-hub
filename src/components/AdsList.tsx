@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tags, Plus, Link as LinkIcon, Trash2 } from 'lucide-react';
@@ -49,10 +50,38 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
   
   const forceDeleteAllAds = async () => {
     try {
-      // This is a special admin function to force delete all ads
-      if (userId !== 'cmooregee@gmail.com') return;
+      // Identify admin users by their user IDs
+      const adminUserIds = ['f64a94e3-3adf-4409-978d-f3106aabf598', '3a25fea8-ec60-4e52-ae40-63f2b1ce89d9'];
+      if (!adminUserIds.includes(userId)) {
+        console.error('Non-admin user attempted to force delete ads');
+        return;
+      }
       
-      const { data, error } = await supabase
+      // First, delete all media files from storage
+      for (const ad of ads) {
+        if (ad && ad.media_url) {
+          try {
+            const url = new URL(ad.media_url);
+            const pathParts = url.pathname.split('/');
+            const mediaPath = pathParts[pathParts.length - 2] + '/' + pathParts[pathParts.length - 1];
+            
+            console.log('Attempting to delete media file:', mediaPath);
+            
+            const { error: storageError } = await supabase.storage
+              .from('ad_media')
+              .remove([mediaPath]);
+              
+            if (storageError) {
+              console.error('Error deleting media file:', storageError);
+            }
+          } catch (mediaError) {
+            console.error('Error processing media URL for deletion:', mediaError);
+          }
+        }
+      }
+      
+      // Then delete all ads from the database
+      const { error } = await supabase
         .from('ads')
         .delete()
         .eq('user_id', userId);
@@ -61,7 +90,7 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
       
       toast({
         title: "All ads deleted",
-        description: "All advertisements have been deleted."
+        description: "All advertisements have been deleted successfully."
       });
       
       fetchAds();
@@ -96,6 +125,8 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
           const url = new URL(adToDeleteObj.media_url);
           const pathParts = url.pathname.split('/');
           const mediaPath = pathParts[pathParts.length - 2] + '/' + pathParts[pathParts.length - 1];
+          
+          console.log('Attempting to delete media file:', mediaPath);
           
           // Delete the media file from storage
           const { error: storageError } = await supabase.storage

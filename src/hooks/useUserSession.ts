@@ -40,6 +40,7 @@ export const useUserSession = () => {
   // Add a function to clear session data when signing out
   const clearSession = useCallback(() => {
     try {
+      console.log('Clearing session in useUserSession');
       setUser(null);
       setSession(null);
     } catch (error) {
