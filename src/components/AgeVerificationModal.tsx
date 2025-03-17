@@ -11,10 +11,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
 
+// Helper to clear age verification (can be used in development)
+// Uncomment this line to reset the age verification on page load
+// localStorage.removeItem('age-verified');
+
 const AgeVerificationModal: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   
   useEffect(() => {
+    // Force clear age verification in development if needed
+    // localStorage.removeItem('age-verified');
+    
     // Check if the user has already verified their age
     const hasVerifiedAge = localStorage.getItem('age-verified');
     
@@ -22,16 +29,21 @@ const AgeVerificationModal: React.FC = () => {
       // Show the modal if the user hasn't verified their age yet
       setIsOpen(true);
     }
+    
+    // For debugging
+    console.log("AgeVerificationModal mounted, hasVerifiedAge:", hasVerifiedAge, "isOpen:", isOpen);
   }, []);
   
   const handleAccept = () => {
     // Store the verification in localStorage
     localStorage.setItem('age-verified', 'true');
     setIsOpen(false);
+    console.log("Age verification accepted");
   };
 
   const handleReject = () => {
     // If the user is under 18, redirect them away from the site
+    console.log("Age verification rejected, redirecting...");
     window.location.href = 'https://www.google.com';
   };
 
@@ -49,7 +61,7 @@ const AgeVerificationModal: React.FC = () => {
         </DialogHeader>
         
         <div className="py-4">
-          <p className="text-pi text-sm">
+          <p className="text-sm">
             By continuing to use this website, you confirm that you are at least 18 years of age.
             This website may contain content suitable only for adults.
           </p>

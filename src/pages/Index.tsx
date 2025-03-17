@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star } from 'lucide-react';
@@ -18,6 +17,11 @@ const Index: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
   const { reviews, isLoading, averageRating, totalReviews } = useSellerReviews(ADMIN_ID);
+  
+  useEffect(() => {
+    // For debugging
+    console.log("Index page loaded, checking for AgeVerificationModal");
+  }, []);
   
   const handleOpenAuthModal = (mode: 'signin' | 'signup') => {
     setAuthModalMode(mode);
