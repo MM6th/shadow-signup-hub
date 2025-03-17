@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
   const [selectedCurrency, setSelectedCurrency] = useState<string>(product.price_currency || 'usd');
   const [showCurrencyConverter, setShowCurrencyConverter] = useState(false);
   const [fullProductData, setFullProductData] = useState<any>(null);
+  const [selectedWalletAddress, setSelectedWalletAddress] = useState<any>(null);
   
   const ADMIN_EMAIL = "cmooregee@gmail.com";
   const isAdminUser = user?.email === ADMIN_EMAIL;
@@ -59,6 +61,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
     product.id, 
     isAdminUser
   );
+  
+  // Derived properties
+  const hasWalletAddresses = adminWalletAddresses && adminWalletAddresses.length > 0;
+  const hasPaymentMethods = hasWalletAddresses || hasPayPalEnabled;
+  
+  useEffect(() => {
+    // Set the first wallet address as the selected one when available
+    if (adminWalletAddresses && adminWalletAddresses.length > 0) {
+      setSelectedWalletAddress(adminWalletAddresses[0]);
+    } else {
+      setSelectedWalletAddress(null);
+    }
+  }, [adminWalletAddresses]);
   
   useEffect(() => {
     const fetchCompleteProductData = async () => {
@@ -463,7 +478,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
 
               {product.contact_phone && (
                 <Button variant="outline" size="sm" onClick={handleContactSeller} className="w-full">
-                  <Phone size={16} className="mr-2" /> Contact Seller
+                  <Phone size={16} className="mr-1" /> Contact Seller
                 </Button>
               )}
             </div>

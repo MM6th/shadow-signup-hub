@@ -60,7 +60,7 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false }) => {
     if (!productId) return null;
     
     try {
-      const { data: supabase } = await import('@/integrations/supabase/client');
+      const { supabase } = await import('@/integrations/supabase/client');
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -81,7 +81,7 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ads, isLoading = false }) => {
         {ads.map((ad) => (
           <div 
             key={ad.id} 
-            className="glass-card overflow-hidden group cursor-pointer"
+            className="glass-card overflow-hidden group cursor-pointer h-[600px]"
             onClick={() => handleAdClick(ad)}
           >
             <div className="h-80 bg-dark-secondary relative overflow-hidden">
