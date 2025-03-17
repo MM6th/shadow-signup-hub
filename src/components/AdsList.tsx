@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tags, Plus, Link as LinkIcon, Trash2 } from 'lucide-react';
@@ -30,6 +29,7 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
         .order('created_at', { ascending: false });
         
       if (error) throw error;
+      console.log('Fetched ads:', data);
       setAds(data || []);
     } catch (error) {
       console.error('Error fetching ads:', error);
@@ -47,10 +47,41 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
     fetchAds();
   }, [userId]);
   
+  const forceDeleteAllAds = async () => {
+    try {
+      // This is a special admin function to force delete all ads
+      if (userId !== 'cmooregee@gmail.com') return;
+      
+      const { data, error } = await supabase
+        .from('ads')
+        .delete()
+        .eq('user_id', userId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "All ads deleted",
+        description: "All advertisements have been deleted."
+      });
+      
+      fetchAds();
+    } catch (error) {
+      console.error('Error force deleting ads:', error);
+      toast({
+        title: "Error deleting ads",
+        description: "There was a problem deleting your ads.",
+        variant: "destructive"
+      });
+    }
+  };
+  
   const handleDeleteAd = async () => {
     if (!adToDelete) return;
     
     try {
+      // Get the ad to find the media URL before deletion
+      const adToDeleteObj = ads.find(ad => ad.id === adToDelete);
+      
       // Delete the ad from the database
       const { error } = await supabase
         .from('ads')
@@ -59,21 +90,23 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
         
       if (error) throw error;
       
-      // Get the ad to find the media URL
-      const adToDeleteObj = ads.find(ad => ad.id === adToDelete);
       if (adToDeleteObj && adToDeleteObj.media_url) {
-        // Extract the path from the URL
-        const url = new URL(adToDeleteObj.media_url);
-        const pathParts = url.pathname.split('/');
-        const mediaPath = pathParts[pathParts.length - 2] + '/' + pathParts[pathParts.length - 1];
-        
-        // Delete the media file from storage
-        const { error: storageError } = await supabase.storage
-          .from('ad_media')
-          .remove([mediaPath]);
+        try {
+          // Extract the path from the URL
+          const url = new URL(adToDeleteObj.media_url);
+          const pathParts = url.pathname.split('/');
+          const mediaPath = pathParts[pathParts.length - 2] + '/' + pathParts[pathParts.length - 1];
           
-        if (storageError) {
-          console.error('Error deleting media file:', storageError);
+          // Delete the media file from storage
+          const { error: storageError } = await supabase.storage
+            .from('ad_media')
+            .remove([mediaPath]);
+            
+          if (storageError) {
+            console.error('Error deleting media file:', storageError);
+          }
+        } catch (mediaError) {
+          console.error('Error processing media URL for deletion:', mediaError);
         }
       }
       
@@ -130,6 +163,9 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
     );
   }
   
+  const isAdmin = userId === 'f64a94e3-3adf-4409-978d-f3106aabf598' || 
+                 userId === '3a25fea8-ec60-4e52-ae40-63f2b1ce89d9';
+  
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -172,6 +208,22 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
           </div>
         ))}
       </div>
+      
+      {isAdmin && (
+        <div className="mt-4 border-t pt-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-medium">Admin Controls</h3>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={forceDeleteAllAds}
+            >
+              <Trash2 size={14} className="mr-1" />
+              Force Delete All Ads
+            </Button>
+          </div>
+        </div>
+      )}
       
       <div className="mt-6 flex justify-end">
         <Button onClick={() => setIsAdFormOpen(true)}>
