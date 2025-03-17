@@ -33,6 +33,8 @@ const AdCard = ({ ad, onProductClick }: { ad: Ad, onProductClick?: (productId: s
   const [productData, setProductData] = useState<any>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   
+  console.log("Ad user profile:", { profile, userId: ad.user_id, isLoading });
+  
   const handleProductClick = async () => {
     if (ad.product_url) {
       try {
@@ -61,7 +63,7 @@ const AdCard = ({ ad, onProductClick }: { ad: Ad, onProductClick?: (productId: s
 
   return (
     <div className="glass-card overflow-hidden group">
-      <div className="h-80 bg-dark-secondary relative overflow-hidden">
+      <div className="h-96 bg-dark-secondary relative overflow-hidden">
         {ad.media_type === 'image' ? (
           <img 
             src={ad.media_url} 
@@ -126,7 +128,9 @@ const AdCard = ({ ad, onProductClick }: { ad: Ad, onProductClick?: (productId: s
             <DialogHeader>
               <DialogTitle>{productData.title}</DialogTitle>
             </DialogHeader>
-            <ProductCard product={productData} showBuyButton={true} />
+            <div className="py-4">
+              <ProductCard product={productData} showBuyButton={true} />
+            </div>
           </DialogContent>
         </Dialog>
       )}

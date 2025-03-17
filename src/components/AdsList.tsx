@@ -46,6 +46,10 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
   useEffect(() => {
     fetchAds();
   }, [userId]);
+
+  const handleCreateAdClick = () => {
+    setIsAdFormOpen(true);
+  };
   
   const handleDeleteAd = async () => {
     if (!adToDelete) return;
@@ -111,7 +115,7 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
         <Tags size={48} className="mx-auto text-muted-foreground mb-4" />
         <h3 className="text-xl font-medium mb-2">No Ads Yet</h3>
         <p className="text-muted-foreground mb-6">You haven't created any advertisements yet.</p>
-        <Button onClick={() => setIsAdFormOpen(true)}>
+        <Button onClick={handleCreateAdClick}>
           <Plus size={16} className="mr-2" /> Create Your First Ad
         </Button>
         
@@ -174,7 +178,7 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
       </div>
       
       <div className="mt-6 flex justify-end">
-        <Button onClick={() => setIsAdFormOpen(true)}>
+        <Button onClick={handleCreateAdClick}>
           <Plus size={16} className="mr-2" /> Create New Ad
         </Button>
       </div>

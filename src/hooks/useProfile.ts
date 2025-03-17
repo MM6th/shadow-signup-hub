@@ -20,13 +20,22 @@ export const useProfile = (userId: string | undefined) => {
 
   const fetchProfile = async (uid: string) => {
     try {
+      console.log("Fetching profile for user ID:", uid);
+      
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', uid)
         .maybeSingle();
         
-      if (!error && profileData) {
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+      
+      console.log("Profile data returned:", profileData);
+      
+      if (profileData) {
         // Map the database fields to our Profile type
         const mappedProfile: Profile = {
           id: profileData.id,
@@ -39,7 +48,7 @@ export const useProfile = (userId: string | undefined) => {
         setProfile(mappedProfile);
         return mappedProfile;
       } else {
-        console.error('Error fetching profile:', error);
+        console.log("No profile found for user:", uid);
         return null;
       }
     } catch (error) {
