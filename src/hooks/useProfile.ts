@@ -44,15 +44,28 @@ export const useProfile = (userId: string | undefined) => {
       console.log("Profile data returned:", profileData);
       
       if (profileData) {
+        // Make sure the profile photo URL is valid
+        let photoUrl = profileData.profile_photo_url;
+        
+        // If the profile has a photo URL but it's not working correctly,
+        // we make sure it's a proper URL from the Supabase storage
+        if (photoUrl && !photoUrl.startsWith('http')) {
+          const { data } = supabase.storage
+            .from('profiles')
+            .getPublicUrl(photoUrl);
+          photoUrl = data.publicUrl;
+        }
+        
         // Map the database fields to our Profile type
         const mappedProfile: Profile = {
           id: profileData.id,
-          username: profileData.username,
-          profile_photo_url: profileData.profile_photo_url,
+          username: profileData.username || 'Anonymous',
+          profile_photo_url: photoUrl,
           business_type: profileData.business_type,
           industry: profileData.industry
         };
         
+        console.log("Mapped profile:", mappedProfile);
         setProfile(mappedProfile);
         setIsLoading(false);
         return mappedProfile;

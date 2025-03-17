@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useProfile } from '@/hooks/useProfile';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -90,7 +90,11 @@ const AdCard = ({ ad, onProductClick }: { ad: Ad, onProductClick?: (productId: s
         <div className="flex items-center space-x-2 mb-3">
           <Avatar className="w-8 h-8">
             {profile?.profile_photo_url ? (
-              <img src={profile.profile_photo_url} alt={profile?.username || 'user'} />
+              <img 
+                src={profile.profile_photo_url} 
+                alt={profile?.username || 'user'} 
+                className="h-full w-full object-cover"
+              />
             ) : (
               <User className="h-4 w-4" />
             )}
@@ -125,9 +129,12 @@ const AdCard = ({ ad, onProductClick }: { ad: Ad, onProductClick?: (productId: s
       {/* Only one modal for product display */}
       {productData && (
         <Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-background">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-background border border-border">
             <DialogHeader>
               <DialogTitle>{productData.title}</DialogTitle>
+              <DialogDescription>
+                Product details
+              </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <ProductCard product={productData} showBuyButton={true} />

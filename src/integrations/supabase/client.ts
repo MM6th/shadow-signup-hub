@@ -35,14 +35,19 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     // If media bucket doesn't exist, create it
     if (!mediaBucketExists) {
       console.log('Media bucket does not exist, creating it now...');
-      const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('media', {
-        public: true
-      });
-      
-      if (bucketError) {
-        console.error('Error creating media bucket:', bucketError);
-      } else {
-        console.log('Media storage bucket created successfully');
+      try {
+        const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('media', {
+          public: true,
+          fileSizeLimit: 5242880 // 5MB
+        });
+        
+        if (bucketError) {
+          console.error('Error creating media bucket:', bucketError);
+        } else {
+          console.log('Media storage bucket created successfully');
+        }
+      } catch (err) {
+        console.error('Error creating media bucket:', err);
       }
     } else {
       console.log('Media bucket already exists');
@@ -51,14 +56,19 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     // If ad_media bucket doesn't exist, create it
     if (!adMediaBucketExists) {
       console.log('Ad media bucket does not exist, creating it now...');
-      const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('ad_media', {
-        public: true
-      });
-      
-      if (bucketError) {
-        console.error('Error creating ad_media bucket:', bucketError);
-      } else {
-        console.log('Ad media storage bucket created successfully');
+      try {
+        const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('ad_media', {
+          public: true,
+          fileSizeLimit: 10485760 // 10MB
+        });
+        
+        if (bucketError) {
+          console.error('Error creating ad_media bucket:', bucketError);
+        } else {
+          console.log('Ad media storage bucket created successfully');
+        }
+      } catch (err) {
+        console.error('Error creating ad_media bucket:', err);
       }
     } else {
       console.log('Ad media bucket already exists');
@@ -67,14 +77,28 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     // If profiles bucket doesn't exist, create it
     if (!profilesBucketExists) {
       console.log('Profiles bucket does not exist, creating it now...');
-      const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('profiles', {
-        public: true
-      });
-      
-      if (bucketError) {
-        console.error('Error creating profiles bucket:', bucketError);
-      } else {
-        console.log('Profiles storage bucket created successfully');
+      try {
+        const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('profiles', {
+          public: true,
+          fileSizeLimit: 5242880 // 5MB
+        });
+        
+        if (bucketError) {
+          console.error('Error creating profiles bucket:', bucketError);
+        } else {
+          console.log('Profiles storage bucket created successfully');
+          
+          // Set public bucket policy to allow reading files
+          const { error: policyError } = await supabase.storage.from('profiles').createSignedUrl(
+            'test.txt', 60, { transform: { width: 100, height: 100 } }
+          );
+          
+          if (policyError && policyError.message !== "The resource was not found") {
+            console.error('Error setting profiles bucket policy:', policyError);
+          }
+        }
+      } catch (err) {
+        console.error('Error creating profiles bucket:', err);
       }
     } else {
       console.log('Profiles bucket already exists');
