@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Upload, X, Play, AlertCircle, Image } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -9,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
+import VideoPlayer from './VideoPlayer';
 
 interface VideoUploaderProps {
   userId: string;
@@ -26,11 +26,14 @@ interface VideoMetadata {
 const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [videos, setVideos] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [currentUploads, setCurrentUploads] = useState<{ [key: string]: number }>({});
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false);
+  const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
+  const [activeVideoTitle, setActiveVideoTitle] = useState('');
+  const [activeVideoId, setActiveVideoId] = useState('');
   const [videoMetadata, setVideoMetadata] = useState<VideoMetadata>({
     title: '',
     description: '',
@@ -336,6 +339,12 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
         .delete()
         .eq('video_path', filePath);
       
+      // Delete any demand meters for this video
+      await supabase
+        .from('video_demand_meters')
+        .delete()
+        .eq('video_path', filePath);
+      
       // Then delete the actual video file
       const { error } = await supabase.storage
         .from('profile_videos')
@@ -359,9 +368,32 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
       });
     }
   };
+
+  const handlePlayVideo = (video: any) => {
+    const videoUrl = supabase.storage
+      .from('profile_videos')
+      .getPublicUrl(`${userId}/${video.name}`).data.publicUrl;
+    
+    setActiveVideoUrl(videoUrl);
+    setActiveVideoTitle(video.metadata?.title || video.name);
+    setActiveVideoId(`${userId}/${video.name}`);
+  };
   
   return (
     <div className="space-y-6">
+      {/* Active Video Player */}
+      {activeVideoUrl && (
+        <div className="mb-6">
+          <VideoPlayer 
+            src={activeVideoUrl} 
+            title={activeVideoTitle}
+            videoId={activeVideoId}
+            userId={userId}
+            onClose={() => setActiveVideoUrl(null)}
+          />
+        </div>
+      )}
+    
       <div 
         className={`border-2 border-dashed rounded-lg p-8 transition-colors ${
           isDragging ? 'border-pi-focus bg-dark-accent/20' : 'border-gray-700 hover:border-pi-focus/70'
@@ -422,7 +454,10 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
               <div key={video.id} className="glass-card rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-md bg-dark-accent flex items-center justify-center">
+                    <div 
+                      className="w-10 h-10 rounded-md bg-dark-accent flex items-center justify-center cursor-pointer hover:bg-dark-accent/80"
+                      onClick={() => handlePlayVideo(video)}
+                    >
                       <Play size={20} className="text-pi-focus" />
                     </div>
                     <div>
@@ -443,13 +478,7 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      onClick={() => {
-                        // Get the URL and open it in a new tab
-                        const videoUrl = supabase.storage
-                          .from('profile_videos')
-                          .getPublicUrl(`${userId}/${video.name}`).data.publicUrl;
-                        window.open(videoUrl, '_blank');
-                      }}
+                      onClick={() => handlePlayVideo(video)}
                     >
                       <Play size={16} />
                     </Button>
