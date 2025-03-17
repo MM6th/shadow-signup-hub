@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -29,6 +30,10 @@ const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [isScreenplayModalOpen, setIsScreenplayModalOpen] = useState(false);
 
+  // Check if the current user is an admin
+  const ADMIN_IDS = ['f64a94e3-3adf-4409-978d-f3106aabf598', '3a25fea8-ec60-4e52-ae40-63f2b1ce89d9'];
+  const isAdmin = user && ADMIN_IDS.includes(user.id);
+
   useEffect(() => {
     if (!isLoading && !user) {
       navigate('/');
@@ -36,6 +41,13 @@ const Dashboard: React.FC = () => {
       navigate('/create-profile');
     }
   }, [user, isLoading, hasProfile, navigate]);
+
+  // Reset the active tab if user is on a restricted tab
+  useEffect(() => {
+    if (!isAdmin && activeTab === 'screenplays') {
+      setActiveTab('profile');
+    }
+  }, [activeTab, isAdmin]);
 
   const handleEditProfile = () => {
     navigate('/update-profile');
@@ -53,6 +65,19 @@ const Dashboard: React.FC = () => {
   }
 
   if (!user || !profile) return null;
+
+  // Determine which tabs to show based on admin status
+  const tabTriggers = [
+    { value: 'profile', label: 'Profile Details' },
+    { value: 'products', label: 'My Products' },
+  ];
+  
+  // Add admin-only tabs
+  if (isAdmin) {
+    tabTriggers.push({ value: 'videos', label: 'My Videos' });
+    tabTriggers.push({ value: 'screenplays', label: 'My Screenplays' });
+    tabTriggers.push({ value: 'ads', label: 'My Ads' });
+  }
 
   return (
     <div className="min-h-screen bg-dark bg-dark-gradient text-pi py-10">
@@ -113,12 +138,10 @@ const Dashboard: React.FC = () => {
             </div>
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
-              <TabsList className="grid grid-cols-5 w-full max-w-2xl mx-auto mb-6">
-                <TabsTrigger value="profile">Profile Details</TabsTrigger>
-                <TabsTrigger value="products">My Products</TabsTrigger>
-                <TabsTrigger value="videos">My Videos</TabsTrigger>
-                <TabsTrigger value="screenplays">My Screenplays</TabsTrigger>
-                <TabsTrigger value="ads">My Ads</TabsTrigger>
+              <TabsList className={`grid grid-cols-${tabTriggers.length} w-full max-w-2xl mx-auto mb-6`}>
+                {tabTriggers.map(tab => (
+                  <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
+                ))}
               </TabsList>
               
               <TabsContent value="profile">
@@ -176,7 +199,7 @@ const Dashboard: React.FC = () => {
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="text-lg font-medium">My Products & Services</h2>
                   <div className="flex gap-2">
-                    <ChartButton /> {/* New Chart Button (Admin Only) */}
+                    {isAdmin && <ChartButton />} {/* Only admins can create charts */}
                     <ShadcnButton onClick={() => navigate('/create-product')} className="flex items-center">
                       <Plus size={16} className="mr-2" /> Create New
                     </ShadcnButton>
@@ -186,46 +209,52 @@ const Dashboard: React.FC = () => {
                 <ProductsList userId={user.id} />
               </TabsContent>
               
-              <TabsContent value="videos">
-                <div className="mb-6 flex items-center justify-between">
-                  <h2 className="text-lg font-medium">My Videos</h2>
-                  <div className="text-pi-muted text-sm">Upload videos up to 3GB</div>
-                </div>
-                
-                <VideoUploader userId={user.id} />
-              </TabsContent>
-              
-              <TabsContent value="screenplays">
-                <div className="mb-6 flex items-center justify-between">
-                  <h2 className="text-lg font-medium">My Screenplays</h2>
-                  <div className="flex gap-2">
-                    <ShadcnButton 
-                      onClick={() => setIsScreenplayModalOpen(true)} 
-                      className="flex items-center"
-                    >
-                      <Plus size={16} className="mr-2" /> Create New Screenplay
-                    </ShadcnButton>
+              {isAdmin && (
+                <TabsContent value="videos">
+                  <div className="mb-6 flex items-center justify-between">
+                    <h2 className="text-lg font-medium">My Videos</h2>
+                    <div className="text-pi-muted text-sm">Upload videos up to 3GB</div>
                   </div>
-                </div>
-                
-                <ScreenplayList userId={user.id} />
-              </TabsContent>
+                  
+                  <VideoUploader userId={user.id} />
+                </TabsContent>
+              )}
               
-              <TabsContent value="ads">
-                <div className="mb-6 flex items-center justify-between">
-                  <h2 className="text-lg font-medium">My Advertisements</h2>
-                  <div className="flex gap-2">
-                    <ShadcnButton 
-                      onClick={() => navigate('/marketplace')} 
-                      className="flex items-center"
-                    >
-                      <Tags size={16} className="mr-2" /> View in Marketplace
-                    </ShadcnButton>
+              {isAdmin && (
+                <TabsContent value="screenplays">
+                  <div className="mb-6 flex items-center justify-between">
+                    <h2 className="text-lg font-medium">My Screenplays</h2>
+                    <div className="flex gap-2">
+                      <ShadcnButton 
+                        onClick={() => setIsScreenplayModalOpen(true)} 
+                        className="flex items-center"
+                      >
+                        <Plus size={16} className="mr-2" /> Create New Screenplay
+                      </ShadcnButton>
+                    </div>
                   </div>
-                </div>
-                
-                <AdsList userId={user.id} />
-              </TabsContent>
+                  
+                  <ScreenplayList userId={user.id} />
+                </TabsContent>
+              )}
+              
+              {isAdmin && (
+                <TabsContent value="ads">
+                  <div className="mb-6 flex items-center justify-between">
+                    <h2 className="text-lg font-medium">My Advertisements</h2>
+                    <div className="flex gap-2">
+                      <ShadcnButton 
+                        onClick={() => navigate('/marketplace')} 
+                        className="flex items-center"
+                      >
+                        <Tags size={16} className="mr-2" /> View in Marketplace
+                      </ShadcnButton>
+                    </div>
+                  </div>
+                  
+                  <AdsList userId={user.id} />
+                </TabsContent>
+              )}
             </Tabs>
             
             <div className="flex justify-end space-x-4 mt-6">
@@ -237,10 +266,12 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
       
-      <ScreenplayModal 
-        open={isScreenplayModalOpen}
-        onOpenChange={setIsScreenplayModalOpen}
-      />
+      {isAdmin && (
+        <ScreenplayModal 
+          open={isScreenplayModalOpen}
+          onOpenChange={setIsScreenplayModalOpen}
+        />
+      )}
     </div>
   );
 };

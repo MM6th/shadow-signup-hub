@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Upload, X, Play, AlertCircle, Image } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -38,6 +39,23 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Check if the current user is an admin
+  const ADMIN_IDS = ['f64a94e3-3adf-4409-978d-f3106aabf598', '3a25fea8-ec60-4e52-ae40-63f2b1ce89d9'];
+  const isAdmin = ADMIN_IDS.includes(userId);
+
+  // Show restricted message for non-admin users
+  if (!isAdmin) {
+    return (
+      <div className="text-center p-8 glass-card rounded-lg">
+        <AlertCircle size={48} className="mx-auto text-amber-500 mb-4" />
+        <h3 className="text-xl font-medium mb-2">Access Restricted</h3>
+        <p className="text-muted-foreground mb-4">
+          Only administrators can upload and manage videos.
+        </p>
+      </div>
+    );
+  }
 
   // Fetch existing videos on component mount
   React.useEffect(() => {

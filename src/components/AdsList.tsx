@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Tags, Plus, Link as LinkIcon, Trash2 } from 'lucide-react';
+import { Tags, Plus, Link as LinkIcon, Trash2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -19,6 +18,21 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
   const [adToDelete, setAdToDelete] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const ADMIN_IDS = ['f64a94e3-3adf-4409-978d-f3106aabf598', '3a25fea8-ec60-4e52-ae40-63f2b1ce89d9'];
+  const isAdmin = ADMIN_IDS.includes(userId);
+
+  if (!isAdmin) {
+    return (
+      <div className="text-center p-8 glass-card rounded-lg">
+        <AlertCircle size={48} className="mx-auto text-amber-500 mb-4" />
+        <h3 className="text-xl font-medium mb-2">Access Restricted</h3>
+        <p className="text-muted-foreground mb-4">
+          Only administrators can create and manage advertisements.
+        </p>
+      </div>
+    );
+  }
 
   const fetchAds = async () => {
     try {
@@ -193,9 +207,6 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
       </div>
     );
   }
-  
-  const isAdmin = userId === 'f64a94e3-3adf-4409-978d-f3106aabf598' || 
-                 userId === '3a25fea8-ec60-4e52-ae40-63f2b1ce89d9';
   
   return (
     <>

@@ -19,8 +19,8 @@ export function ChartButton({ className }: ChartButtonProps) {
   const { user } = useAuth();
   
   // Check if the current user is an admin
-  const ADMIN_EMAILS = ['cmooregee@gmail.com'];
-  const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email);
+  const ADMIN_IDS = ['f64a94e3-3adf-4409-978d-f3106aabf598', '3a25fea8-ec60-4e52-ae40-63f2b1ce89d9'];
+  const isAdmin = user && ADMIN_IDS.includes(user.id);
   
   // If not an admin, don't render the buttons
   if (!isAdmin) {

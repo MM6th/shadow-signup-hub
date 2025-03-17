@@ -18,12 +18,13 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   hasProfile: boolean;
   refreshProfile: () => Promise<void>;
+  isAdmin: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, session, isLoading: sessionLoading, clearSession } = useUserSession();
+  const { user, session, isLoading: sessionLoading, clearSession, isAdmin } = useUserSession();
   const { profile, isLoading: profileLoading, refreshProfile } = useProfile(user?.id);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -133,7 +134,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signUp, 
       signOut,
       hasProfile,
-      refreshProfile
+      refreshProfile,
+      isAdmin
     }}>
       {children}
     </AuthContext.Provider>
