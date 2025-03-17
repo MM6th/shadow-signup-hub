@@ -32,9 +32,10 @@ interface ProductCardProps {
   };
   onClick?: () => void;
   showEditButton?: boolean;
+  showBuyButton?: boolean;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditButton }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditButton, showBuyButton = true }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -303,10 +304,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
 
   return (
     <Card 
-      className="overflow-hidden h-[500px] flex flex-col"
+      className="overflow-hidden h-[550px] flex flex-col"
       onClick={handleCardClick}
     >
-      <div className="relative h-64 overflow-hidden">
+      <div className="relative h-80 overflow-hidden">
         {product.image_url ? (
           <img
             src={product.image_url}
@@ -383,7 +384,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
             <Button onClick={handleScheduleClick} className="w-full">
               Schedule Appointment
             </Button>
-          ) : (
+          ) : showBuyButton ? (
             <div className="space-y-2">
               {isLoading ? (
                 <Button disabled className="w-full">
@@ -442,7 +443,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, showEditBut
                 </Button>
               )}
             </div>
-          )}
+          ) : null}
         </div>
       </CardContent>
 

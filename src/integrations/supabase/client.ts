@@ -12,10 +12,10 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Create a Supabase client
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Create a storage bucket for media if it doesn't exist
+// Create required storage buckets if they don't exist
 (async () => {
   try {
-    // First check if the bucket exists
+    // First check if buckets exist
     const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
     
     if (bucketsError) {
@@ -23,24 +23,39 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
       return;
     }
     
-    const mediaBucketExists = buckets?.some(bucket => bucket.name === 'media');
+    const requiredBuckets = ['media', 'ad_media', 'profile_photos', 'profile'];
     
-    // If media bucket doesn't exist, create it
-    if (!mediaBucketExists) {
-      console.log('Media bucket does not exist, creating it now...');
-      const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('media', {
-        public: true
-      });
+    for (const bucketName of requiredBuckets) {
+      const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
       
-      if (bucketError) {
-        console.error('Error creating media bucket:', bucketError);
+      if (!bucketExists) {
+        console.log(`${bucketName} bucket does not exist, creating it now...`);
+        const { data: bucketData, error: bucketError } = await supabase.storage.createBucket(bucketName, {
+          public: true,
+          fileSizeLimit: bucketName.includes('video') ? 50 * 1024 * 1024 : 10 * 1024 * 1024
+        });
+        
+        if (bucketError) {
+          console.error(`Error creating ${bucketName} bucket:`, bucketError);
+        } else {
+          console.log(`${bucketName} storage bucket created successfully`);
+          
+          // Set bucket to public
+          const { error: policyError } = await supabase.storage.updateBucket(bucketName, {
+            public: true
+          });
+          
+          if (policyError) {
+            console.error(`Error making ${bucketName} bucket public:`, policyError);
+          } else {
+            console.log(`${bucketName} bucket set to public`);
+          }
+        }
       } else {
-        console.log('Media storage bucket created successfully');
+        console.log(`${bucketName} bucket already exists`);
       }
-    } else {
-      console.log('Media bucket already exists');
     }
   } catch (err) {
-    console.error('Error initializing storage bucket:', err);
+    console.error('Error initializing storage buckets:', err);
   }
 })();
