@@ -31,14 +31,20 @@ export const useUserSession = () => {
     });
 
     return () => {
-      authListener.subscription.unsubscribe();
+      if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
+      }
     };
   }, []);
 
   // Add a function to clear session data when signing out
   const clearSession = useCallback(() => {
-    setUser(null);
-    setSession(null);
+    try {
+      setUser(null);
+      setSession(null);
+    } catch (error) {
+      console.error('Error clearing session:', error);
+    }
   }, []);
 
   return { user, session, isLoading, clearSession };

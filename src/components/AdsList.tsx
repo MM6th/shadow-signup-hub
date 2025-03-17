@@ -123,7 +123,7 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
             <AdForm onAdCreated={() => {
               setIsAdFormOpen(false);
               fetchAds();
-            }} />
+            }} onCancel={() => setIsAdFormOpen(false)} />
           </DialogContent>
         </Dialog>
       </div>
@@ -184,10 +184,13 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
           <DialogHeader>
             <DialogTitle>Create New Advertisement</DialogTitle>
           </DialogHeader>
-          <AdForm onAdCreated={() => {
-            setIsAdFormOpen(false);
-            fetchAds();
-          }} />
+          <AdForm 
+            onAdCreated={() => {
+              setIsAdFormOpen(false);
+              fetchAds();
+            }} 
+            onCancel={() => setIsAdFormOpen(false)}
+          />
         </DialogContent>
       </Dialog>
       

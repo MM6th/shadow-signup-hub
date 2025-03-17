@@ -76,7 +76,10 @@ export function ChartButton({ className }: ChartButtonProps) {
           <DialogHeader>
             <DialogTitle>Create New Advertisement</DialogTitle>
           </DialogHeader>
-          <AdForm onAdCreated={() => setIsAdModalOpen(false)} />
+          <AdForm 
+            onAdCreated={() => setIsAdModalOpen(false)} 
+            onCancel={() => setIsAdModalOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </>
