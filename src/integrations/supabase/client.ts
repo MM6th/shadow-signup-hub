@@ -29,6 +29,9 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     // Check for ad_media bucket
     const adMediaBucketExists = buckets?.some(bucket => bucket.name === 'ad_media');
     
+    // Check for profiles bucket
+    const profilesBucketExists = buckets?.some(bucket => bucket.name === 'profiles');
+    
     // If media bucket doesn't exist, create it
     if (!mediaBucketExists) {
       console.log('Media bucket does not exist, creating it now...');
@@ -59,6 +62,22 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
       }
     } else {
       console.log('Ad media bucket already exists');
+    }
+    
+    // If profiles bucket doesn't exist, create it
+    if (!profilesBucketExists) {
+      console.log('Profiles bucket does not exist, creating it now...');
+      const { data: bucketData, error: bucketError } = await supabase.storage.createBucket('profiles', {
+        public: true
+      });
+      
+      if (bucketError) {
+        console.error('Error creating profiles bucket:', bucketError);
+      } else {
+        console.log('Profiles storage bucket created successfully');
+      }
+    } else {
+      console.log('Profiles bucket already exists');
     }
   } catch (err) {
     console.error('Error initializing storage buckets:', err);

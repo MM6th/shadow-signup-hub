@@ -48,6 +48,7 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
   }, [userId]);
 
   const handleCreateAdClick = () => {
+    // Make sure to properly set the state to open the dialog
     setIsAdFormOpen(true);
   };
   
@@ -120,7 +121,7 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
         </Button>
         
         <Dialog open={isAdFormOpen} onOpenChange={setIsAdFormOpen}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-background">
             <DialogHeader>
               <DialogTitle>Create New Advertisement</DialogTitle>
             </DialogHeader>
@@ -184,7 +185,7 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
       </div>
       
       <Dialog open={isAdFormOpen} onOpenChange={setIsAdFormOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-background">
           <DialogHeader>
             <DialogTitle>Create New Advertisement</DialogTitle>
           </DialogHeader>
@@ -196,7 +197,7 @@ const AdsList: React.FC<AdsListProps> = ({ userId }) => {
       </Dialog>
       
       <Dialog open={!!adToDelete} onOpenChange={() => setAdToDelete(null)}>
-        <DialogContent>
+        <DialogContent className="bg-background">
           <DialogHeader>
             <DialogTitle>Delete Advertisement</DialogTitle>
             <DialogDescription>

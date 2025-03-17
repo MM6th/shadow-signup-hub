@@ -22,14 +22,22 @@ export const useProfile = (userId: string | undefined) => {
     try {
       console.log("Fetching profile for user ID:", uid);
       
+      if (!uid) {
+        console.error('No user ID provided');
+        setIsLoading(false);
+        return null;
+      }
+      
+      // First try to get the profile from profiles table
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', uid)
         .maybeSingle();
-        
+      
       if (error) {
         console.error('Error fetching profile:', error);
+        setIsLoading(false);
         return null;
       }
       
@@ -46,21 +54,23 @@ export const useProfile = (userId: string | undefined) => {
         };
         
         setProfile(mappedProfile);
+        setIsLoading(false);
         return mappedProfile;
       } else {
         console.log("No profile found for user:", uid);
+        setIsLoading(false);
         return null;
       }
     } catch (error) {
       console.error('Error in fetchProfile:', error);
-      return null;
-    } finally {
       setIsLoading(false);
+      return null;
     }
   };
 
   const refreshProfile = async () => {
     if (userId) {
+      setIsLoading(true);
       await fetchProfile(userId);
     }
   };

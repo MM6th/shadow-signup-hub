@@ -122,9 +122,10 @@ const AdCard = ({ ad, onProductClick }: { ad: Ad, onProductClick?: (productId: s
         )}
       </div>
       
+      {/* Only one modal for product display */}
       {productData && (
         <Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-background">
             <DialogHeader>
               <DialogTitle>{productData.title}</DialogTitle>
             </DialogHeader>
