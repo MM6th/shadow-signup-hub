@@ -11,6 +11,7 @@ import EditProduct from '@/pages/EditProduct';
 import AdminNFT from '@/pages/AdminNFT';
 import DigitalOffice from '@/pages/DigitalOffice';
 import NotFound from '@/pages/NotFound';
+import LiveStream from '@/pages/LiveStream';
 import { Toaster } from '@/components/ui/toaster';
 import ChartReport from '@/pages/ChartReport';
 import ScreenplayView from '@/pages/ScreenplayView';
@@ -32,6 +33,7 @@ function App() {
           <Route path="/screenplay/:screenplayId" element={<ScreenplayView />} />
           <Route path="/admin-nft" element={<AdminNFT />} />
           <Route path="/digital-office" element={<DigitalOffice />} />
+          <Route path="/livestream/:conferenceId" element={<LiveStream />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />
