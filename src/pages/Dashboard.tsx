@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -63,6 +62,11 @@ const Dashboard: React.FC = () => {
   // Handle sub-tab changes
   const handleSubTabChange = (value: string) => {
     setActiveSubTab(value);
+    
+    // If we're in products tab and switching to livestream, ensure we show the livestream content
+    if (activeTab === 'products' && value === 'livestream') {
+      // No need to change active tab - we'll display the livestream content within products tab
+    }
   };
 
   if (isLoading) {
@@ -172,6 +176,7 @@ const Dashboard: React.FC = () => {
                         key={subtab.value} 
                         value={subtab.value} 
                         onClick={() => handleSubTabChange(subtab.value)}
+                        data-state={activeSubTab === subtab.value ? 'active' : ''}
                         className={`flex-1 ${activeSubTab === subtab.value ? 'bg-accent' : ''}`}
                       >
                         {subtab.label}
@@ -233,7 +238,7 @@ const Dashboard: React.FC = () => {
               </TabsContent>
               
               <TabsContent value="products">
-                {isAdmin && activeSubTab === 'livestream' ? (
+                {activeSubTab === 'livestream' ? (
                   <LiveStreamTab />
                 ) : (
                   <>
