@@ -1,11 +1,12 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import LocalVideo from './video-conference/LocalVideo';
-import RemoteVideo from './video-conference/RemoteVideo';
-import CallControls from './video-conference/CallControls';
-import CallHeader from './video-conference/CallHeader';
-import { useVideoCall } from './video-conference/useVideoCall';
+import React, { useRef, useEffect, useState } from 'react';
+import { useVideoCall } from '@/components/video-conference/useVideoCall';
+import LocalVideo from '@/components/video-conference/LocalVideo';
+import RemoteVideo from '@/components/video-conference/RemoteVideo';
+import CallControls from '@/components/video-conference/CallControls';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { User, Users } from 'lucide-react';
 
 interface VideoConferenceProps {
   roomId: string;
@@ -18,85 +19,81 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   isHost = false,
   onEndCall
 }) => {
-  const [callDuration, setCallDuration] = useState(0);
+  const { toast } = useToast();
   const localVideoRef = useRef<HTMLDivElement>(null);
   const remoteVideoRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const navigate = useNavigate();
   
   const {
     isConnected,
     isMicOn,
     isVideoOn,
     isJoining,
+    localTracks,
     initializeCall,
     toggleMic,
     toggleVideo,
     endCall
   } = useVideoCall(roomId);
   
-  // Initialize call when component mounts
+  const [viewerCount, setViewerCount] = useState(1);
+
   useEffect(() => {
     if (localVideoRef.current && remoteVideoRef.current) {
       initializeCall(localVideoRef.current, remoteVideoRef.current);
     }
     
+    // Cleanup function
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      endCall();
     };
-  }, [initializeCall]);
-  
-  // Start timer when connected
-  useEffect(() => {
-    if (isConnected && !timerRef.current) {
-      timerRef.current = setInterval(() => {
-        setCallDuration(prev => prev + 1);
-      }, 1000);
-    }
-    
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [isConnected]);
-  
-  const handleEndCall = async () => {
-    await endCall();
-    
+  }, []);
+
+  const handleEndCall = () => {
+    endCall();
     if (onEndCall) {
       onEndCall();
     } else {
-      navigate('/dashboard');
+      toast({
+        title: "Call ended",
+        description: "You've left the video conference",
+      });
     }
   };
-  
+
   return (
-    <div className="flex flex-col">
-      <CallHeader 
-        roomId={roomId}
-        isJoining={isJoining}
-        isConnected={isConnected}
-        isHost={isHost}
-        callDuration={callDuration}
-      />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="relative">
-          <div ref={localVideoRef} className="hidden"></div>
-          <LocalVideo 
-            videoTrack={isConnected ? null : null} 
-            isVideoOn={isVideoOn}
-            isHost={isHost}
-          />
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center">
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center mr-2">
+            {isHost ? <User size={16} /> : <Users size={16} />}
+          </div>
+          <div>
+            <h3 className="text-sm font-medium">{isHost ? 'Your Stream' : 'Live Stream'}</h3>
+            <p className="text-xs text-muted-foreground">Room: {roomId}</p>
+          </div>
         </div>
         
-        <div className="relative">
-          <div ref={remoteVideoRef} className="hidden"></div>
-          <RemoteVideo isConnected={isConnected} />
+        <div className="flex items-center">
+          <div className="flex items-center text-xs text-muted-foreground">
+            <Users size={14} className="mr-1" />
+            <span>{viewerCount}</span>
+          </div>
         </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <LocalVideo 
+          videoTrack={localTracks.videoTrack} 
+          isVideoOn={isVideoOn}
+          isHost={isHost}
+        />
+        
+        <RemoteVideo 
+          isConnected={isConnected}
+          videoTrack={null}
+          audioMuted={false}
+          videoMuted={false}
+        />
       </div>
       
       <CallControls 

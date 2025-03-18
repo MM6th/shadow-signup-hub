@@ -1,71 +1,50 @@
 
 import React, { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle 
-} from '@/components/ui/dialog';
-import { 
-  Form, 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel 
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { useForm } from 'react-hook-form';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Loader, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { Camera, Coins, CreditCard } from 'lucide-react';
+
+// Validation schema for the form
+const formSchema = z.object({
+  title: z.string().min(3, { message: 'Title must be at least 3 characters' }).max(100),
+  enableCrypto: z.boolean().default(false),
+  enablePaypal: z.boolean().default(false),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface LiveStreamModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-interface FormValues {
-  title: string;
-  enableCrypto: boolean;
-  enablePaypal: boolean;
-}
-
 const LiveStreamModal: React.FC<LiveStreamModalProps> = ({ open, onOpenChange }) => {
-  const [isUploading, setIsUploading] = useState(false);
-  const [thumbnail, setThumbnail] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
   const { user } = useAuth();
-
-  const form = useForm<FormValues>({
+  const navigate = useNavigate();
+  
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       title: '',
       enableCrypto: false,
-      enablePaypal: false
-    },
+      enablePaypal: false,
+    }
   });
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    setThumbnail(file);
-    
-    // Create a preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setThumbnailPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
+  
   const onSubmit = async (data: FormValues) => {
     if (!user) {
       toast({
@@ -76,193 +55,157 @@ const LiveStreamModal: React.FC<LiveStreamModalProps> = ({ open, onOpenChange })
       return;
     }
     
+    setIsCreating(true);
+    
     try {
-      setIsUploading(true);
+      // Generate a unique conference ID
       const conferenceId = uuidv4();
-      let thumbnailUrl = null;
       
-      // Upload thumbnail if provided
-      if (thumbnail) {
-        const fileExt = thumbnail.name.split('.').pop();
-        const fileName = `${uuidv4()}.${fileExt}`;
-        const filePath = `livestream-thumbnails/${fileName}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('media')
-          .upload(filePath, thumbnail);
-          
-        if (uploadError) throw uploadError;
-        
-        const { data: urlData } = supabase.storage
-          .from('media')
-          .getPublicUrl(filePath);
-          
-        thumbnailUrl = urlData.publicUrl;
-      }
-      
-      // Create a new livestream record
-      const { error } = await supabase
+      // Create a new live stream record
+      const { data: liveStreamData, error } = await supabase
         .from('livestreams')
         .insert({
           title: data.title,
-          thumbnail_url: thumbnailUrl,
           conference_id: conferenceId,
           user_id: user.id,
           enable_crypto: data.enableCrypto,
           enable_paypal: data.enablePaypal,
           is_active: true,
-          views: 0
-        });
-        
+          views: 0,
+        })
+        .select()
+        .single();
+      
       if (error) throw error;
       
       toast({
-        title: "Stream created",
-        description: "Your live stream has been set up successfully!"
+        title: "Live stream created",
+        description: "Your live stream has been set up successfully",
       });
       
-      // Close modal and navigate to the livestream page
+      // Close the modal
       onOpenChange(false);
+      
+      // Reset the form
+      reset();
+      
+      // Navigate to the live stream page
       navigate(`/livestream/${conferenceId}`);
       
     } catch (error: any) {
-      console.error('Error creating livestream:', error);
+      console.error('Error creating live stream:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create the live stream",
+        description: error.message || "Failed to create live stream",
         variant: "destructive",
       });
     } finally {
-      setIsUploading(false);
+      setIsCreating(false);
     }
   };
-
+  
+  // Clean up form when modal closes
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      reset();
+    }
+    onOpenChange(newOpen);
+  };
+  
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Start Live Stream</DialogTitle>
+          <DialogTitle>Start a New Live Stream</DialogTitle>
+          <DialogDescription>
+            Set up your cosmic live stream to connect with your audience
+          </DialogDescription>
         </DialogHeader>
         
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Stream Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter a title for your stream" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Give your stream a descriptive title that will attract viewers.
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-            
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <FormLabel>Thumbnail</FormLabel>
-              <div className="flex flex-col items-center justify-center gap-4">
-                <div 
-                  className="w-full aspect-video rounded-md border border-input overflow-hidden flex items-center justify-center bg-dark-secondary"
-                >
-                  {thumbnailPreview ? (
-                    <img 
-                      src={thumbnailPreview} 
-                      alt="Thumbnail Preview" 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Camera size={36} className="text-pi-muted" />
-                  )}
-                </div>
-                
-                <div className="flex items-center justify-center w-full">
-                  <label 
-                    htmlFor="thumbnail-upload" 
-                    className="flex flex-col items-center justify-center w-full cursor-pointer"
-                  >
-                    <Button type="button" variant="outline" className="w-full">
-                      {thumbnailPreview ? "Change Thumbnail" : "Upload Thumbnail"}
-                    </Button>
-                    <input
-                      id="thumbnail-upload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleFileChange}
-                    />
-                  </label>
-                </div>
-              </div>
+              <Label htmlFor="title">Stream Title</Label>
+              <Controller
+                name="title"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    id="title"
+                    placeholder="Enter a title for your stream"
+                    {...field}
+                    disabled={isCreating}
+                  />
+                )}
+              />
+              {errors.title && (
+                <p className="text-sm text-destructive">{errors.title.message}</p>
+              )}
             </div>
             
             <div className="space-y-4">
-              <FormLabel>Payment Options</FormLabel>
-              
-              <FormField
-                control={form.control}
-                name="enableCrypto"
-                render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                    <div className="flex items-center space-x-2">
-                      <Coins size={18} />
-                      <div className="space-y-0.5">
-                        <FormLabel>Cryptocurrency</FormLabel>
-                        <FormDescription>Accept crypto payments</FormDescription>
-                      </div>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="enablePaypal"
-                render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                    <div className="flex items-center space-x-2">
-                      <CreditCard size={18} />
-                      <div className="space-y-0.5">
-                        <FormLabel>PayPal</FormLabel>
-                        <FormDescription>Accept PayPal payments</FormDescription>
-                      </div>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <div className="rounded-lg border p-3 text-center">
-                <div className="font-medium">Conference ID</div>
-                <div className="text-pi-muted text-sm">
-                  A unique ID will be generated when you start the stream
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="enableCrypto">Accept Crypto Payments</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow viewers to support you with cryptocurrency
+                  </p>
                 </div>
+                <Controller
+                  name="enableCrypto"
+                  control={control}
+                  render={({ field }) => (
+                    <Switch
+                      id="enableCrypto"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isCreating}
+                    />
+                  )}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="enablePaypal">Accept PayPal</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow viewers to support you via PayPal
+                  </p>
+                </div>
+                <Controller
+                  name="enablePaypal"
+                  control={control}
+                  render={({ field }) => (
+                    <Switch
+                      id="enablePaypal"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isCreating}
+                    />
+                  )}
+                />
               </div>
             </div>
-            
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={isUploading || !form.getValues().title}
-            >
-              {isUploading ? "Setting Up..." : "Start Live Stream"}
+          </div>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isCreating}>
+              Cancel
             </Button>
-          </form>
-        </Form>
+            <Button type="submit" disabled={isCreating}>
+              {isCreating ? (
+                <>
+                  <Loader size={16} className="mr-2 animate-spin" />
+                  Setting Up...
+                </>
+              ) : (
+                <>
+                  Go Live
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

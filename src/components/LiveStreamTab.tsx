@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const LiveStreamTabWithQueryProvider: React.FC = () => {
 const LiveStreamTabContent: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   // Fetch user's past streams
   const { data: pastStreams, isLoading } = useQuery<LiveStream[]>({
@@ -54,6 +56,11 @@ const LiveStreamTabContent: React.FC = () => {
     },
     enabled: !!user
   });
+
+  // Handle stream click - navigate to the livestream page
+  const handleStreamClick = (conferenceId: string) => {
+    navigate(`/livestream/${conferenceId}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -111,8 +118,8 @@ const LiveStreamTabContent: React.FC = () => {
                         )}
                       </div>
                       
-                      <Button variant="outline" size="sm" onClick={() => window.location.href = `/livestream/${stream.conference_id}`}>
-                        Replay
+                      <Button variant="outline" size="sm" onClick={() => handleStreamClick(stream.conference_id)}>
+                        {stream.is_active ? "Join" : "Replay"}
                       </Button>
                     </div>
                   </div>
