@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect } from 'react';
 import { IRemoteVideoTrack } from 'agora-rtc-sdk-ng';
-import { Share2 } from 'lucide-react';
+import { Share2, Link } from 'lucide-react';
 
 interface RemoteVideoProps {
   isConnected: boolean;
@@ -47,9 +47,13 @@ const RemoteVideo: React.FC<RemoteVideoProps> = ({
           {!isConnected && (
             <div className="text-center px-4">
               <p className="text-pi-muted mb-2">Waiting for someone to join</p>
-              <div className="flex items-center justify-center">
+              <div className="flex items-center justify-center mb-2">
                 <Share2 size={16} className="mr-2 text-pi-muted" />
-                <span className="text-sm">Share your conference ID to invite others</span>
+                <span className="text-sm">Share your livestream link to invite others</span>
+              </div>
+              <div className="flex items-center justify-center">
+                <Link size={16} className="mr-2 text-pi-muted" />
+                <span className="text-xs text-pi-muted">Others can join by opening the link you share</span>
               </div>
             </div>
           )}

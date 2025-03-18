@@ -6,7 +6,7 @@ import RemoteVideo from '@/components/video-conference/RemoteVideo';
 import CallControls from '@/components/video-conference/CallControls';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { User, Users, CameraOff, MicOff } from 'lucide-react';
+import { User, Users, CameraOff, MicOff, Link2 } from 'lucide-react';
 import CallHeader from '@/components/video-conference/CallHeader';
 import { Button } from '@/components/ui/button';
 
@@ -103,10 +103,12 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   };
   
   const handleCopyRoomId = () => {
-    navigator.clipboard.writeText(roomId);
+    // Create a shareable link
+    const shareableLink = `${window.location.origin}/livestream/${roomId}`;
+    navigator.clipboard.writeText(shareableLink);
     toast({
-      title: "Conference ID copied",
-      description: "Share this ID with others so they can join your livestream",
+      title: "Livestream link copied",
+      description: "Share this link with others so they can join your livestream",
     });
   };
 
@@ -142,7 +144,7 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
                   size="sm"
                   onClick={handleCopyRoomId}
                 >
-                  Copy Conference ID
+                  <Link2 size={14} className="mr-1" /> Copy Shareable Link
                 </Button>
               )}
             </div>

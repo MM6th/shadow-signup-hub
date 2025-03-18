@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -60,6 +59,16 @@ const LiveStreamTab: React.FC = () => {
   // Handle stream click - navigate to the livestream page
   const handleStreamClick = (conferenceId: string) => {
     navigate(`/livestream/${conferenceId}`);
+  };
+  
+  // Function to copy conference ID
+  const copyConferenceId = (conferenceId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation when clicking the copy button
+    navigator.clipboard.writeText(`${window.location.origin}/livestream/${conferenceId}`);
+    toast({
+      title: "Link copied",
+      description: "Livestream link has been copied to clipboard",
+    });
   };
   
   // Handle delete stream
@@ -146,9 +155,12 @@ const LiveStreamTab: React.FC = () => {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => handleStreamClick(stream.conference_id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyConferenceId(stream.conference_id, e);
+                        }}
                       >
-                        {stream.is_active ? "Join" : "Replay"}
+                        Share Link
                       </Button>
                       
                       <AlertDialog>
@@ -156,7 +168,10 @@ const LiveStreamTab: React.FC = () => {
                           <Button 
                             variant="destructive" 
                             size="sm"
-                            onClick={() => setStreamToDelete(stream.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setStreamToDelete(stream.id);
+                            }}
                           >
                             <Trash2 size={14} />
                           </Button>
