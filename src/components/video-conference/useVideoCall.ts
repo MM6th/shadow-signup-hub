@@ -35,8 +35,47 @@ export const useVideoCall = (roomId: string) => {
     try {
       setIsJoining(true);
       
-      // Create local tracks (camera and microphone)
-      const [microphoneTrack, cameraTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+      // Create local tracks with more robust error handling
+      let microphoneTrack: IMicrophoneAudioTrack | null = null;
+      let cameraTrack: ICameraVideoTrack | null = null;
+      
+      try {
+        console.log("Creating microphone and camera tracks...");
+        const tracks = await AgoraRTC.createMicrophoneAndCameraTracks(
+          {
+            AEC: true,
+            AGC: true,
+            ANS: true
+          },
+          {
+            encoderConfig: {
+              width: 640,
+              height: 360,
+              frameRate: 15,
+              bitrateMin: 400,
+              bitrateMax: 800
+            }
+          }
+        );
+        
+        microphoneTrack = tracks[0];
+        cameraTrack = tracks[1];
+        
+        console.log("Tracks created successfully:", { 
+          audioTrackId: microphoneTrack?.getTrackId(),
+          videoTrackId: cameraTrack?.getTrackId()
+        });
+      } catch (err: any) {
+        console.error("Error creating tracks:", err);
+        if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
+          throw new Error("Camera or microphone permission denied. Please check your browser settings.");
+        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+          throw new Error("No camera or microphone found. Please connect devices and try again.");
+        } else {
+          throw new Error(`Failed to access media devices: ${err.message}`);
+        }
+      }
+      
       localTracksRef.current = {
         audioTrack: microphoneTrack,
         videoTrack: cameraTrack
@@ -44,10 +83,12 @@ export const useVideoCall = (roomId: string) => {
       
       // Display local video
       if (localVideoRef && cameraTrack) {
+        console.log("Playing local video track");
         cameraTrack.play(localVideoRef);
       }
       
       // Generate a token for the Agora channel
+      console.log("Generating Agora token...");
       const uid = Math.floor(Math.random() * 100000).toString();
       const tokenData = await generateToken(uid);
       
@@ -55,17 +96,21 @@ export const useVideoCall = (roomId: string) => {
         throw new Error("Failed to generate Agora token");
       }
       
+      console.log("Token generated successfully:", tokenData.channelName);
+      
       // Join the Agora channel
       if (remoteVideoRef && localTracksRef.current.audioTrack && localTracksRef.current.videoTrack) {
         // Set up user-published handler
         const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
         
         client.on('user-published', async (user, mediaType) => {
+          console.log(`Remote user ${user.uid} published ${mediaType} track`);
           await client.subscribe(user, mediaType);
           
           if (mediaType === 'video') {
             remoteTracksRef.current.videoTrack = user.videoTrack;
             if (user.videoTrack) {
+              console.log("Playing remote video track");
               user.videoTrack.play(remoteVideoRef);
             }
           }
@@ -73,12 +118,14 @@ export const useVideoCall = (roomId: string) => {
           if (mediaType === 'audio') {
             remoteTracksRef.current.audioTrack = user.audioTrack;
             if (user.audioTrack) {
+              console.log("Playing remote audio track");
               user.audioTrack.play();
             }
           }
         });
         
         client.on('user-unpublished', (user, mediaType) => {
+          console.log(`Remote user ${user.uid} unpublished ${mediaType} track`);
           if (mediaType === 'video') {
             remoteTracksRef.current.videoTrack = null;
           }
@@ -87,6 +134,7 @@ export const useVideoCall = (roomId: string) => {
           }
         });
         
+        console.log("Joining channel:", tokenData.channelName);
         agoraClientRef.current = await joinChannel(
           client,
           localTracksRef.current.audioTrack,

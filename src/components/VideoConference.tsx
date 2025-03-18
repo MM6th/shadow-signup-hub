@@ -28,6 +28,7 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   const [viewerCount, setViewerCount] = useState(1);
   const [callDuration, setCallDuration] = useState(0);
   const [showPermissionMessage, setShowPermissionMessage] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
 
   const {
     isConnected,
@@ -62,20 +63,38 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
       const setupCall = async () => {
         try {
           setShowPermissionMessage(true);
+          setPermissionError(null);
           
-          // Request camera and microphone permissions
-          await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          // Request permissions explicitly with proper error handling
+          try {
+            await navigator.mediaDevices.getUserMedia({ 
+              video: true, 
+              audio: true 
+            });
+            console.log("Camera and microphone permissions granted");
+          } catch (err: any) {
+            console.error("Permission error:", err);
+            if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+              setPermissionError("Camera and microphone access was denied. Please allow access in your browser settings.");
+            } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+              setPermissionError("No camera or microphone found. Please connect these devices and try again.");
+            } else {
+              setPermissionError(`Error accessing media devices: ${err.message}`);
+            }
+            setShowPermissionMessage(false);
+            // Don't proceed with call initialization if we can't get permissions
+            return;
+          }
           
           // Initialize the call with Agora
           await initializeCall(localVideoRef.current, remoteVideoRef.current);
-          
           setShowPermissionMessage(false);
-        } catch (error) {
-          console.error('Error requesting media permissions:', error);
+        } catch (error: any) {
+          console.error('Error in call setup:', error);
           setShowPermissionMessage(false);
           toast({
-            title: "Permission Error",
-            description: "Please enable camera and microphone access to join the livestream.",
+            title: "Connection Error",
+            description: error.message || "Could not connect to the livestream. Please try again.",
             variant: "destructive",
           });
         }
@@ -110,6 +129,26 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
       title: "Livestream link copied",
       description: "Share this link with others so they can join your livestream",
     });
+  };
+
+  const handleRetryPermissions = async () => {
+    setPermissionError(null);
+    setShowPermissionMessage(true);
+    
+    try {
+      // Ask user to grant permissions again
+      await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      
+      // If successful, initialize the call
+      if (localVideoRef.current && remoteVideoRef.current) {
+        await initializeCall(localVideoRef.current, remoteVideoRef.current);
+      }
+      setShowPermissionMessage(false);
+    } catch (err: any) {
+      console.error("Retry permission error:", err);
+      setPermissionError(`Could not access camera/microphone: ${err.message}`);
+      setShowPermissionMessage(false);
+    }
   };
 
   return (
@@ -156,6 +195,18 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
                 <CameraOff className="mr-2" /> <MicOff />
               </div>
               <p className="text-pi">Please allow camera and microphone access to join the livestream</p>
+            </div>
+          )}
+          
+          {permissionError && (
+            <div className="bg-red-500/10 p-4 rounded-lg text-center mb-4">
+              <div className="flex justify-center mb-2">
+                <CameraOff className="mr-2 text-red-400" /> <MicOff className="text-red-400" />
+              </div>
+              <p className="text-red-400 mb-2">{permissionError}</p>
+              <Button variant="outline" size="sm" onClick={handleRetryPermissions}>
+                Retry Permissions
+              </Button>
             </div>
           )}
           
