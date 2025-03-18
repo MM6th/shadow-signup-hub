@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,8 +17,6 @@ interface PaymentDialogProps {
     enable_paypal?: boolean;
     paypal_client_id?: string;
     contact_phone?: string;
-    type?: string;
-    digital_type?: string;
   };
   walletData: {
     wallet_address: string;
@@ -36,7 +33,6 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const { toast } = useToast();
-  const navigate = useNavigate();
   
   // Default PayPal client ID if none is provided
   const DEFAULT_PAYPAL_CLIENT_ID = "AbGYIHsjPxcCNhgce9MZsTQ7Mou5ZqJljgpEc-7-_owsvr5InFhhEDyEPEGlWQPzzaW1b_52EU-Gbn-l";
@@ -66,9 +62,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
       enablePayPal: product?.enable_paypal,
       clientId: product?.paypal_client_id,
       hasWalletData: !!walletData,
-      contactPhone: product?.contact_phone,
-      type: product?.type,
-      digitalType: product?.digital_type
+      contactPhone: product?.contact_phone
     });
   }, [product, walletData]);
 
@@ -117,36 +111,11 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
           contactPhone: product.contact_phone || "Not provided"
         },
       });
-      
-      // Get the current user id
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) throw new Error("User not authenticated");
-      
-      // Create a purchase record
-      const { error: purchaseError } = await supabase
-        .from("purchases")
-        .insert({
-          product_id: product.id,
-          buyer_id: user.id,
-          payment_method: 'crypto',
-          status: 'completed',
-          amount: product.price,
-          currency: walletData.crypto_type
-        });
-        
-      if (purchaseError) throw purchaseError;
 
       toast({
         title: "Address copied!",
         description: `Send ${product.price} ${walletData.crypto_type} to the copied address to complete your purchase.`,
       });
-      
-      // If this is an audio product, redirect to the download page
-      if (product.type === 'digital' && product.digital_type === 'audio') {
-        onOpenChange(false);
-        navigate(`/download/${product.id}`);
-      }
 
     } catch (error: any) {
       console.error('Error processing purchase:', error);
@@ -178,38 +147,12 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
         },
       });
       
-      // Get the current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) throw new Error("User not authenticated");
-      
-      // Create a purchase record
-      const { error: purchaseError } = await supabase
-        .from("purchases")
-        .insert({
-          product_id: product.id,
-          buyer_id: user.id,
-          payment_method: 'paypal',
-          payment_id: details.id,
-          status: 'completed',
-          amount: product.price,
-          currency: 'usd'
-        });
-        
-      if (purchaseError) throw purchaseError;
-      
       toast({
         title: "Payment successful!",
         description: `Thank you for your purchase of ${product.title}.`,
       });
       
-      // Close the payment dialog
       onOpenChange(false);
-      
-      // If this is an audio product, redirect to the download page
-      if (product.type === 'digital' && product.digital_type === 'audio') {
-        navigate(`/download/${product.id}`);
-      }
     } catch (error: any) {
       console.error('Error recording PayPal purchase:', error);
       toast({

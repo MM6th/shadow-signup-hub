@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Music } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductForm from '@/components/ProductForm';
 import { useToast } from '@/hooks/use-toast';
@@ -83,22 +83,6 @@ const CreateProduct = () => {
               This will be used for all products in your marketplace.
             </p>
           </div>
-        </div>
-        
-        <div className="glass-card p-6 mb-6">
-          <div className="flex items-center mb-4">
-            <Music className="mr-2 text-pi-muted" />
-            <h2 className="text-xl font-elixia text-gradient">New Audio Products Feature</h2>
-          </div>
-          <p className="text-pi-muted mb-4">
-            You can now create audio products! Select "Digital" as the product type, 
-            then choose "Audio Product" from the dropdown. Upload single files or collections 
-            and add artist information.
-          </p>
-          <p className="text-pi-muted mb-4">
-            Your customers will be able to securely download their purchased audio files 
-            after completing payment through PayPal or cryptocurrency.
-          </p>
         </div>
         
         <ProductForm paypalClientId={paypalClientId} />
