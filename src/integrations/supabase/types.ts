@@ -150,6 +150,41 @@ export type Database = {
         }
         Relationships: []
       }
+      download_activity: {
+        Row: {
+          downloaded_at: string
+          file_name: string
+          file_url: string
+          id: string
+          product_id: string
+          user_id: string
+        }
+        Insert: {
+          downloaded_at?: string
+          file_name: string
+          file_url: string
+          id?: string
+          product_id: string
+          user_id: string
+        }
+        Update: {
+          downloaded_at?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          product_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "download_activity_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_sessions: {
         Row: {
           created_at: string
@@ -348,54 +383,75 @@ export type Database = {
       }
       products: {
         Row: {
+          artist_name: string | null
+          audio_file_names: string[] | null
+          audio_type: string | null
+          audio_urls: string[] | null
           category: string
           contact_phone: string | null
           created_at: string
           description: string
+          digital_type: string | null
           enable_crypto: boolean | null
           enable_paypal: boolean | null
           id: string
           image_url: string | null
+          lyrics: string | null
           original_price: number | null
           paypal_client_id: string | null
           price: number
           price_currency: string | null
+          publishing_year: string | null
           title: string
           type: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          artist_name?: string | null
+          audio_file_names?: string[] | null
+          audio_type?: string | null
+          audio_urls?: string[] | null
           category: string
           contact_phone?: string | null
           created_at?: string
           description: string
+          digital_type?: string | null
           enable_crypto?: boolean | null
           enable_paypal?: boolean | null
           id?: string
           image_url?: string | null
+          lyrics?: string | null
           original_price?: number | null
           paypal_client_id?: string | null
           price: number
           price_currency?: string | null
+          publishing_year?: string | null
           title: string
           type: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          artist_name?: string | null
+          audio_file_names?: string[] | null
+          audio_type?: string | null
+          audio_urls?: string[] | null
           category?: string
           contact_phone?: string | null
           created_at?: string
           description?: string
+          digital_type?: string | null
           enable_crypto?: boolean | null
           enable_paypal?: boolean | null
           id?: string
           image_url?: string | null
+          lyrics?: string | null
           original_price?: number | null
           paypal_client_id?: string | null
           price?: number
           price_currency?: string | null
+          publishing_year?: string | null
           title?: string
           type?: string
           updated_at?: string
@@ -432,6 +488,50 @@ export type Database = {
           username?: string
         }
         Relationships: []
+      }
+      purchases: {
+        Row: {
+          amount: number
+          buyer_id: string | null
+          created_at: string
+          currency: string
+          id: string
+          payment_id: string | null
+          payment_method: string
+          product_id: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          buyer_id?: string | null
+          created_at?: string
+          currency: string
+          id?: string
+          payment_id?: string | null
+          payment_method: string
+          product_id: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          buyer_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_id?: string | null
+          payment_method?: string
+          product_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviews: {
         Row: {

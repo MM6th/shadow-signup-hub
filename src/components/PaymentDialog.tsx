@@ -118,18 +118,22 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
         },
       });
       
+      // Get the current user id
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) throw new Error("User not authenticated");
+      
       // Create a purchase record
-      const { data: purchaseData, error: purchaseError } = await supabase
-        .from('purchases')
+      const { error: purchaseError } = await supabase
+        .from("purchases")
         .insert({
           product_id: product.id,
+          buyer_id: user.id,
           payment_method: 'crypto',
           status: 'completed',
           amount: product.price,
           currency: walletData.crypto_type
-        })
-        .select()
-        .single();
+        });
         
       if (purchaseError) throw purchaseError;
 
@@ -174,20 +178,23 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
         },
       });
       
+      // Get the current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) throw new Error("User not authenticated");
+      
       // Create a purchase record
-      const { data: purchaseData, error: purchaseError } = await supabase
-        .from('purchases')
+      const { error: purchaseError } = await supabase
+        .from("purchases")
         .insert({
           product_id: product.id,
+          buyer_id: user.id,
           payment_method: 'paypal',
           payment_id: details.id,
-          buyer_id: (await supabase.auth.getUser()).data.user?.id,
           status: 'completed',
           amount: product.price,
           currency: 'usd'
-        })
-        .select()
-        .single();
+        });
         
       if (purchaseError) throw purchaseError;
       
