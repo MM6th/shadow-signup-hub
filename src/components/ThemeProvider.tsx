@@ -34,8 +34,10 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement
     
+    // First remove all theme classes
     root.classList.remove("light", "dark")
     
+    // Apply the appropriate theme
     if (theme === "system") {
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
         .matches
@@ -43,10 +45,17 @@ export function ThemeProvider({
         : "light"
       
       root.classList.add(systemTheme)
-      return
+    } else {
+      root.classList.add(theme)
     }
     
-    root.classList.add(theme)
+    // Ensure the text color and background are visible
+    if (theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+      // Make sure we have visible text in dark mode
+      document.body.classList.add('text-white', 'bg-dark');
+    } else {
+      document.body.classList.add('text-black', 'bg-white');
+    }
   }, [theme])
 
   const value = {

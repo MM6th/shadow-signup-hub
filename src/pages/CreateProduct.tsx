@@ -91,7 +91,7 @@ const CreateProduct = () => {
             <h2 className="text-xl font-elixia text-gradient">New Audio Products Feature</h2>
           </div>
           <p className="text-pi-muted mb-4">
-            You can now create audio and audio products! Select "Digital" as the product type, 
+            You can now create audio products! Select "Digital" as the product type, 
             then choose "Audio Product" from the dropdown. Upload single files or collections 
             and add artist information.
           </p>
