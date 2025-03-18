@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Briefcase, Tag, PenSquare, ShoppingBag, Plus, User, Film, Trash2 } from 'lucide-react';
+import { Briefcase, Tag, PenSquare, ShoppingBag, Plus, User, Film, Trash2, Video } from 'lucide-react';
 import Button from '@/components/Button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button as ShadcnButton } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import VideoUploader from '@/components/VideoUploader';
 import { ChartButton } from '@/components/charts/ChartButton';
 import { ScreenplayModal } from '@/components/charts/ScreenplayModal';
+import LiveStreamModal from '@/components/LiveStreamModal';
 import AdsList from '@/components/AdsList';
 import { Tags } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -28,7 +29,7 @@ const Dashboard: React.FC = () => {
   const { user, profile, isLoading, hasProfile, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
-  const [activeSubTab, setActiveSubTab] = useState('livestream');
+  const [isLiveStreamModalOpen, setIsLiveStreamModalOpen] = useState(false);
   const [isScreenplayModalOpen, setIsScreenplayModalOpen] = useState(false);
 
   // Check if the current user is an admin
@@ -59,14 +60,9 @@ const Dashboard: React.FC = () => {
     setActiveTab(value);
   };
 
-  // Handle sub-tab changes
-  const handleSubTabChange = (value: string) => {
-    setActiveSubTab(value);
-    
-    // If we're in products tab and switching to livestream, ensure we show the livestream content
-    if (activeTab === 'products' && value === 'livestream') {
-      // No need to change active tab - we'll display the livestream content within products tab
-    }
+  // Handle live stream button click
+  const handleLiveStreamClick = () => {
+    setIsLiveStreamModalOpen(true);
   };
 
   if (isLoading) {
@@ -86,6 +82,7 @@ const Dashboard: React.FC = () => {
   const tabTriggers = [
     { value: 'profile', label: 'Profile Details' },
     { value: 'products', label: 'My Products' },
+    { value: 'livestream', label: 'Live Stream' }, // Add livestream as a main tab
   ];
   
   // Add admin-only tabs
@@ -94,12 +91,6 @@ const Dashboard: React.FC = () => {
     tabTriggers.push({ value: 'screenplays', label: 'My Screenplays' });
     tabTriggers.push({ value: 'ads', label: 'My Ads' });
   }
-  
-  // Define subtabs for content creation (Live Stream, etc)
-  const contentSubtabs = [
-    { value: 'livestream', label: 'Live Stream' },
-    // Future subtabs can be added here
-  ];
 
   return (
     <div className="min-h-screen bg-dark bg-dark-gradient text-pi py-10">
@@ -168,24 +159,6 @@ const Dashboard: React.FC = () => {
                 ))}
               </TabsList>
               
-              {isAdmin && (
-                <div className="mb-6">
-                  <TabsList className="w-full flex">
-                    {contentSubtabs.map(subtab => (
-                      <TabsTrigger 
-                        key={subtab.value} 
-                        value={subtab.value} 
-                        onClick={() => handleSubTabChange(subtab.value)}
-                        data-state={activeSubTab === subtab.value ? 'active' : ''}
-                        className={`flex-1 ${activeSubTab === subtab.value ? 'bg-accent' : ''}`}
-                      >
-                        {subtab.label}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </div>
-              )}
-              
               <TabsContent value="profile">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                   <div className="space-y-4">
@@ -238,87 +211,77 @@ const Dashboard: React.FC = () => {
               </TabsContent>
               
               <TabsContent value="products">
-                {activeSubTab === 'livestream' ? (
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="text-lg font-medium">My Products & Services</h2>
+                  <div className="flex gap-2">
+                    {isAdmin && <ChartButton />} {/* Only admins can create charts */}
+                    <ShadcnButton onClick={() => navigate('/create-product')} className="flex items-center">
+                      <Plus size={16} className="mr-2" /> Create New
+                    </ShadcnButton>
+                  </div>
+                </div>
+                
+                <ProductsList userId={user.id} />
+              </TabsContent>
+              
+              <TabsContent value="livestream">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-medium">Cosmic Live Streaming</h2>
+                    <ShadcnButton onClick={handleLiveStreamClick} className="flex items-center gap-2">
+                      <Plus size={16} />
+                      Start New Stream
+                    </ShadcnButton>
+                  </div>
+                  
                   <LiveStreamTab />
-                ) : (
-                  <>
-                    <div className="mb-6 flex items-center justify-between">
-                      <h2 className="text-lg font-medium">My Products & Services</h2>
-                      <div className="flex gap-2">
-                        {isAdmin && <ChartButton />} {/* Only admins can create charts */}
-                        <ShadcnButton onClick={() => navigate('/create-product')} className="flex items-center">
-                          <Plus size={16} className="mr-2" /> Create New
-                        </ShadcnButton>
-                      </div>
-                    </div>
-                    
-                    <ProductsList userId={user.id} />
-                  </>
-                )}
+                </div>
               </TabsContent>
               
               {isAdmin && (
                 <TabsContent value="videos">
-                  {activeSubTab === 'livestream' ? (
-                    <LiveStreamTab />
-                  ) : (
-                    <>
-                      <div className="mb-6 flex items-center justify-between">
-                        <h2 className="text-lg font-medium">My Videos</h2>
-                        <div className="text-pi-muted text-sm">Upload videos up to 3GB</div>
-                      </div>
-                      
-                      <VideoUploader userId={user.id} />
-                    </>
-                  )}
+                  <div className="mb-6 flex items-center justify-between">
+                    <h2 className="text-lg font-medium">My Videos</h2>
+                    <div className="text-pi-muted text-sm">Upload videos up to 3GB</div>
+                  </div>
+                  
+                  <VideoUploader userId={user.id} />
                 </TabsContent>
               )}
               
               {isAdmin && (
                 <TabsContent value="screenplays">
-                  {activeSubTab === 'livestream' ? (
-                    <LiveStreamTab />
-                  ) : (
-                    <>
-                      <div className="mb-6 flex items-center justify-between">
-                        <h2 className="text-lg font-medium">My Screenplays</h2>
-                        <div className="flex gap-2">
-                          <ShadcnButton 
-                            onClick={() => setIsScreenplayModalOpen(true)} 
-                            className="flex items-center"
-                          >
-                            <Plus size={16} className="mr-2" /> Create New Screenplay
-                          </ShadcnButton>
-                        </div>
-                      </div>
-                      
-                      <ScreenplayList userId={user.id} />
-                    </>
-                  )}
+                  <div className="mb-6 flex items-center justify-between">
+                    <h2 className="text-lg font-medium">My Screenplays</h2>
+                    <div className="flex gap-2">
+                      <ShadcnButton 
+                        onClick={() => setIsScreenplayModalOpen(true)} 
+                        className="flex items-center"
+                      >
+                        <Plus size={16} className="mr-2" /> Create New Screenplay
+                      </ShadcnButton>
+                    </div>
+                  </div>
+                  
+                  <ScreenplayList userId={user.id} />
                 </TabsContent>
               )}
               
               {isAdmin && (
                 <TabsContent value="ads">
-                  {activeSubTab === 'livestream' ? (
-                    <LiveStreamTab />
-                  ) : (
-                    <>
-                      <div className="mb-6 flex items-center justify-between">
-                        <h2 className="text-lg font-medium">My Advertisements</h2>
-                        <div className="flex gap-2">
-                          <ShadcnButton 
-                            onClick={() => navigate('/marketplace')} 
-                            className="flex items-center"
-                          >
-                            <Tags size={16} className="mr-2" /> View in Marketplace
-                          </ShadcnButton>
-                        </div>
-                      </div>
-                      
-                      <AdsList userId={user.id} />
-                    </>
-                  )}
+                  <div className="mb-6 flex items-center justify-between">
+                    <h2 className="text-lg font-medium">My Advertisements</h2>
+                    <div className="flex gap-2">
+                      <ShadcnButton 
+                        onClick={() => navigate('/marketplace')} 
+                        className="flex items-center"
+                      >
+                        <Tags size={16} className="mr-2" /> View in Marketplace
+                      </ShadcnButton>
+                    </div>
+                  </div>
+                  
+                  <AdsList userId={user.id} />
                 </TabsContent>
               )}
             </Tabs>
@@ -331,6 +294,12 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Updated LiveStreamModal component */}
+      <LiveStreamModal 
+        open={isLiveStreamModalOpen}
+        onOpenChange={setIsLiveStreamModalOpen}
+      />
       
       {isAdmin && (
         <ScreenplayModal 
