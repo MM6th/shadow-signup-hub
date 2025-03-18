@@ -1,12 +1,24 @@
 
-import React from 'react';
-import { Video } from 'lucide-react';
+import React, { useState } from 'react';
+import { Video, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface LiveStream {
   id: string;
@@ -25,9 +37,11 @@ interface LiveStream {
 const LiveStreamTab: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [streamToDelete, setStreamToDelete] = useState<string | null>(null);
   
   // Fetch user's past streams
-  const { data: pastStreams, isLoading } = useQuery<LiveStream[]>({
+  const { data: pastStreams, isLoading, refetch } = useQuery<LiveStream[]>({
     queryKey: ['pastStreams', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -46,6 +60,39 @@ const LiveStreamTab: React.FC = () => {
   // Handle stream click - navigate to the livestream page
   const handleStreamClick = (conferenceId: string) => {
     navigate(`/livestream/${conferenceId}`);
+  };
+  
+  // Handle delete stream
+  const handleDeleteStream = async () => {
+    if (!streamToDelete) return;
+    
+    try {
+      // Delete the livestream from the database
+      const { error } = await supabase
+        .from('livestreams')
+        .delete()
+        .eq('id', streamToDelete);
+        
+      if (error) throw error;
+      
+      // Show success message
+      toast({
+        title: "Stream deleted",
+        description: "The livestream has been successfully deleted",
+      });
+      
+      // Refresh the streams list
+      refetch();
+    } catch (error: any) {
+      console.error('Error deleting stream:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the livestream. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setStreamToDelete(null);
+    }
   };
 
   return (
@@ -95,9 +142,43 @@ const LiveStreamTab: React.FC = () => {
                       )}
                     </div>
                     
-                    <Button variant="outline" size="sm" onClick={() => handleStreamClick(stream.conference_id)}>
-                      {stream.is_active ? "Join" : "Replay"}
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleStreamClick(stream.conference_id)}
+                      >
+                        {stream.is_active ? "Join" : "Replay"}
+                      </Button>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => setStreamToDelete(stream.id)}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Stream</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this livestream? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel onClick={() => setStreamToDelete(null)}>
+                              Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteStream}>
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                 </div>
               </div>
