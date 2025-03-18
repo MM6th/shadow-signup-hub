@@ -6,7 +6,7 @@ import RemoteVideo from '@/components/video-conference/RemoteVideo';
 import CallControls from '@/components/video-conference/CallControls';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { User, Users, CameraOff, MicOff, Link2 } from 'lucide-react';
+import { User, Users, CameraOff, MicOff, Link2, Video, Mic } from 'lucide-react';
 import CallHeader from '@/components/video-conference/CallHeader';
 import { Button } from '@/components/ui/button';
 
@@ -29,6 +29,7 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   const [callDuration, setCallDuration] = useState(0);
   const [showPermissionMessage, setShowPermissionMessage] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
+  const [showPermissionButton, setShowPermissionButton] = useState(true);
 
   const {
     isConnected,
@@ -57,71 +58,56 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     };
   }, [isConnected]);
 
-  // Request camera/mic permissions and initialize call
-  useEffect(() => {
-    if (localVideoRef.current && remoteVideoRef.current) {
-      const setupCall = async () => {
-        try {
-          setShowPermissionMessage(true);
-          setPermissionError(null);
-          
-          console.log("Setting up video call, requesting permissions...");
-          
-          try {
-            // Request permissions explicitly with proper error handling
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-              video: true, 
-              audio: true 
-            });
-            console.log("Camera and microphone permissions granted");
-            
-            // We don't need this stream as Agora will create its own
-            stream.getTracks().forEach(track => track.stop());
-          } catch (err: any) {
-            console.error("Permission error:", err);
-            if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-              setPermissionError("Camera and microphone access was denied. Please allow access in your browser settings.");
-            } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-              setPermissionError("No camera or microphone found. Please connect these devices and try again.");
-            } else {
-              setPermissionError(`Error accessing media devices: ${err.message}`);
-            }
-            setShowPermissionMessage(false);
-            // Don't proceed with call initialization if we can't get permissions
-            return;
-          }
-          
-          // Initialize the call with Agora
-          await initializeCall(localVideoRef.current, remoteVideoRef.current);
-          setShowPermissionMessage(false);
-        } catch (error: any) {
-          console.error('Error in call setup:', error);
-          setShowPermissionMessage(false);
-          
-          // Set permission error if it's a permission-related issue
-          if (error.message?.includes("permission") || 
-              error.message?.includes("camera") || 
-              error.message?.includes("microphone") ||
-              error.message?.includes("media")) {
-            setPermissionError(error.message);
-          } else {
-            toast({
-              title: "Connection Error",
-              description: error.message || "Could not connect to the livestream. Please try again.",
-              variant: "destructive",
-            });
-          }
-        }
-      };
+  // Explicitly request camera/mic permissions
+  const requestPermissions = async () => {
+    try {
+      setShowPermissionMessage(true);
+      setPermissionError(null);
       
-      setupCall();
+      console.log("Explicitly requesting camera and microphone permissions...");
+      
+      try {
+        // This will trigger the browser permission dialog
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true, 
+          audio: true 
+        });
+        
+        console.log("Camera and microphone permissions granted successfully");
+        toast({
+          title: "Permissions granted",
+          description: "Camera and microphone access allowed",
+        });
+        
+        // Stop the temporary stream since we'll create a new one with Agora
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Hide the permission button since permissions are granted
+        setShowPermissionButton(false);
+        
+        // Initialize the call if we have the refs
+        if (localVideoRef.current && remoteVideoRef.current) {
+          await initializeCall(localVideoRef.current, remoteVideoRef.current);
+        }
+        
+        setShowPermissionMessage(false);
+      } catch (err: any) {
+        console.error("Permission error:", err);
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          setPermissionError("Camera and microphone access was denied. Please allow access in your browser settings.");
+        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+          setPermissionError("No camera or microphone found. Please connect these devices and try again.");
+        } else {
+          setPermissionError(`Error accessing media devices: ${err.message}`);
+        }
+        setShowPermissionMessage(false);
+      }
+    } catch (error: any) {
+      console.error('Error requesting permissions:', error);
+      setShowPermissionMessage(false);
+      setPermissionError(`Failed to request permissions: ${error.message}`);
     }
-    
-    // Cleanup function
-    return () => {
-      endCall();
-    };
-  }, []);
+  };
 
   const handleEndCall = () => {
     endCall();
@@ -147,28 +133,7 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
 
   const handleRetryPermissions = async () => {
     setPermissionError(null);
-    setShowPermissionMessage(true);
-    
-    try {
-      console.log("Retrying permission request...");
-      
-      // Ask user to grant permissions again
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      console.log("Permissions granted on retry");
-      
-      // Stop the stream since Agora will create its own
-      stream.getTracks().forEach(track => track.stop());
-      
-      // If successful, initialize the call
-      if (localVideoRef.current && remoteVideoRef.current) {
-        await initializeCall(localVideoRef.current, remoteVideoRef.current);
-      }
-      setShowPermissionMessage(false);
-    } catch (err: any) {
-      console.error("Retry permission error:", err);
-      setPermissionError(`Could not access camera/microphone: ${err.message}`);
-      setShowPermissionMessage(false);
-    }
+    requestPermissions();
   };
 
   return (
@@ -209,12 +174,29 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
             </div>
           </div>
           
+          {showPermissionButton && !isConnected && !isJoining && (
+            <div className="bg-primary/10 p-6 rounded-lg text-center mb-4">
+              <div className="flex justify-center mb-4">
+                <Video className="mr-2 text-primary h-8 w-8" /> 
+                <Mic className="text-primary h-8 w-8" />
+              </div>
+              <p className="text-pi mb-4">To use this livestream, you need to allow camera and microphone access</p>
+              <Button 
+                onClick={requestPermissions}
+                size="lg"
+                className="animate-pulse"
+              >
+                Allow Camera & Mic
+              </Button>
+            </div>
+          )}
+          
           {showPermissionMessage && (
             <div className="bg-dark-accent/20 p-4 rounded-lg text-center mb-4">
               <div className="flex justify-center mb-2">
                 <CameraOff className="mr-2" /> <MicOff />
               </div>
-              <p className="text-pi">Please allow camera and microphone access to join the livestream</p>
+              <p className="text-pi">Please allow camera and microphone access in the browser prompt</p>
             </div>
           )}
           

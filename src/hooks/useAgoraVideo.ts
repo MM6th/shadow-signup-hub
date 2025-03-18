@@ -25,6 +25,8 @@ export const useAgoraVideo = (appointmentId: string) => {
       // Generate a channel name based on the appointment ID
       const generatedChannelName = `livestream-${appointmentId}`;
       
+      console.log("Generating token for channel:", generatedChannelName, "with UID:", uid);
+      
       // Call our edge function to generate a token
       const { data, error } = await supabase.functions.invoke('generate-agora-token', {
         body: {
@@ -77,7 +79,8 @@ export const useAgoraVideo = (appointmentId: string) => {
     try {
       console.log("Joining channel with:", { 
         tokenProvided: !!agoraToken, 
-        channelName: agoraChannelName 
+        channelName: agoraChannelName,
+        tokenLength: agoraToken.length
       });
       
       // Join the channel

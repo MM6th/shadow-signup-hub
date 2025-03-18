@@ -34,25 +34,7 @@ export const useVideoCall = (roomId: string) => {
   const initializeCall = async (localVideoRef: HTMLDivElement, remoteVideoRef: HTMLDivElement) => {
     try {
       setIsJoining(true);
-      
-      // Explicitly request permissions first before creating tracks
-      console.log("Requesting camera and microphone permissions...");
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-        // We got permissions, but we don't use this stream - we'll let Agora create its own tracks
-        // Just stop it immediately since we don't need it
-        stream.getTracks().forEach(track => track.stop());
-        console.log("Camera and microphone permissions granted successfully");
-      } catch (err: any) {
-        console.error("Error getting media permissions:", err);
-        if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
-          throw new Error("Camera or microphone permission denied. Please check your browser settings and try again.");
-        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-          throw new Error("No camera or microphone found. Please connect devices and try again.");
-        } else {
-          throw new Error(`Failed to access media devices: ${err.message}`);
-        }
-      }
+      console.log("Initializing call with room ID:", roomId);
       
       // Create local tracks with more robust error handling
       let microphoneTrack: IMicrophoneAudioTrack | null = null;
