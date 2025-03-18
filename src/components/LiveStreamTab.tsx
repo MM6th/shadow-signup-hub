@@ -39,7 +39,6 @@ const LiveStreamTab: React.FC = () => {
   const { toast } = useToast();
   const [streamToDelete, setStreamToDelete] = useState<string | null>(null);
   
-  // Fetch user's past streams
   const { data: pastStreams, isLoading, refetch } = useQuery<LiveStream[]>({
     queryKey: ['pastStreams', user?.id],
     queryFn: async () => {
@@ -56,14 +55,12 @@ const LiveStreamTab: React.FC = () => {
     enabled: !!user
   });
 
-  // Handle stream click - navigate to the livestream page
   const handleStreamClick = (conferenceId: string) => {
     navigate(`/livestream/${conferenceId}`);
   };
   
-  // Function to copy conference ID
   const copyConferenceId = (conferenceId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent navigation when clicking the copy button
+    e.stopPropagation();
     navigator.clipboard.writeText(`${window.location.origin}/livestream/${conferenceId}`);
     toast({
       title: "Link copied",
@@ -71,12 +68,10 @@ const LiveStreamTab: React.FC = () => {
     });
   };
   
-  // Handle delete stream
   const handleDeleteStream = async () => {
     if (!streamToDelete) return;
     
     try {
-      // Delete the livestream from the database
       const { error } = await supabase
         .from('livestreams')
         .delete()
@@ -84,13 +79,11 @@ const LiveStreamTab: React.FC = () => {
         
       if (error) throw error;
       
-      // Show success message
       toast({
         title: "Stream deleted",
         description: "The livestream has been successfully deleted",
       });
       
-      // Refresh the streams list
       refetch();
     } catch (error: any) {
       console.error('Error deleting stream:', error);
@@ -152,17 +145,6 @@ const LiveStreamTab: React.FC = () => {
                     </div>
                     
                     <div className="flex space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          copyConferenceId(stream.conference_id, e);
-                        }}
-                      >
-                        Share Link
-                      </Button>
-                      
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button 
