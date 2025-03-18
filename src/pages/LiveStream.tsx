@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import VideoConference from '@/components/VideoConference';
 import PaymentDialog from '@/components/PaymentDialog';
 import { useWalletAddresses } from '@/hooks/useWalletAddresses';
+import { useProfile } from '@/hooks/useProfile';
 
 interface LiveStreamData {
   id: string;
@@ -22,7 +23,6 @@ interface LiveStreamData {
   views: number;
   enable_crypto: boolean;
   enable_paypal: boolean;
-  username?: string;  // Added this field for profile username
 }
 
 const LiveStream: React.FC = () => {
@@ -34,6 +34,9 @@ const LiveStream: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isHost, setIsHost] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  
+  // Fetch user's profile who created the livestream
+  const { profile: creatorProfile } = useProfile(streamData?.user_id);
   
   // Get wallet addresses for payments
   const { adminWalletAddresses, hasPayPalEnabled, paypalClientId } = useWalletAddresses(
@@ -52,7 +55,6 @@ const LiveStream: React.FC = () => {
       try {
         setIsLoading(true);
         
-        // Changed query to join with profiles table using a separate query
         const { data: streamData, error } = await supabase
           .from('livestreams')
           .select('*')
@@ -60,19 +62,6 @@ const LiveStream: React.FC = () => {
           .single();
           
         if (error) throw error;
-        
-        // Fetch username from profiles if we have a user_id
-        if (streamData.user_id) {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', streamData.user_id)
-            .single();
-            
-          if (!profileError && profileData) {
-            streamData.username = profileData.username;
-          }
-        }
         
         setStreamData(streamData as LiveStreamData);
         setIsHost(user?.id === streamData.user_id);
@@ -171,7 +160,7 @@ const LiveStream: React.FC = () => {
             </Button>
             <h1 className="text-3xl font-elixia text-gradient mt-2">{streamData.title}</h1>
             <p className="text-pi-muted">
-              {isHost ? 'Your live stream' : `${streamData.username || 'User'}'s live stream`}
+              {isHost ? 'Your live stream' : `${creatorProfile?.username || 'User'}'s live stream`}
             </p>
           </div>
           
