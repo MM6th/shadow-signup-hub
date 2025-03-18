@@ -22,7 +22,7 @@ interface LiveStreamData {
   views: number;
   enable_crypto: boolean;
   enable_paypal: boolean;
-  profiles?: any;
+  username?: string;  // Added this field for profile username
 }
 
 const LiveStream: React.FC = () => {
@@ -52,23 +52,37 @@ const LiveStream: React.FC = () => {
       try {
         setIsLoading(true);
         
-        const { data, error } = await supabase
+        // Changed query to join with profiles table using a separate query
+        const { data: streamData, error } = await supabase
           .from('livestreams')
-          .select('*, profiles(*)')
+          .select('*')
           .eq('conference_id', conferenceId)
           .single();
           
         if (error) throw error;
         
-        setStreamData(data as LiveStreamData);
-        setIsHost(user?.id === data.user_id);
+        // Fetch username from profiles if we have a user_id
+        if (streamData.user_id) {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', streamData.user_id)
+            .single();
+            
+          if (!profileError && profileData) {
+            streamData.username = profileData.username;
+          }
+        }
+        
+        setStreamData(streamData as LiveStreamData);
+        setIsHost(user?.id === streamData.user_id);
         
         // Update view count if not the host
-        if (user?.id !== data.user_id) {
+        if (user?.id !== streamData.user_id) {
           await supabase
             .from('livestreams')
-            .update({ views: (data.views || 0) + 1 })
-            .eq('id', data.id);
+            .update({ views: (streamData.views || 0) + 1 })
+            .eq('id', streamData.id);
         }
       } catch (error: any) {
         console.error('Error fetching stream data:', error);
@@ -157,7 +171,7 @@ const LiveStream: React.FC = () => {
             </Button>
             <h1 className="text-3xl font-elixia text-gradient mt-2">{streamData.title}</h1>
             <p className="text-pi-muted">
-              {isHost ? 'Your live stream' : `${streamData.profiles?.username || 'User'}'s live stream`}
+              {isHost ? 'Your live stream' : `${streamData.username || 'User'}'s live stream`}
             </p>
           </div>
           
@@ -198,7 +212,7 @@ const LiveStream: React.FC = () => {
             price: 10.00,
             enable_paypal: streamData.enable_paypal,
             paypal_client_id: paypalClientId,
-            contact_phone: streamData.profiles?.phone_number
+            contact_phone: null
           }}
           walletData={streamData.enable_crypto ? walletData : null}
         />

@@ -1,8 +1,8 @@
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAgoraVideo } from '@/hooks/useAgoraVideo';
-import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
+import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack, IRemoteVideoTrack, IRemoteAudioTrack } from 'agora-rtc-sdk-ng';
 
 export const useVideoCall = (roomId: string) => {
   const { toast } = useToast();
@@ -15,6 +15,14 @@ export const useVideoCall = (roomId: string) => {
   const localTracksRef = useRef<{
     audioTrack: IMicrophoneAudioTrack | null;
     videoTrack: ICameraVideoTrack | null;
+  }>({
+    audioTrack: null,
+    videoTrack: null
+  });
+  
+  const remoteTracksRef = useRef<{
+    audioTrack: IRemoteAudioTrack | null;
+    videoTrack: IRemoteVideoTrack | null;
   }>({
     audioTrack: null,
     videoTrack: null
@@ -49,10 +57,42 @@ export const useVideoCall = (roomId: string) => {
       
       // Join the Agora channel
       if (remoteVideoRef && localTracksRef.current.audioTrack && localTracksRef.current.videoTrack) {
+        // Set up user-published handler
+        const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+        
+        client.on('user-published', async (user, mediaType) => {
+          await client.subscribe(user, mediaType);
+          
+          if (mediaType === 'video') {
+            remoteTracksRef.current.videoTrack = user.videoTrack;
+            if (user.videoTrack) {
+              user.videoTrack.play(remoteVideoRef);
+            }
+          }
+          
+          if (mediaType === 'audio') {
+            remoteTracksRef.current.audioTrack = user.audioTrack;
+            if (user.audioTrack) {
+              user.audioTrack.play();
+            }
+          }
+        });
+        
+        client.on('user-unpublished', (user, mediaType) => {
+          if (mediaType === 'video') {
+            remoteTracksRef.current.videoTrack = null;
+          }
+          if (mediaType === 'audio') {
+            remoteTracksRef.current.audioTrack = null;
+          }
+        });
+        
         agoraClientRef.current = await joinChannel(
+          client,
           localTracksRef.current.audioTrack,
           localTracksRef.current.videoTrack,
-          remoteVideoRef
+          tokenData.token,
+          tokenData.channelName
         );
         
         setIsConnected(true);
@@ -74,7 +114,7 @@ export const useVideoCall = (roomId: string) => {
   };
   
   // Toggle microphone
-  const toggleMic = () => {
+  const toggleMic = useCallback(() => {
     if (localTracksRef.current.audioTrack) {
       if (isMicOn) {
         localTracksRef.current.audioTrack.setEnabled(false);
@@ -83,10 +123,10 @@ export const useVideoCall = (roomId: string) => {
       }
       setIsMicOn(!isMicOn);
     }
-  };
+  }, [isMicOn]);
   
   // Toggle video
-  const toggleVideo = () => {
+  const toggleVideo = useCallback(() => {
     if (localTracksRef.current.videoTrack) {
       if (isVideoOn) {
         localTracksRef.current.videoTrack.setEnabled(false);
@@ -95,30 +135,46 @@ export const useVideoCall = (roomId: string) => {
       }
       setIsVideoOn(!isVideoOn);
     }
-  };
+  }, [isVideoOn]);
   
   // End call
-  const endCall = async () => {
-    // Leave the Agora channel
-    if (agoraClientRef.current) {
-      await agoraClientRef.current.leave();
+  const endCall = useCallback(async () => {
+    try {
+      // Leave the Agora channel
+      if (agoraClientRef.current) {
+        await agoraClientRef.current.leave();
+      }
+      
+      // Close and release local tracks
+      if (localTracksRef.current.audioTrack) {
+        localTracksRef.current.audioTrack.close();
+      }
+      if (localTracksRef.current.videoTrack) {
+        localTracksRef.current.videoTrack.close();
+      }
+      
+      localTracksRef.current = {
+        audioTrack: null,
+        videoTrack: null
+      };
+      
+      remoteTracksRef.current = {
+        audioTrack: null,
+        videoTrack: null
+      };
+      
+      setIsConnected(false);
+    } catch (error) {
+      console.error('Error ending call:', error);
     }
-    
-    // Close and release local tracks
-    if (localTracksRef.current.audioTrack) {
-      localTracksRef.current.audioTrack.close();
-    }
-    if (localTracksRef.current.videoTrack) {
-      localTracksRef.current.videoTrack.close();
-    }
-    
-    localTracksRef.current = {
-      audioTrack: null,
-      videoTrack: null
+  }, []);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      endCall();
     };
-    
-    setIsConnected(false);
-  };
+  }, [endCall]);
 
   return {
     isConnected,
@@ -126,6 +182,7 @@ export const useVideoCall = (roomId: string) => {
     isVideoOn,
     isJoining,
     localTracks: localTracksRef.current,
+    remoteTracks: remoteTracksRef.current,
     initializeCall,
     toggleMic,
     toggleVideo,
