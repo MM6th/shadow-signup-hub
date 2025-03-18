@@ -35,6 +35,25 @@ export const useVideoCall = (roomId: string) => {
     try {
       setIsJoining(true);
       
+      // Explicitly request permissions first before creating tracks
+      console.log("Requesting camera and microphone permissions...");
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        // We got permissions, but we don't use this stream - we'll let Agora create its own tracks
+        // Just stop it immediately since we don't need it
+        stream.getTracks().forEach(track => track.stop());
+        console.log("Camera and microphone permissions granted successfully");
+      } catch (err: any) {
+        console.error("Error getting media permissions:", err);
+        if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
+          throw new Error("Camera or microphone permission denied. Please check your browser settings and try again.");
+        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+          throw new Error("No camera or microphone found. Please connect devices and try again.");
+        } else {
+          throw new Error(`Failed to access media devices: ${err.message}`);
+        }
+      }
+      
       // Create local tracks with more robust error handling
       let microphoneTrack: IMicrophoneAudioTrack | null = null;
       let cameraTrack: ICameraVideoTrack | null = null;
@@ -84,7 +103,17 @@ export const useVideoCall = (roomId: string) => {
       // Display local video
       if (localVideoRef && cameraTrack) {
         console.log("Playing local video track");
-        cameraTrack.play(localVideoRef);
+        try {
+          await cameraTrack.play(localVideoRef);
+          console.log("Local video track played successfully");
+        } catch (playErr) {
+          console.error("Error playing local video track:", playErr);
+        }
+      } else {
+        console.warn("Cannot play local video track - reference or track is null", {
+          hasLocalVideoRef: !!localVideoRef,
+          hasCameraTrack: !!cameraTrack
+        });
       }
       
       // Generate a token for the Agora channel
@@ -111,7 +140,12 @@ export const useVideoCall = (roomId: string) => {
             remoteTracksRef.current.videoTrack = user.videoTrack;
             if (user.videoTrack) {
               console.log("Playing remote video track");
-              user.videoTrack.play(remoteVideoRef);
+              try {
+                user.videoTrack.play(remoteVideoRef);
+                console.log("Remote video track played successfully");
+              } catch (playErr) {
+                console.error("Error playing remote video track:", playErr);
+              }
             }
           }
           
@@ -119,7 +153,12 @@ export const useVideoCall = (roomId: string) => {
             remoteTracksRef.current.audioTrack = user.audioTrack;
             if (user.audioTrack) {
               console.log("Playing remote audio track");
-              user.audioTrack.play();
+              try {
+                user.audioTrack.play();
+                console.log("Remote audio track played successfully");
+              } catch (playErr) {
+                console.error("Error playing remote audio track:", playErr);
+              }
             }
           }
         });
@@ -135,19 +174,24 @@ export const useVideoCall = (roomId: string) => {
         });
         
         console.log("Joining channel:", tokenData.channelName);
-        agoraClientRef.current = await joinChannel(
-          client,
-          localTracksRef.current.audioTrack,
-          localTracksRef.current.videoTrack,
-          tokenData.token,
-          tokenData.channelName
-        );
-        
-        setIsConnected(true);
-        toast({
-          title: "Connected to room",
-          description: `You've joined room: ${roomId}`,
-        });
+        try {
+          agoraClientRef.current = await joinChannel(
+            client,
+            localTracksRef.current.audioTrack,
+            localTracksRef.current.videoTrack,
+            tokenData.token,
+            tokenData.channelName
+          );
+          
+          setIsConnected(true);
+          toast({
+            title: "Connected to room",
+            description: `You've joined room: ${roomId}`,
+          });
+        } catch (joinErr: any) {
+          console.error("Error joining channel:", joinErr);
+          throw new Error(`Failed to join channel: ${joinErr.message}`);
+        }
       }
     } catch (error: any) {
       console.error('Error initializing Agora:', error);
@@ -156,6 +200,19 @@ export const useVideoCall = (roomId: string) => {
         description: error.message || "Could not connect to the video call. Please try again.",
         variant: "destructive",
       });
+      
+      // Clean up any tracks we might have created before the error
+      if (localTracksRef.current.audioTrack) {
+        localTracksRef.current.audioTrack.close();
+        localTracksRef.current.audioTrack = null;
+      }
+      
+      if (localTracksRef.current.videoTrack) {
+        localTracksRef.current.videoTrack.close();
+        localTracksRef.current.videoTrack = null;
+      }
+      
+      throw error;
     } finally {
       setIsJoining(false);
     }

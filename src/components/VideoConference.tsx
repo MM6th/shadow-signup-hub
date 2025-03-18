@@ -65,13 +65,18 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
           setShowPermissionMessage(true);
           setPermissionError(null);
           
-          // Request permissions explicitly with proper error handling
+          console.log("Setting up video call, requesting permissions...");
+          
           try {
-            await navigator.mediaDevices.getUserMedia({ 
+            // Request permissions explicitly with proper error handling
+            const stream = await navigator.mediaDevices.getUserMedia({ 
               video: true, 
               audio: true 
             });
             console.log("Camera and microphone permissions granted");
+            
+            // We don't need this stream as Agora will create its own
+            stream.getTracks().forEach(track => track.stop());
           } catch (err: any) {
             console.error("Permission error:", err);
             if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
@@ -92,11 +97,20 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
         } catch (error: any) {
           console.error('Error in call setup:', error);
           setShowPermissionMessage(false);
-          toast({
-            title: "Connection Error",
-            description: error.message || "Could not connect to the livestream. Please try again.",
-            variant: "destructive",
-          });
+          
+          // Set permission error if it's a permission-related issue
+          if (error.message?.includes("permission") || 
+              error.message?.includes("camera") || 
+              error.message?.includes("microphone") ||
+              error.message?.includes("media")) {
+            setPermissionError(error.message);
+          } else {
+            toast({
+              title: "Connection Error",
+              description: error.message || "Could not connect to the livestream. Please try again.",
+              variant: "destructive",
+            });
+          }
         }
       };
       
@@ -136,8 +150,14 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     setShowPermissionMessage(true);
     
     try {
+      console.log("Retrying permission request...");
+      
       // Ask user to grant permissions again
-      await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      console.log("Permissions granted on retry");
+      
+      // Stop the stream since Agora will create its own
+      stream.getTracks().forEach(track => track.stop());
       
       // If successful, initialize the call
       if (localVideoRef.current && remoteVideoRef.current) {

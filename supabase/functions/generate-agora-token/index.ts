@@ -7,10 +7,20 @@ const AGORA_APP_ID = "0763309372ab4637918e71cb13f52323";
 
 function generateAgoraToken(channelName: string, uid: string, role: string, expirationTimeInSeconds: number, appCertificate: string) {
   try {
+    console.log(`Generating token for channel: ${channelName}, uid: ${uid}, role: ${role}`);
+    
     // Use the Agora Token Builder
     const tokenExpirationInSeconds = expirationTimeInSeconds;
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const privilegeExpiredTs = currentTimestamp + tokenExpirationInSeconds;
+    
+    // Parse the uid as an integer
+    const uidInt = parseInt(uid, 10);
+    
+    if (isNaN(uidInt)) {
+      console.error("Invalid UID format, must be a number:", uid);
+      throw new Error("Invalid UID format");
+    }
     
     // Build the token
     let rtcToken;
@@ -19,7 +29,7 @@ function generateAgoraToken(channelName: string, uid: string, role: string, expi
         AGORA_APP_ID,
         appCertificate,
         channelName,
-        parseInt(uid),
+        uidInt,
         RtcRole.PUBLISHER,
         privilegeExpiredTs
       );
@@ -28,12 +38,13 @@ function generateAgoraToken(channelName: string, uid: string, role: string, expi
         AGORA_APP_ID,
         appCertificate,
         channelName,
-        parseInt(uid),
+        uidInt,
         RtcRole.SUBSCRIBER,
         privilegeExpiredTs
       );
     }
     
+    console.log("Token generated successfully");
     return rtcToken;
   } catch (error) {
     console.error("Error generating Agora token:", error);
@@ -60,6 +71,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    console.log("Received request to generate-agora-token function");
+    
     // Create Supabase client with Deno fetch
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -77,10 +90,22 @@ const handler = async (req: Request): Promise<Response> => {
     } = await supabaseClient.auth.getUser();
 
     if (!user) {
+      console.error("User not authenticated");
       throw new Error("User not authenticated");
     }
 
-    const { channelName, uid, role = 'publisher', expirationTimeInSeconds = 3600 }: TokenRequest = await req.json();
+    // Parse request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (err) {
+      console.error("Failed to parse request body:", err);
+      throw new Error("Invalid request body");
+    }
+
+    const { channelName, uid, role = 'publisher', expirationTimeInSeconds = 3600 }: TokenRequest = requestBody;
+    
+    console.log("Request params:", { channelName, uid, role, expirationTimeInSeconds });
     
     if (!channelName) {
       throw new Error('Channel name is required');
@@ -94,6 +119,7 @@ const handler = async (req: Request): Promise<Response> => {
     const appCertificate = Deno.env.get("AGORA_APP_CERTIFICATE");
     
     if (!appCertificate) {
+      console.error("AGORA_APP_CERTIFICATE not found in environment");
       throw new Error('Agora App Certificate is not configured in Edge Function secrets');
     }
 
@@ -104,13 +130,17 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Failed to generate token');
     }
 
+    const responseBody = { 
+      token,
+      channelName,
+      uid,
+      expirationTimeInSeconds 
+    };
+    
+    console.log("Successfully generated token, returning response");
+    
     return new Response(
-      JSON.stringify({ 
-        token,
-        channelName,
-        uid,
-        expirationTimeInSeconds 
-      }),
+      JSON.stringify(responseBody),
       { 
         headers: { 
           'Content-Type': 'application/json',

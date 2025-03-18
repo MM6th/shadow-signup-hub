@@ -34,8 +34,20 @@ export const useAgoraVideo = (appointmentId: string) => {
       });
 
       if (error) {
+        console.error("Error from generate-agora-token function:", error);
         throw new Error(error.message || 'Failed to generate Agora token');
       }
+
+      if (!data || !data.token) {
+        console.error("No token data returned from function:", data);
+        throw new Error('Invalid token data received');
+      }
+
+      console.log("Successfully generated token:", {
+        channelName: data.channelName,
+        uid: data.uid,
+        tokenLength: data.token.length,
+      });
 
       setToken(data.token);
       setChannelName(data.channelName);
@@ -63,7 +75,10 @@ export const useAgoraVideo = (appointmentId: string) => {
     agoraChannelName: string
   ) => {
     try {
-      console.log("Joining channel with:", { agoraToken, agoraChannelName });
+      console.log("Joining channel with:", { 
+        tokenProvided: !!agoraToken, 
+        channelName: agoraChannelName 
+      });
       
       // Join the channel
       const uid = await client.join(
@@ -76,8 +91,9 @@ export const useAgoraVideo = (appointmentId: string) => {
       console.log('Joined channel with UID:', uid);
       
       // Publish local tracks
+      console.log("Publishing local tracks...");
       await client.publish([localAudioTrack, localVideoTrack]);
-      console.log('Local tracks published');
+      console.log('Local tracks published successfully');
       
       // Return client for later use
       return client;
