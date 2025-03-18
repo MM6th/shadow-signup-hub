@@ -36,9 +36,11 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     isMicOn,
     isVideoOn,
     isJoining,
+    permissionsGranted,
     localTracks,
     remoteTracks,
     initializeCall,
+    requestPermissions,
     toggleMic,
     toggleVideo,
     endCall
@@ -58,54 +60,49 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     };
   }, [isConnected]);
 
-  // Explicitly request camera/mic permissions
-  const requestPermissions = async () => {
+  // Explicitly request camera/mic permissions, then initialize call
+  const handleRequestPermissions = async () => {
     try {
       setShowPermissionMessage(true);
       setPermissionError(null);
       
-      console.log("Explicitly requesting camera and microphone permissions...");
+      console.log("VideoConference: Requesting camera and microphone permissions...");
       
-      try {
-        // This will trigger the browser permission dialog
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: true, 
-          audio: true 
-        });
-        
-        console.log("Camera and microphone permissions granted successfully");
-        toast({
-          title: "Permissions granted",
-          description: "Camera and microphone access allowed",
-        });
-        
-        // Stop the temporary stream since we'll create a new one with Agora
-        stream.getTracks().forEach(track => track.stop());
-        
-        // Hide the permission button since permissions are granted
+      // Request permissions first
+      const permissionsGranted = await requestPermissions();
+      
+      if (permissionsGranted) {
+        console.log("VideoConference: Permissions granted, initializing call...");
+        // Hide the permission button
         setShowPermissionButton(false);
         
         // Initialize the call if we have the refs
         if (localVideoRef.current && remoteVideoRef.current) {
-          await initializeCall(localVideoRef.current, remoteVideoRef.current);
-        }
-        
-        setShowPermissionMessage(false);
-      } catch (err: any) {
-        console.error("Permission error:", err);
-        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-          setPermissionError("Camera and microphone access was denied. Please allow access in your browser settings.");
-        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-          setPermissionError("No camera or microphone found. Please connect these devices and try again.");
+          try {
+            await initializeCall(localVideoRef.current, remoteVideoRef.current);
+            console.log("VideoConference: Call initialized successfully");
+          } catch (initError: any) {
+            console.error("VideoConference: Error initializing call:", initError);
+            setPermissionError(`Error initializing call: ${initError.message}`);
+            setShowPermissionButton(true);
+          }
         } else {
-          setPermissionError(`Error accessing media devices: ${err.message}`);
+          console.error("VideoConference: Video references not found");
+          setPermissionError("Unable to initialize video elements. Please refresh and try again.");
+          setShowPermissionButton(true);
         }
-        setShowPermissionMessage(false);
+      } else {
+        console.error("VideoConference: Permission request failed");
+        setPermissionError("Camera and microphone access was denied. Please allow access in your browser settings.");
+        setShowPermissionButton(true);
       }
+      
+      setShowPermissionMessage(false);
     } catch (error: any) {
-      console.error('Error requesting permissions:', error);
+      console.error('VideoConference: Error in permission handling:', error);
       setShowPermissionMessage(false);
       setPermissionError(`Failed to request permissions: ${error.message}`);
+      setShowPermissionButton(true);
     }
   };
 
@@ -133,7 +130,7 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
 
   const handleRetryPermissions = async () => {
     setPermissionError(null);
-    requestPermissions();
+    handleRequestPermissions();
   };
 
   return (
@@ -182,7 +179,7 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
               </div>
               <p className="text-pi mb-4">To use this livestream, you need to allow camera and microphone access</p>
               <Button 
-                onClick={requestPermissions}
+                onClick={handleRequestPermissions}
                 size="lg"
                 className="animate-pulse"
               >

@@ -93,10 +93,18 @@ export const useAgoraVideo = (appointmentId: string) => {
       
       console.log('Joined channel with UID:', uid);
       
-      // Publish local tracks
+      // Publish local tracks with retry logic
       console.log("Publishing local tracks...");
-      await client.publish([localAudioTrack, localVideoTrack]);
-      console.log('Local tracks published successfully');
+      try {
+        await client.publish([localAudioTrack, localVideoTrack]);
+        console.log('Local tracks published successfully');
+      } catch (publishError) {
+        console.error("Error publishing tracks, retrying:", publishError);
+        // Wait a bit and retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await client.publish([localAudioTrack, localVideoTrack]);
+        console.log('Local tracks published successfully on retry');
+      }
       
       // Return client for later use
       return client;

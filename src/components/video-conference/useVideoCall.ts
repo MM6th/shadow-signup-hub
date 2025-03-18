@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAgoraVideo } from '@/hooks/useAgoraVideo';
@@ -10,6 +9,7 @@ export const useVideoCall = (roomId: string) => {
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
+  const [permissionsGranted, setPermissionsGranted] = useState(false);
   
   const agoraClientRef = useRef<any>(null);
   const localTracksRef = useRef<{
@@ -30,11 +30,67 @@ export const useVideoCall = (roomId: string) => {
   
   const { generateToken, joinChannel, isLoading: isTokenLoading } = useAgoraVideo(roomId);
 
+  // Request permissions explicitly
+  const requestPermissions = useCallback(async (): Promise<boolean> => {
+    try {
+      console.log("Explicitly requesting camera and microphone permissions...");
+      
+      // This will trigger the browser permission dialog
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
+      
+      console.log("Camera and microphone permissions granted successfully");
+      
+      // Important: Don't stop the stream right away - keep it referenced
+      // We'll need to properly handle this when creating Agora tracks
+      
+      setPermissionsGranted(true);
+      toast({
+        title: "Permissions granted",
+        description: "Camera and microphone access allowed",
+      });
+      
+      return true;
+    } catch (err: any) {
+      console.error("Permission error:", err);
+      
+      setPermissionsGranted(false);
+      toast({
+        title: "Permission Error",
+        description: err.message || "Failed to access camera and microphone",
+        variant: "destructive",
+      });
+      
+      return false;
+    }
+  }, [toast]);
+
   // Initialize tracks and join the channel
   const initializeCall = async (localVideoRef: HTMLDivElement, remoteVideoRef: HTMLDivElement) => {
     try {
       setIsJoining(true);
       console.log("Initializing call with room ID:", roomId);
+      
+      // Check if permissions already granted or request them
+      if (!permissionsGranted) {
+        const granted = await requestPermissions();
+        if (!granted) {
+          throw new Error("Camera and microphone permissions are required");
+        }
+      }
+      
+      // Release any existing tracks first
+      if (localTracksRef.current.audioTrack) {
+        localTracksRef.current.audioTrack.close();
+        localTracksRef.current.audioTrack = null;
+      }
+      
+      if (localTracksRef.current.videoTrack) {
+        localTracksRef.current.videoTrack.close();
+        localTracksRef.current.videoTrack = null;
+      }
       
       // Create local tracks with more robust error handling
       let microphoneTrack: IMicrophoneAudioTrack | null = null;
@@ -84,10 +140,19 @@ export const useVideoCall = (roomId: string) => {
       
       // Display local video
       if (localVideoRef && cameraTrack) {
-        console.log("Playing local video track");
+        console.log("Playing local video track to element:", localVideoRef);
         try {
-          await cameraTrack.play(localVideoRef);
-          console.log("Local video track played successfully");
+          // Set a timeout to ensure DOM is ready
+          setTimeout(async () => {
+            if (cameraTrack && localVideoRef) {
+              try {
+                await cameraTrack.play(localVideoRef);
+                console.log("Local video track played successfully");
+              } catch (playErr) {
+                console.error("Error playing local video track:", playErr);
+              }
+            }
+          }, 100);
         } catch (playErr) {
           console.error("Error playing local video track:", playErr);
         }
@@ -268,9 +333,11 @@ export const useVideoCall = (roomId: string) => {
     isMicOn,
     isVideoOn,
     isJoining,
+    permissionsGranted,
     localTracks: localTracksRef.current,
     remoteTracks: remoteTracksRef.current,
     initializeCall,
+    requestPermissions,
     toggleMic,
     toggleVideo,
     endCall

@@ -19,14 +19,28 @@ const RemoteVideo: React.FC<RemoteVideoProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (containerRef.current && videoTrack && !videoMuted) {
-      videoTrack.play(containerRef.current);
-    }
+    // Use a delayed initialization to ensure the DOM is ready
+    const playVideoTimeout = setTimeout(() => {
+      if (containerRef.current && videoTrack && !videoMuted) {
+        console.log("RemoteVideo: Playing video track to container");
+        
+        try {
+          // Stop first in case it was already playing somewhere
+          videoTrack.stop();
+          // Then play in our container
+          videoTrack.play(containerRef.current);
+          console.log("RemoteVideo: Video track played successfully");
+        } catch (error) {
+          console.error("RemoteVideo: Error playing video track:", error);
+        }
+      }
+    }, 200);
     
     return () => {
-      if (videoTrack) {
-        videoTrack.stop();
-      }
+      clearTimeout(playVideoTimeout);
+      
+      // Don't call stop here - let the parent component handle track cleanup
+      // This prevents the video from stopping when this component re-renders
     };
   }, [videoTrack, videoMuted]);
 
@@ -35,6 +49,7 @@ const RemoteVideo: React.FC<RemoteVideoProps> = ({
       <div
         ref={containerRef}
         className={`w-full h-full object-cover ${!isConnected || videoMuted ? 'hidden' : ''}`}
+        data-testid="remote-video-container"
       />
       {(!isConnected || videoMuted) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800">

@@ -16,22 +16,37 @@ const LocalVideo: React.FC<LocalVideoProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (containerRef.current && videoTrack) {
-      videoTrack.play(containerRef.current);
-    }
+    // Use a delayed initialization to ensure the DOM is ready
+    const playVideoTimeout = setTimeout(() => {
+      if (containerRef.current && videoTrack && isVideoOn) {
+        console.log("LocalVideo: Playing video track to container");
+        
+        try {
+          // Stop first in case it was already playing somewhere
+          videoTrack.stop();
+          // Then play in our container
+          videoTrack.play(containerRef.current);
+          console.log("LocalVideo: Video track played successfully");
+        } catch (error) {
+          console.error("LocalVideo: Error playing video track:", error);
+        }
+      }
+    }, 200);
     
     return () => {
-      if (videoTrack) {
-        videoTrack.stop();
-      }
+      clearTimeout(playVideoTimeout);
+      
+      // Don't call stop here - let the parent component handle track cleanup
+      // This prevents the video from stopping when this component re-renders
     };
-  }, [videoTrack]);
+  }, [videoTrack, isVideoOn]);
 
   return (
     <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video">
       <div 
         ref={containerRef}
         className={`w-full h-full object-cover ${!isVideoOn ? 'hidden' : ''}`}
+        data-testid="local-video-container"
       />
       {!isVideoOn && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
