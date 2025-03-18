@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -52,6 +53,16 @@ const Dashboard: React.FC = () => {
 
   const handleEditProfile = () => {
     navigate('/update-profile');
+  };
+
+  // Handle tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
+  // Handle sub-tab changes
+  const handleSubTabChange = (value: string) => {
+    setActiveSubTab(value);
   };
 
   if (isLoading) {
@@ -144,7 +155,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-8">
               <TabsList className="w-full flex mb-6">
                 {tabTriggers.map(tab => (
                   <TabsTrigger key={tab.value} value={tab.value} className="flex-1">
@@ -153,14 +164,14 @@ const Dashboard: React.FC = () => {
                 ))}
               </TabsList>
               
-              {isAdmin && activeTab !== 'profile' && (
+              {isAdmin && (
                 <div className="mb-6">
                   <TabsList className="w-full flex">
                     {contentSubtabs.map(subtab => (
                       <TabsTrigger 
                         key={subtab.value} 
                         value={subtab.value} 
-                        onClick={() => setActiveSubTab(subtab.value)}
+                        onClick={() => handleSubTabChange(subtab.value)}
                         className={`flex-1 ${activeSubTab === subtab.value ? 'bg-accent' : ''}`}
                       >
                         {subtab.label}
@@ -584,4 +595,3 @@ const ScreenplayList = ({ userId }: { userId: string }) => {
 };
 
 export default Dashboard;
-

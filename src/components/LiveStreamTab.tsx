@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import LiveStreamModal from './LiveStreamModal';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
+
+// Create a client
+const queryClient = new QueryClient();
 
 interface LiveStream {
   id: string;
@@ -22,7 +25,16 @@ interface LiveStream {
   ended_at: string | null;
 }
 
-const LiveStreamTab: React.FC = () => {
+// Wrap the component to provide QueryClientProvider
+const LiveStreamTabWithQueryProvider: React.FC = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <LiveStreamTabContent />
+    </QueryClientProvider>
+  );
+};
+
+const LiveStreamTabContent: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { user } = useAuth();
   
@@ -130,4 +142,4 @@ const LiveStreamTab: React.FC = () => {
   );
 };
 
-export default LiveStreamTab;
+export default LiveStreamTabWithQueryProvider;
