@@ -10,12 +10,27 @@ import VideoConference from '@/components/VideoConference';
 import PaymentDialog from '@/components/PaymentDialog';
 import { useWalletAddresses } from '@/hooks/useWalletAddresses';
 
+interface LiveStreamData {
+  id: string;
+  title: string;
+  thumbnail_url: string | null;
+  conference_id: string;
+  user_id: string;
+  created_at: string;
+  ended_at: string | null;
+  is_active: boolean;
+  views: number;
+  enable_crypto: boolean;
+  enable_paypal: boolean;
+  profiles?: any;
+}
+
 const LiveStream: React.FC = () => {
   const { conferenceId } = useParams<{ conferenceId: string }>();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [streamData, setStreamData] = useState<any>(null);
+  const [streamData, setStreamData] = useState<LiveStreamData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isHost, setIsHost] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -45,7 +60,7 @@ const LiveStream: React.FC = () => {
           
         if (error) throw error;
         
-        setStreamData(data);
+        setStreamData(data as LiveStreamData);
         setIsHost(user?.id === data.user_id);
         
         // Update view count if not the host

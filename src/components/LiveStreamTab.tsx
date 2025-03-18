@@ -11,13 +11,15 @@ import { formatDistanceToNow } from 'date-fns';
 interface LiveStream {
   id: string;
   title: string;
-  thumbnail_url: string;
+  thumbnail_url: string | null;
   conference_id: string;
   created_at: string;
   user_id: string;
   enable_crypto: boolean;
   enable_paypal: boolean;
   views: number;
+  is_active: boolean;
+  ended_at: string | null;
 }
 
 const LiveStreamTab: React.FC = () => {
@@ -25,7 +27,7 @@ const LiveStreamTab: React.FC = () => {
   const { user } = useAuth();
   
   // Fetch user's past streams
-  const { data: pastStreams, isLoading } = useQuery({
+  const { data: pastStreams, isLoading } = useQuery<LiveStream[]>({
     queryKey: ['pastStreams', user?.id],
     queryFn: async () => {
       if (!user) return [];

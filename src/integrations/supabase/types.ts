@@ -218,6 +218,48 @@ export type Database = {
         }
         Relationships: []
       }
+      livestreams: {
+        Row: {
+          conference_id: string
+          created_at: string
+          enable_crypto: boolean
+          enable_paypal: boolean
+          ended_at: string | null
+          id: string
+          is_active: boolean
+          thumbnail_url: string | null
+          title: string
+          user_id: string
+          views: number
+        }
+        Insert: {
+          conference_id: string
+          created_at?: string
+          enable_crypto?: boolean
+          enable_paypal?: boolean
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean
+          thumbnail_url?: string | null
+          title: string
+          user_id: string
+          views?: number
+        }
+        Update: {
+          conference_id?: string
+          created_at?: string
+          enable_crypto?: boolean
+          enable_paypal?: boolean
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean
+          thumbnail_url?: string | null
+          title?: string
+          user_id?: string
+          views?: number
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           appointment_id: string | null

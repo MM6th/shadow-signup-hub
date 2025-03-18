@@ -110,6 +110,8 @@ const LiveStreamModal: React.FC<LiveStreamModalProps> = ({ open, onOpenChange })
           user_id: user.id,
           enable_crypto: data.enableCrypto,
           enable_paypal: data.enablePaypal,
+          is_active: true,
+          views: 0
         });
         
       if (error) throw error;
