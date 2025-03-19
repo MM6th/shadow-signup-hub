@@ -1,9 +1,8 @@
 
 import React, { useRef, useEffect } from 'react';
-import { ICameraVideoTrack } from 'agora-rtc-sdk-ng';
 
 interface LocalVideoProps {
-  videoTrack: ICameraVideoTrack | null;
+  videoTrack: MediaStreamTrack | null;
   isVideoOn: boolean;
   isHost?: boolean;
 }
@@ -14,30 +13,51 @@ const LocalVideo: React.FC<LocalVideoProps> = ({
   isHost = false
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
-    // Use a delayed initialization to ensure the DOM is ready
-    const playVideoTimeout = setTimeout(() => {
-      if (containerRef.current && videoTrack && isVideoOn) {
-        console.log("LocalVideo: Playing video track to container");
+    // Create or update video element when track changes or visibility changes
+    if (containerRef.current) {
+      // Clean up any existing video element
+      if (videoRef.current) {
+        containerRef.current.removeChild(videoRef.current);
+        videoRef.current = null;
+      }
+
+      if (videoTrack && isVideoOn) {
+        console.log("LocalVideo: Creating video element for track", videoTrack.id);
         
         try {
-          // Stop first in case it was already playing somewhere
-          videoTrack.stop();
-          // Then play in our container
-          videoTrack.play(containerRef.current);
-          console.log("LocalVideo: Video track played successfully");
+          // Create a new video element and stream
+          const newStream = new MediaStream([videoTrack]);
+          const video = document.createElement('video');
+          video.srcObject = newStream;
+          video.autoplay = true;
+          video.muted = true; // Mute local video to prevent feedback
+          video.playsInline = true;
+          video.className = 'w-full h-full object-cover';
+          
+          // Add the video to the container
+          containerRef.current.appendChild(video);
+          videoRef.current = video;
+          
+          video.onloadedmetadata = () => {
+            video.play().catch(e => console.error("Error playing video:", e));
+          };
+          
+          console.log("LocalVideo: Video element created and added to container");
         } catch (error) {
-          console.error("LocalVideo: Error playing video track:", error);
+          console.error("LocalVideo: Error setting up video element:", error);
         }
       }
-    }, 200);
+    }
     
+    // Clean up function
     return () => {
-      clearTimeout(playVideoTimeout);
-      
-      // Don't call stop here - let the parent component handle track cleanup
-      // This prevents the video from stopping when this component re-renders
+      if (videoRef.current && containerRef.current && containerRef.current.contains(videoRef.current)) {
+        containerRef.current.removeChild(videoRef.current);
+        videoRef.current = null;
+      }
     };
   }, [videoTrack, isVideoOn]);
 
@@ -45,7 +65,7 @@ const LocalVideo: React.FC<LocalVideoProps> = ({
     <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video">
       <div 
         ref={containerRef}
-        className={`w-full h-full object-cover ${!isVideoOn ? 'hidden' : ''}`}
+        className={`w-full h-full ${!isVideoOn ? 'hidden' : ''}`}
         data-testid="local-video-container"
       />
       {!isVideoOn && (

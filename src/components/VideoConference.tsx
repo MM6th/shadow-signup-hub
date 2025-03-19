@@ -1,12 +1,12 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { useVideoCall } from '@/components/video-conference/useVideoCall';
+import { useWebRTC } from '@/hooks/useWebRTC';
 import LocalVideo from '@/components/video-conference/LocalVideo';
 import RemoteVideo from '@/components/video-conference/RemoteVideo';
 import CallControls from '@/components/video-conference/CallControls';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { User, Users, CameraOff, MicOff, Link2, Video, Mic } from 'lucide-react';
+import { User, Users, CameraOff, MicOff, Link2, Video, Mic, PhoneCall } from 'lucide-react';
 import CallHeader from '@/components/video-conference/CallHeader';
 import { Button } from '@/components/ui/button';
 
@@ -30,21 +30,23 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   const [showPermissionMessage, setShowPermissionMessage] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [showPermissionButton, setShowPermissionButton] = useState(true);
+  const [showCallButton, setShowCallButton] = useState(false);
 
   const {
     isConnected,
-    isMicOn,
+    isAudioOn,
     isVideoOn,
     isJoining,
     permissionsGranted,
-    localTracks,
-    remoteTracks,
+    makeCall,
     initializeCall,
     requestPermissions,
     toggleMic,
     toggleVideo,
-    endCall
-  } = useVideoCall(roomId);
+    endCall,
+    localTracks,
+    remoteTracks
+  } = useWebRTC(roomId);
 
   // Call duration timer
   useEffect(() => {
@@ -81,6 +83,10 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
           try {
             await initializeCall(localVideoRef.current, remoteVideoRef.current);
             console.log("VideoConference: Call initialized successfully");
+            // Show the call button if this is the host
+            if (isHost) {
+              setShowCallButton(true);
+            }
           } catch (initError: any) {
             console.error("VideoConference: Error initializing call:", initError);
             setPermissionError(`Error initializing call: ${initError.message}`);
@@ -104,6 +110,11 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
       setPermissionError(`Failed to request permissions: ${error.message}`);
       setShowPermissionButton(true);
     }
+  };
+
+  const handleMakeCall = () => {
+    makeCall();
+    setShowCallButton(false);
   };
 
   const handleEndCall = () => {
@@ -188,6 +199,22 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
             </div>
           )}
           
+          {showCallButton && !isConnected && !isJoining && (
+            <div className="bg-primary/10 p-6 rounded-lg text-center mb-4">
+              <div className="flex justify-center mb-4">
+                <PhoneCall className="text-primary h-8 w-8" />
+              </div>
+              <p className="text-pi mb-4">Your camera and mic are ready. Start the call when you're ready.</p>
+              <Button 
+                onClick={handleMakeCall}
+                size="lg"
+                className="animate-pulse"
+              >
+                Start Call
+              </Button>
+            </div>
+          )}
+          
           {showPermissionMessage && (
             <div className="bg-dark-accent/20 p-4 rounded-lg text-center mb-4">
               <div className="flex justify-center mb-2">
@@ -219,15 +246,15 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
             <RemoteVideo 
               isConnected={isConnected}
               videoTrack={remoteTracks.videoTrack}
-              audioMuted={false}
-              videoMuted={!remoteTracks.videoTrack}
+              audioMuted={!remoteTracks.audioTrack?.enabled}
+              videoMuted={!remoteTracks.videoTrack?.enabled}
             />
           </div>
           
           <CallControls 
-            isMicOn={isMicOn}
+            isMicOn={isAudioOn}
             isVideoOn={isVideoOn}
-            isConnected={isConnected}
+            isConnected={permissionsGranted}
             isJoining={isJoining}
             onToggleMic={toggleMic}
             onToggleVideo={toggleVideo}
