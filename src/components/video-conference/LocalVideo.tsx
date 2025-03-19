@@ -1,8 +1,9 @@
 
 import React, { useRef, useEffect } from 'react';
+import { ICameraVideoTrack } from 'agora-rtc-sdk-ng';
 
 interface LocalVideoProps {
-  videoTrack: MediaStreamTrack | null;
+  videoTrack: ICameraVideoTrack | null;
   isVideoOn: boolean;
   isHost?: boolean;
 }
@@ -25,38 +26,26 @@ const LocalVideo: React.FC<LocalVideoProps> = ({
       }
 
       if (videoTrack && isVideoOn) {
-        console.log("LocalVideo: Creating video element for track", videoTrack.id);
+        console.log("LocalVideo: Creating video element for track", videoTrack.getTrackId());
         
         try {
-          // Create a new video element and stream
-          const newStream = new MediaStream([videoTrack]);
-          const video = document.createElement('video');
-          video.srcObject = newStream;
-          video.autoplay = true;
-          video.muted = true; // Mute local video to prevent feedback
-          video.playsInline = true;
-          video.className = 'w-full h-full object-cover';
-          
-          // Add the video to the container
-          containerRef.current.appendChild(video);
-          videoRef.current = video;
-          
-          video.onloadedmetadata = () => {
-            video.play().catch(e => console.error("Error playing video:", e));
-          };
-          
-          console.log("LocalVideo: Video element created and added to container");
+          // Play the video track directly in the container
+          videoTrack.play(containerRef.current);
+          console.log("LocalVideo: Video track played successfully");
         } catch (error) {
-          console.error("LocalVideo: Error setting up video element:", error);
+          console.error("LocalVideo: Error playing video track:", error);
         }
       }
     }
     
     // Clean up function
     return () => {
-      if (videoRef.current && containerRef.current && containerRef.current.contains(videoRef.current)) {
-        containerRef.current.removeChild(videoRef.current);
-        videoRef.current = null;
+      if (videoTrack) {
+        try {
+          videoTrack.stop();
+        } catch (error) {
+          console.error("LocalVideo: Error stopping video track:", error);
+        }
       }
     };
   }, [videoTrack, isVideoOn]);

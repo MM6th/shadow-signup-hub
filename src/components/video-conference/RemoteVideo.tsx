@@ -1,10 +1,11 @@
 
 import React, { useRef, useEffect } from 'react';
 import { Share2, Link } from 'lucide-react';
+import { IRemoteVideoTrack, IRemoteAudioTrack } from 'agora-rtc-sdk-ng';
 
 interface RemoteVideoProps {
   isConnected: boolean;
-  videoTrack?: MediaStreamTrack | null;
+  videoTrack?: IRemoteVideoTrack | null;
   audioMuted?: boolean;
   videoMuted?: boolean;
 }
@@ -16,49 +17,29 @@ const RemoteVideo: React.FC<RemoteVideoProps> = ({
   videoMuted = false
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
-    // Create or update video element when track changes or visibility changes
-    if (containerRef.current) {
-      // Clean up any existing video element
-      if (videoRef.current) {
-        containerRef.current.removeChild(videoRef.current);
-        videoRef.current = null;
-      }
-
-      if (videoTrack && !videoMuted) {
-        console.log("RemoteVideo: Creating video element for track", videoTrack.id);
-        
-        try {
-          // Create a new video element and stream
-          const newStream = new MediaStream([videoTrack]);
-          const video = document.createElement('video');
-          video.srcObject = newStream;
-          video.autoplay = true;
-          video.playsInline = true;
-          video.className = 'w-full h-full object-cover';
-          
-          // Add the video to the container
-          containerRef.current.appendChild(video);
-          videoRef.current = video;
-          
-          video.onloadedmetadata = () => {
-            video.play().catch(e => console.error("Error playing video:", e));
-          };
-          
-          console.log("RemoteVideo: Video element created and added to container");
-        } catch (error) {
-          console.error("RemoteVideo: Error setting up video element:", error);
-        }
+    // Play or stop video track when component mounts or track changes
+    if (containerRef.current && videoTrack && !videoMuted) {
+      console.log("RemoteVideo: Playing video track");
+      
+      try {
+        // Play the video track directly in the container
+        videoTrack.play(containerRef.current);
+        console.log("RemoteVideo: Video track played successfully");
+      } catch (error) {
+        console.error("RemoteVideo: Error playing video track:", error);
       }
     }
     
     // Clean up function
     return () => {
-      if (videoRef.current && containerRef.current && containerRef.current.contains(videoRef.current)) {
-        containerRef.current.removeChild(videoRef.current);
-        videoRef.current = null;
+      if (videoTrack) {
+        try {
+          videoTrack.stop();
+        } catch (error) {
+          console.error("RemoteVideo: Error stopping video track:", error);
+        }
       }
     };
   }, [videoTrack, videoMuted]);

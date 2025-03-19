@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { useWebRTC } from '@/hooks/useWebRTC';
 import LocalVideo from '@/components/video-conference/LocalVideo';
@@ -72,7 +71,6 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     }
   }, [isHost, permissionsGranted, makeCall]);
 
-  // Explicitly request camera/mic permissions, then initialize call
   const handleRequestPermissions = async () => {
     try {
       setShowPermissionMessage(true);
@@ -168,6 +166,10 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
 
   // Generate shareable link
   const shareableLink = `${window.location.origin}/livestream/${roomId}`;
+
+  // Check for muted state for remote tracks
+  const isRemoteAudioMuted = !remoteTracks.audioTrack || !remoteTracks.audioTrack.isPlaying;
+  const isRemoteVideoMuted = !remoteTracks.videoTrack || !remoteTracks.videoTrack.isPlaying;
 
   return (
     <Card className="border-none shadow-none bg-transparent overflow-hidden">
@@ -281,8 +283,8 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
             <RemoteVideo 
               isConnected={isConnected}
               videoTrack={remoteTracks.videoTrack}
-              audioMuted={!remoteTracks.audioTrack?.enabled}
-              videoMuted={!remoteTracks.videoTrack?.enabled}
+              audioMuted={isRemoteAudioMuted}
+              videoMuted={isRemoteVideoMuted}
             />
           </div>
           
