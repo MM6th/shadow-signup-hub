@@ -6,9 +6,10 @@ import RemoteVideo from '@/components/video-conference/RemoteVideo';
 import CallControls from '@/components/video-conference/CallControls';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { User, Users, CameraOff, MicOff, Link2, Video, Mic, PhoneCall } from 'lucide-react';
+import { User, Users, CameraOff, MicOff, Link2, Video, Mic, PhoneCall, Share } from 'lucide-react';
 import CallHeader from '@/components/video-conference/CallHeader';
 import { Button } from '@/components/ui/button';
+import ShareWithUsersDialog from '@/components/video-conference/ShareWithUsersDialog';
 
 interface VideoConferenceProps {
   roomId: string;
@@ -31,6 +32,7 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [showPermissionButton, setShowPermissionButton] = useState(true);
   const [showCallButton, setShowCallButton] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const {
     isConnected,
@@ -139,10 +141,17 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     });
   };
 
+  const handleShowShareDialog = () => {
+    setShareDialogOpen(true);
+  };
+
   const handleRetryPermissions = async () => {
     setPermissionError(null);
     handleRequestPermissions();
   };
+
+  // Generate shareable link
+  const shareableLink = `${window.location.origin}/livestream/${roomId}`;
 
   return (
     <Card className="border-none shadow-none bg-transparent overflow-hidden">
@@ -170,13 +179,23 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
                 <span>{viewerCount}</span>
               </div>
               
+              {isHost && isConnected && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleShowShareDialog}
+                >
+                  <Share size={14} className="mr-1" /> Share with Users
+                </Button>
+              )}
+              
               {isHost && (
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={handleCopyRoomId}
                 >
-                  <Link2 size={14} className="mr-1" /> Copy Shareable Link
+                  <Link2 size={14} className="mr-1" /> Copy Link
                 </Button>
               )}
             </div>
@@ -277,6 +296,12 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
           )}
         </div>
       </CardContent>
+      
+      <ShareWithUsersDialog 
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        shareUrl={shareableLink}
+      />
     </Card>
   );
 };

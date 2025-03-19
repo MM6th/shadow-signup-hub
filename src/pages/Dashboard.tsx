@@ -1,7 +1,8 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Briefcase, Tag, PenSquare, ShoppingBag, Plus, User, Film, Trash2, Video } from 'lucide-react';
+import { Briefcase, Tag, PenSquare, ShoppingBag, Plus, User, Film, Trash2, Video, MessageSquare } from 'lucide-react';
 import Button from '@/components/Button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button as ShadcnButton } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import AdsList from '@/components/AdsList';
 import { Tags } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import LiveStreamTab from '@/components/LiveStreamTab';
+import MessageTab from '@/components/messaging/MessageTab';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +33,7 @@ const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [isLiveStreamModalOpen, setIsLiveStreamModalOpen] = useState(false);
   const [isScreenplayModalOpen, setIsScreenplayModalOpen] = useState(false);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   // Check if the current user is an admin
   const ADMIN_IDS = ['f64a94e3-3adf-4409-978d-f3106aabf598', '3a25fea8-ec60-4e52-ae40-63f2b1ce89d9'];
@@ -51,6 +54,61 @@ const Dashboard: React.FC = () => {
     }
   }, [activeTab, isAdmin]);
 
+  // Fetch unread message count
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchUnreadCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('messages')
+          .select('id', { count: 'exact' })
+          .eq('receiver_id', user.id)
+          .eq('is_read', false);
+          
+        if (error) throw error;
+        setUnreadMessageCount(count || 0);
+      } catch (error) {
+        console.error('Error fetching unread message count:', error);
+      }
+    };
+    
+    fetchUnreadCount();
+    
+    // Subscribe to message changes
+    const channel = supabase
+      .channel('messages-count')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${user.id}`
+        },
+        () => {
+          fetchUnreadCount();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${user.id}`
+        },
+        () => {
+          fetchUnreadCount();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const handleEditProfile = () => {
     navigate('/update-profile');
   };
@@ -58,6 +116,23 @@ const Dashboard: React.FC = () => {
   // Handle tab changes
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+    
+    // If switching to messages tab, reset unread count
+    if (value === 'messages') {
+      setUnreadMessageCount(0);
+      
+      // Mark all messages as read
+      if (user) {
+        supabase
+          .from('messages')
+          .update({ is_read: true })
+          .eq('receiver_id', user.id)
+          .eq('is_read', false)
+          .then(({ error }) => {
+            if (error) console.error('Error marking messages as read:', error);
+          });
+      }
+    }
   };
 
   // Handle live stream button click
@@ -82,7 +157,13 @@ const Dashboard: React.FC = () => {
   const tabTriggers = [
     { value: 'profile', label: 'Profile Details' },
     { value: 'products', label: 'My Products' },
-    { value: 'livestream', label: 'Live Stream' }, // Add livestream as a main tab
+    { value: 'livestream', label: 'Live Stream' },
+    { 
+      value: 'messages', 
+      label: unreadMessageCount > 0 
+        ? `Messages (${unreadMessageCount})` 
+        : 'Messages'
+    },
   ];
   
   // Add admin-only tabs
@@ -153,8 +234,21 @@ const Dashboard: React.FC = () => {
             <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-8">
               <TabsList className="w-full flex mb-6">
                 {tabTriggers.map(tab => (
-                  <TabsTrigger key={tab.value} value={tab.value} className="flex-1">
-                    {tab.label}
+                  <TabsTrigger 
+                    key={tab.value} 
+                    value={tab.value} 
+                    className={`flex-1 ${tab.value === 'messages' && unreadMessageCount > 0 ? 'text-pi-focus font-medium' : ''}`}
+                  >
+                    {tab.value === 'messages' && unreadMessageCount > 0 ? (
+                      <div className="flex items-center">
+                        <span>{tab.label.split(' ')[0]}</span>
+                        <span className="ml-1.5 bg-pi-focus text-white rounded-full px-1.5 text-xs">
+                          {unreadMessageCount}
+                        </span>
+                      </div>
+                    ) : (
+                      tab.label
+                    )}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -236,6 +330,10 @@ const Dashboard: React.FC = () => {
                   
                   <LiveStreamTab />
                 </div>
+              </TabsContent>
+              
+              <TabsContent value="messages">
+                <MessageTab />
               </TabsContent>
               
               {isAdmin && (
