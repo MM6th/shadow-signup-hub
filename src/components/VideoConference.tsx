@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { useWebRTC } from '@/hooks/useWebRTC';
+
+import React, { useEffect, useState } from 'react';
+import { usePureWebRTC } from '@/hooks/usePureWebRTC';
 import LocalVideo from '@/components/video-conference/LocalVideo';
 import RemoteVideo from '@/components/video-conference/RemoteVideo';
 import CallControls from '@/components/video-conference/CallControls';
@@ -22,8 +23,6 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   onEndCall
 }) => {
   const { toast } = useToast();
-  const localVideoRef = useRef<HTMLDivElement>(null);
-  const remoteVideoRef = useRef<HTMLDivElement>(null);
   
   const [viewerCount, setViewerCount] = useState(1);
   const [callDuration, setCallDuration] = useState(0);
@@ -39,15 +38,17 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     isVideoOn,
     isJoining,
     permissionsGranted,
+    isRemoteAudioMuted,
+    isRemoteVideoMuted,
+    localStream,
+    remoteStream,
     makeCall,
     initializeCall,
     requestPermissions,
     toggleMic,
     toggleVideo,
-    endCall,
-    localTracks,
-    remoteTracks
-  } = useWebRTC(roomId);
+    endCall
+  } = usePureWebRTC(roomId, isHost);
 
   // Call duration timer
   useEffect(() => {
@@ -56,20 +57,17 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
       timer = setInterval(() => {
         setCallDuration(prev => prev + 1);
       }, 1000);
+      
+      // If we're connected, also update viewer count
+      setViewerCount(2); // Host + remote user
+    } else {
+      setViewerCount(1); // Just the local user
     }
     
     return () => {
       if (timer) clearInterval(timer);
     };
   }, [isConnected]);
-
-  // For non-host users, we want to automatically initiate the call once permissions are granted
-  useEffect(() => {
-    if (!isHost && permissionsGranted && localVideoRef.current && remoteVideoRef.current) {
-      console.log("Non-host user: Auto-connecting to host...");
-      makeCall();
-    }
-  }, [isHost, permissionsGranted, makeCall]);
 
   const handleRequestPermissions = async () => {
     try {
@@ -86,30 +84,17 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
         // Hide the permission button
         setShowPermissionButton(false);
         
-        // Initialize the call if we have the refs
-        if (localVideoRef.current && remoteVideoRef.current) {
-          try {
-            await initializeCall(localVideoRef.current, remoteVideoRef.current);
-            console.log("VideoConference: Call initialized successfully");
-            // Show the call button if this is the host
-            if (isHost) {
-              setShowCallButton(true);
-            } else {
-              // For non-host users, automatically make the call
-              console.log("Non-host user: Auto-connecting to host after initialization...");
-              // We'll make the call after a short delay to ensure everything is set up
-              setTimeout(() => {
-                makeCall();
-              }, 500);
-            }
-          } catch (initError: any) {
-            console.error("VideoConference: Error initializing call:", initError);
-            setPermissionError(`Error initializing call: ${initError.message}`);
-            setShowPermissionButton(true);
+        try {
+          await initializeCall();
+          console.log("VideoConference: Call initialized successfully");
+          
+          // Show the call button if this is the host
+          if (isHost) {
+            setShowCallButton(true);
           }
-        } else {
-          console.error("VideoConference: Video references not found");
-          setPermissionError("Unable to initialize video elements. Please refresh and try again.");
+        } catch (initError: any) {
+          console.error("VideoConference: Error initializing call:", initError);
+          setPermissionError(`Error initializing call: ${initError.message}`);
           setShowPermissionButton(true);
         }
       } else {
@@ -166,10 +151,6 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
 
   // Generate shareable link
   const shareableLink = `${window.location.origin}/livestream/${roomId}`;
-
-  // Check for muted state for remote tracks
-  const isRemoteAudioMuted = !remoteTracks.audioTrack || !remoteTracks.audioTrack.isPlaying;
-  const isRemoteVideoMuted = !remoteTracks.videoTrack || !remoteTracks.videoTrack.isPlaying;
 
   return (
     <Card className="border-none shadow-none bg-transparent overflow-hidden">
@@ -275,14 +256,14 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <LocalVideo 
-              videoTrack={localTracks.videoTrack} 
+              localStream={localStream} 
               isVideoOn={isVideoOn}
               isHost={isHost}
             />
             
             <RemoteVideo 
               isConnected={isConnected}
-              videoTrack={remoteTracks.videoTrack}
+              remoteStream={remoteStream}
               audioMuted={isRemoteAudioMuted}
               videoMuted={isRemoteVideoMuted}
             />

@@ -1,55 +1,45 @@
 
 import React, { useRef, useEffect } from 'react';
 import { Share2, Link } from 'lucide-react';
-import { IRemoteVideoTrack, IRemoteAudioTrack } from 'agora-rtc-sdk-ng';
 
 interface RemoteVideoProps {
   isConnected: boolean;
-  videoTrack?: IRemoteVideoTrack | null;
+  remoteStream?: MediaStream | null;
   audioMuted?: boolean;
   videoMuted?: boolean;
 }
 
 const RemoteVideo: React.FC<RemoteVideoProps> = ({ 
   isConnected, 
-  videoTrack,
+  remoteStream,
   audioMuted = false,
   videoMuted = false
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    // Play or stop video track when component mounts or track changes
-    if (containerRef.current && videoTrack && !videoMuted) {
-      console.log("RemoteVideo: Playing video track");
-      
-      try {
-        // Play the video track directly in the container
-        videoTrack.play(containerRef.current);
-        console.log("RemoteVideo: Video track played successfully");
-      } catch (error) {
-        console.error("RemoteVideo: Error playing video track:", error);
-      }
+    // Connect remote stream to video element when available
+    if (videoRef.current && remoteStream && !videoMuted) {
+      console.log("RemoteVideo: Setting remote stream to video element");
+      videoRef.current.srcObject = remoteStream;
     }
     
-    // Clean up function
+    // Return cleanup function
     return () => {
-      if (videoTrack) {
-        try {
-          videoTrack.stop();
-        } catch (error) {
-          console.error("RemoteVideo: Error stopping video track:", error);
-        }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
       }
     };
-  }, [videoTrack, videoMuted]);
+  }, [remoteStream, videoMuted]);
 
   return (
     <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video">
-      <div
-        ref={containerRef}
-        className={`w-full h-full ${!isConnected || videoMuted ? 'hidden' : ''}`}
-        data-testid="remote-video-container"
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        className={`w-full h-full object-cover ${!isConnected || videoMuted ? 'hidden' : ''}`}
+        data-testid="remote-video-element"
       />
       {(!isConnected || videoMuted) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800">

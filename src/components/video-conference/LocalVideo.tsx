@@ -1,61 +1,43 @@
 
 import React, { useRef, useEffect } from 'react';
-import { ICameraVideoTrack } from 'agora-rtc-sdk-ng';
 
 interface LocalVideoProps {
-  videoTrack: ICameraVideoTrack | null;
+  localStream: MediaStream | null;
   isVideoOn: boolean;
   isHost?: boolean;
 }
 
 const LocalVideo: React.FC<LocalVideoProps> = ({ 
-  videoTrack, 
+  localStream, 
   isVideoOn,
   isHost = false
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    // Create or update video element when track changes or visibility changes
-    if (containerRef.current) {
-      // Clean up any existing video element
-      if (videoRef.current) {
-        containerRef.current.removeChild(videoRef.current);
-        videoRef.current = null;
-      }
-
-      if (videoTrack && isVideoOn) {
-        console.log("LocalVideo: Creating video element for track", videoTrack.getTrackId());
-        
-        try {
-          // Play the video track directly in the container
-          videoTrack.play(containerRef.current);
-          console.log("LocalVideo: Video track played successfully");
-        } catch (error) {
-          console.error("LocalVideo: Error playing video track:", error);
-        }
-      }
+    // Connect local stream to video element when available
+    if (videoRef.current && localStream && isVideoOn) {
+      console.log("LocalVideo: Setting local stream to video element");
+      videoRef.current.srcObject = localStream;
     }
     
-    // Clean up function
+    // Return cleanup function
     return () => {
-      if (videoTrack) {
-        try {
-          videoTrack.stop();
-        } catch (error) {
-          console.error("LocalVideo: Error stopping video track:", error);
-        }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
       }
     };
-  }, [videoTrack, isVideoOn]);
+  }, [localStream, isVideoOn]);
 
   return (
     <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video">
-      <div 
-        ref={containerRef}
-        className={`w-full h-full ${!isVideoOn ? 'hidden' : ''}`}
-        data-testid="local-video-container"
+      <video 
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted // Always mute local video to prevent feedback
+        className={`w-full h-full object-cover ${!isVideoOn ? 'hidden' : ''}`}
+        data-testid="local-video-element"
       />
       {!isVideoOn && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
