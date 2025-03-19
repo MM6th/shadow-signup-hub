@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, User, Send } from 'lucide-react';
+import { CheckCircle, User, Send, Search, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 
 interface ShareWithUsersProps {
   open: boolean;
@@ -28,10 +29,12 @@ const ShareWithUsersDialog: React.FC<ShareWithUsersProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<any[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<{[key: string]: boolean}>({});
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Fetch users
   useEffect(() => {
@@ -47,6 +50,7 @@ const ShareWithUsersDialog: React.FC<ShareWithUsersProps> = ({
           
         if (error) throw error;
         setUsers(data || []);
+        setFilteredUsers(data || []);
       } catch (error: any) {
         console.error('Error fetching users:', error);
         toast({
@@ -62,6 +66,20 @@ const ShareWithUsersDialog: React.FC<ShareWithUsersProps> = ({
     fetchUsers();
   }, [user, open, toast]);
   
+  // Handle search
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredUsers(users);
+    } else {
+      const query = searchQuery.toLowerCase();
+      setFilteredUsers(
+        users.filter(user => 
+          user.username && user.username.toLowerCase().includes(query)
+        )
+      );
+    }
+  }, [searchQuery, users]);
+  
   // Toggle user selection
   const toggleUser = (userId: string) => {
     if (selectedUsers.includes(userId)) {
@@ -69,6 +87,12 @@ const ShareWithUsersDialog: React.FC<ShareWithUsersProps> = ({
     } else {
       setSelectedUsers([...selectedUsers, userId]);
     }
+  };
+  
+  // Clear search
+  const clearSearch = () => {
+    setSearchQuery('');
+    setFilteredUsers(users);
   };
   
   // Send message to selected users
@@ -95,7 +119,7 @@ const ShareWithUsersDialog: React.FC<ShareWithUsersProps> = ({
             sender_id: user.id,
             receiver_id: receiverId,
             sender_name: profileData?.username || 'User',
-            content: shareUrl,
+            content: `Livestream link: ${shareUrl}`,
             is_read: false
           });
           
@@ -113,17 +137,20 @@ const ShareWithUsersDialog: React.FC<ShareWithUsersProps> = ({
       
       setSent(newSent);
       
+      const successCount = Object.keys(newSent).length;
+      
       toast({
         title: "Link shared",
-        description: `Livestream link has been shared with ${selectedUsers.length} user(s)`,
+        description: `Livestream link has been shared with ${successCount} user(s)`,
       });
       
-      // Close dialog after short delay
-      if (Object.keys(newSent).length === selectedUsers.length) {
+      // Close dialog after short delay if all messages were sent successfully
+      if (successCount === selectedUsers.length) {
         setTimeout(() => {
           onOpenChange(false);
           setSent({});
           setSelectedUsers([]);
+          setSearchQuery('');
         }, 1500);
       }
     } catch (error: any) {
@@ -149,6 +176,28 @@ const ShareWithUsersDialog: React.FC<ShareWithUsersProps> = ({
         </DialogHeader>
         
         <div className="py-4">
+          <div className="flex items-center mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search users..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 pr-8"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                  onClick={clearSearch}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+          
           <h3 className="text-sm font-medium mb-2">Select Users:</h3>
           
           {loading ? (
@@ -156,12 +205,14 @@ const ShareWithUsersDialog: React.FC<ShareWithUsersProps> = ({
               <div className="animate-spin h-6 w-6 border-4 border-pi-focus border-t-transparent rounded-full mx-auto mb-2"></div>
               <p className="text-sm text-pi-muted">Loading users...</p>
             </div>
-          ) : users.length === 0 ? (
-            <p className="text-center py-4 text-pi-muted">No other users found</p>
+          ) : filteredUsers.length === 0 ? (
+            <p className="text-center py-4 text-pi-muted">
+              {searchQuery ? 'No users matching your search' : 'No other users found'}
+            </p>
           ) : (
             <ScrollArea className="h-[200px]">
               <ul className="space-y-2">
-                {users.map(u => {
+                {filteredUsers.map(u => {
                   const isSelected = selectedUsers.includes(u.id);
                   const isSent = sent[u.id];
                   
@@ -194,29 +245,35 @@ const ShareWithUsersDialog: React.FC<ShareWithUsersProps> = ({
           )}
         </div>
         
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-between gap-2">
           <Button
             variant="outline"
             onClick={() => {
               onOpenChange(false);
               setSent({});
               setSelectedUsers([]);
+              setSearchQuery('');
             }}
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleSend}
-            disabled={selectedUsers.length === 0 || sending}
-            className="flex items-center"
-          >
-            {sending ? (
-              <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-            ) : (
-              <Send size={16} className="mr-2" />
-            )}
-            Share with {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''}
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-muted-foreground">
+              {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''} selected
+            </div>
+            <Button
+              onClick={handleSend}
+              disabled={selectedUsers.length === 0 || sending}
+              className="flex items-center"
+            >
+              {sending ? (
+                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+              ) : (
+                <Send size={16} className="mr-2" />
+              )}
+              Share
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
