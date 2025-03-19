@@ -64,6 +64,14 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     };
   }, [isConnected]);
 
+  // For non-host users, we want to automatically initiate the call once permissions are granted
+  useEffect(() => {
+    if (!isHost && permissionsGranted && localVideoRef.current && remoteVideoRef.current) {
+      console.log("Non-host user: Auto-connecting to host...");
+      makeCall();
+    }
+  }, [isHost, permissionsGranted, makeCall]);
+
   // Explicitly request camera/mic permissions, then initialize call
   const handleRequestPermissions = async () => {
     try {
@@ -88,6 +96,13 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
             // Show the call button if this is the host
             if (isHost) {
               setShowCallButton(true);
+            } else {
+              // For non-host users, automatically make the call
+              console.log("Non-host user: Auto-connecting to host after initialization...");
+              // We'll make the call after a short delay to ensure everything is set up
+              setTimeout(() => {
+                makeCall();
+              }, 500);
             }
           } catch (initError: any) {
             console.error("VideoConference: Error initializing call:", initError);
@@ -115,6 +130,7 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   };
 
   const handleMakeCall = () => {
+    console.log("Host is manually initiating the call");
     makeCall();
     setShowCallButton(false);
   };
