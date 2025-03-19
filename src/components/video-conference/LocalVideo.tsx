@@ -2,42 +2,71 @@
 import React, { useRef, useEffect } from 'react';
 
 interface LocalVideoProps {
-  localStream: MediaStream | null;
+  videoTrack: MediaStreamTrack | null;
   isVideoOn: boolean;
   isHost?: boolean;
 }
 
 const LocalVideo: React.FC<LocalVideoProps> = ({ 
-  localStream, 
+  videoTrack, 
   isVideoOn,
   isHost = false
 }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
-    // Connect local stream to video element when available
-    if (videoRef.current && localStream && isVideoOn) {
-      console.log("LocalVideo: Setting local stream to video element");
-      videoRef.current.srcObject = localStream;
+    // Create or update video element when track changes or visibility changes
+    if (containerRef.current) {
+      // Clean up any existing video element
+      if (videoRef.current) {
+        containerRef.current.removeChild(videoRef.current);
+        videoRef.current = null;
+      }
+
+      if (videoTrack && isVideoOn) {
+        console.log("LocalVideo: Creating video element for track", videoTrack.id);
+        
+        try {
+          // Create a new video element and stream
+          const newStream = new MediaStream([videoTrack]);
+          const video = document.createElement('video');
+          video.srcObject = newStream;
+          video.autoplay = true;
+          video.muted = true; // Mute local video to prevent feedback
+          video.playsInline = true;
+          video.className = 'w-full h-full object-cover';
+          
+          // Add the video to the container
+          containerRef.current.appendChild(video);
+          videoRef.current = video;
+          
+          video.onloadedmetadata = () => {
+            video.play().catch(e => console.error("Error playing video:", e));
+          };
+          
+          console.log("LocalVideo: Video element created and added to container");
+        } catch (error) {
+          console.error("LocalVideo: Error setting up video element:", error);
+        }
+      }
     }
     
-    // Return cleanup function
+    // Clean up function
     return () => {
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
+      if (videoRef.current && containerRef.current && containerRef.current.contains(videoRef.current)) {
+        containerRef.current.removeChild(videoRef.current);
+        videoRef.current = null;
       }
     };
-  }, [localStream, isVideoOn]);
+  }, [videoTrack, isVideoOn]);
 
   return (
     <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video">
-      <video 
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted // Always mute local video to prevent feedback
-        className={`w-full h-full object-cover ${!isVideoOn ? 'hidden' : ''}`}
-        data-testid="local-video-element"
+      <div 
+        ref={containerRef}
+        className={`w-full h-full ${!isVideoOn ? 'hidden' : ''}`}
+        data-testid="local-video-container"
       />
       {!isVideoOn && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-800">

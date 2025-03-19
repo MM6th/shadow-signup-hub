@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import MessageList from './MessageList';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
@@ -19,12 +19,6 @@ const MessageTab: React.FC = () => {
       description: "Message list has been refreshed",
     });
   };
-  
-  // Auto-refresh on first load
-  useEffect(() => {
-    // This will cause the MessageList to reload when the tab is visible
-    handleRefresh();
-  }, []);
   
   return (
     <div className="space-y-4">

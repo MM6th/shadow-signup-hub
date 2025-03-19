@@ -4,42 +4,71 @@ import { Share2, Link } from 'lucide-react';
 
 interface RemoteVideoProps {
   isConnected: boolean;
-  remoteStream?: MediaStream | null;
+  videoTrack?: MediaStreamTrack | null;
   audioMuted?: boolean;
   videoMuted?: boolean;
 }
 
 const RemoteVideo: React.FC<RemoteVideoProps> = ({ 
   isConnected, 
-  remoteStream,
+  videoTrack,
   audioMuted = false,
   videoMuted = false
 }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
-    // Connect remote stream to video element when available
-    if (videoRef.current && remoteStream && !videoMuted) {
-      console.log("RemoteVideo: Setting remote stream to video element");
-      videoRef.current.srcObject = remoteStream;
+    // Create or update video element when track changes or visibility changes
+    if (containerRef.current) {
+      // Clean up any existing video element
+      if (videoRef.current) {
+        containerRef.current.removeChild(videoRef.current);
+        videoRef.current = null;
+      }
+
+      if (videoTrack && !videoMuted) {
+        console.log("RemoteVideo: Creating video element for track", videoTrack.id);
+        
+        try {
+          // Create a new video element and stream
+          const newStream = new MediaStream([videoTrack]);
+          const video = document.createElement('video');
+          video.srcObject = newStream;
+          video.autoplay = true;
+          video.playsInline = true;
+          video.className = 'w-full h-full object-cover';
+          
+          // Add the video to the container
+          containerRef.current.appendChild(video);
+          videoRef.current = video;
+          
+          video.onloadedmetadata = () => {
+            video.play().catch(e => console.error("Error playing video:", e));
+          };
+          
+          console.log("RemoteVideo: Video element created and added to container");
+        } catch (error) {
+          console.error("RemoteVideo: Error setting up video element:", error);
+        }
+      }
     }
     
-    // Return cleanup function
+    // Clean up function
     return () => {
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
+      if (videoRef.current && containerRef.current && containerRef.current.contains(videoRef.current)) {
+        containerRef.current.removeChild(videoRef.current);
+        videoRef.current = null;
       }
     };
-  }, [remoteStream, videoMuted]);
+  }, [videoTrack, videoMuted]);
 
   return (
     <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video">
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        className={`w-full h-full object-cover ${!isConnected || videoMuted ? 'hidden' : ''}`}
-        data-testid="remote-video-element"
+      <div
+        ref={containerRef}
+        className={`w-full h-full ${!isConnected || videoMuted ? 'hidden' : ''}`}
+        data-testid="remote-video-container"
       />
       {(!isConnected || videoMuted) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800">

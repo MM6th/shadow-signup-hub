@@ -1,6 +1,6 @@
 
-import React, { useEffect, useState } from 'react';
-import { usePureWebRTC } from '@/hooks/usePureWebRTC';
+import React, { useRef, useEffect, useState } from 'react';
+import { useWebRTC } from '@/hooks/useWebRTC';
 import LocalVideo from '@/components/video-conference/LocalVideo';
 import RemoteVideo from '@/components/video-conference/RemoteVideo';
 import CallControls from '@/components/video-conference/CallControls';
@@ -23,6 +23,8 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   onEndCall
 }) => {
   const { toast } = useToast();
+  const localVideoRef = useRef<HTMLDivElement>(null);
+  const remoteVideoRef = useRef<HTMLDivElement>(null);
   
   const [viewerCount, setViewerCount] = useState(1);
   const [callDuration, setCallDuration] = useState(0);
@@ -38,17 +40,15 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     isVideoOn,
     isJoining,
     permissionsGranted,
-    isRemoteAudioMuted,
-    isRemoteVideoMuted,
-    localStream,
-    remoteStream,
     makeCall,
     initializeCall,
     requestPermissions,
     toggleMic,
     toggleVideo,
-    endCall
-  } = usePureWebRTC(roomId, isHost);
+    endCall,
+    localTracks,
+    remoteTracks
+  } = useWebRTC(roomId);
 
   // Call duration timer
   useEffect(() => {
@@ -57,11 +57,6 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
       timer = setInterval(() => {
         setCallDuration(prev => prev + 1);
       }, 1000);
-      
-      // If we're connected, also update viewer count
-      setViewerCount(2); // Host + remote user
-    } else {
-      setViewerCount(1); // Just the local user
     }
     
     return () => {
@@ -69,6 +64,7 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     };
   }, [isConnected]);
 
+  // Explicitly request camera/mic permissions, then initialize call
   const handleRequestPermissions = async () => {
     try {
       setShowPermissionMessage(true);
@@ -84,17 +80,23 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
         // Hide the permission button
         setShowPermissionButton(false);
         
-        try {
-          await initializeCall();
-          console.log("VideoConference: Call initialized successfully");
-          
-          // Show the call button if this is the host
-          if (isHost) {
-            setShowCallButton(true);
+        // Initialize the call if we have the refs
+        if (localVideoRef.current && remoteVideoRef.current) {
+          try {
+            await initializeCall(localVideoRef.current, remoteVideoRef.current);
+            console.log("VideoConference: Call initialized successfully");
+            // Show the call button if this is the host
+            if (isHost) {
+              setShowCallButton(true);
+            }
+          } catch (initError: any) {
+            console.error("VideoConference: Error initializing call:", initError);
+            setPermissionError(`Error initializing call: ${initError.message}`);
+            setShowPermissionButton(true);
           }
-        } catch (initError: any) {
-          console.error("VideoConference: Error initializing call:", initError);
-          setPermissionError(`Error initializing call: ${initError.message}`);
+        } else {
+          console.error("VideoConference: Video references not found");
+          setPermissionError("Unable to initialize video elements. Please refresh and try again.");
           setShowPermissionButton(true);
         }
       } else {
@@ -113,7 +115,6 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   };
 
   const handleMakeCall = () => {
-    console.log("Host is manually initiating the call");
     makeCall();
     setShowCallButton(false);
   };
@@ -256,16 +257,16 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <LocalVideo 
-              localStream={localStream} 
+              videoTrack={localTracks.videoTrack} 
               isVideoOn={isVideoOn}
               isHost={isHost}
             />
             
             <RemoteVideo 
               isConnected={isConnected}
-              remoteStream={remoteStream}
-              audioMuted={isRemoteAudioMuted}
-              videoMuted={isRemoteVideoMuted}
+              videoTrack={remoteTracks.videoTrack}
+              audioMuted={!remoteTracks.audioTrack?.enabled}
+              videoMuted={!remoteTracks.videoTrack?.enabled}
             />
           </div>
           

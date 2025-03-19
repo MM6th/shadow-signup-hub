@@ -35,26 +35,18 @@ const MessageList: React.FC<MessageListProps> = ({
   const [loading, setLoading] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   
-  // Fetch all users except current user - improved query
+  // Fetch all users except current user
   const fetchUsers = async () => {
     if (!user) return;
     
     try {
       setLoadingUsers(true);
-      console.log("Fetching users for messaging, current user ID:", user.id);
-      
-      // Modified query to select from profiles table which has all registered users
       const { data, error } = await supabase
         .from('profiles')
         .select('id, username')
         .neq('id', user.id);
         
-      if (error) {
-        console.error('Error fetching users:', error);
-        throw error;
-      }
-      
-      console.log("Fetched users:", data);
+      if (error) throw error;
       setUsers(data || []);
     } catch (error: any) {
       console.error('Error fetching users:', error);
