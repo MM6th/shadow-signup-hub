@@ -26,6 +26,8 @@ const ProductsTab: React.FC<ProductsTabProps> = ({ isAdmin = false }) => {
     try {
       setLoading(true);
       
+      // For normal users, only show products they've purchased
+      // For admins, show products they've created
       const { data, error } = await supabase
         .from('products')
         .select('*')

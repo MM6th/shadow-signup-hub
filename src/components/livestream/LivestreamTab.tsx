@@ -159,7 +159,6 @@ const LivestreamTab: React.FC = () => {
   // Get livestream video URL
   const getLivestreamVideoUrl = (conferenceId: string) => {
     // This should be the URL where the recorded livestream is stored
-    // For now, we'll use a placeholder or you can implement your actual storage logic
     return `/api/livestream/recording/${conferenceId}`;
   };
   
@@ -334,7 +333,7 @@ const LivestreamTab: React.FC = () => {
             
             <div className="pt-4">
               <VideoPlayer 
-                src={`/api/livestream/recording/${selectedStream.conference_id}`}
+                src={getLivestreamVideoUrl(selectedStream.conference_id)}
                 title={selectedStream.title}
                 videoId={selectedStream.conference_id}
                 userId={user?.id || ''}
