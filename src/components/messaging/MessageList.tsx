@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,6 +22,15 @@ interface UserData {
   id: string;
   username?: string;
   email?: string;
+}
+
+// Define a type for Supabase auth user
+interface SupabaseAuthUser {
+  id: string;
+  email?: string;
+  user_metadata?: {
+    email?: string;
+  };
 }
 
 interface MessageListProps {
@@ -57,7 +67,7 @@ const MessageList: React.FC<MessageListProps> = ({
       if (profilesError) throw profilesError;
       
       // Then get all auth users
-      const { data: authUsersData, error: authUsersError } = await supabase.auth.admin.listUsers();
+      const { data: authUsersResponse, error: authUsersError } = await supabase.auth.admin.listUsers();
       
       if (authUsersError) {
         console.log("Cannot access auth users list, using only profiles data");
@@ -76,11 +86,12 @@ const MessageList: React.FC<MessageListProps> = ({
         });
         
         // Add auth users that don't have profiles
-        authUsersData?.users?.forEach(authUser => {
+        const authUsers = authUsersResponse?.users as SupabaseAuthUser[] || [];
+        authUsers.forEach(authUser => {
           if (authUser.id !== user.id && !addedUserIds.has(authUser.id)) {
             combinedUsers.push({
               id: authUser.id,
-              email: authUser.email,
+              email: authUser.email || authUser.user_metadata?.email,
               username: authUser.email?.split('@')[0] || 'User'
             });
           }
