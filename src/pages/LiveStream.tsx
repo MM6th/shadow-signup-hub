@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useAgoraVideo } from '@/hooks/useAgoraVideo';
-import AgoraRTC from 'agora-rtc-sdk-ng';
+import AgoraRTC, { ClientConfig } from 'agora-rtc-sdk-ng';
 import {
   Card,
   CardContent,
@@ -41,7 +41,7 @@ import PaymentDialog from '@/components/PaymentDialog';
 import { ADMIN_IDS } from '@/hooks/useUserSession';
 
 // AgoraRTC client options
-const rtcClientOptions = {
+const rtcClientOptions: ClientConfig = {
   mode: 'rtc',
   codec: 'vp8',
 };

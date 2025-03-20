@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAgoraVideo } from '@/hooks/useAgoraVideo';
-import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack, IRemoteVideoTrack, IRemoteAudioTrack } from 'agora-rtc-sdk-ng';
+import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack, IRemoteVideoTrack, IRemoteAudioTrack, ClientConfig } from 'agora-rtc-sdk-ng';
 
 export const useVideoCall = (roomId: string) => {
   const { toast } = useToast();
@@ -30,21 +30,16 @@ export const useVideoCall = (roomId: string) => {
   
   const { generateToken, joinChannel, isLoading: isTokenLoading } = useAgoraVideo(roomId);
 
-  // Request permissions explicitly
   const requestPermissions = useCallback(async (): Promise<boolean> => {
     try {
       console.log("Explicitly requesting camera and microphone permissions...");
       
-      // This will trigger the browser permission dialog
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: true, 
         audio: true 
       });
       
       console.log("Camera and microphone permissions granted successfully");
-      
-      // Important: Don't stop the stream right away - keep it referenced
-      // We'll need to properly handle this when creating Agora tracks
       
       setPermissionsGranted(true);
       toast({
@@ -67,13 +62,11 @@ export const useVideoCall = (roomId: string) => {
     }
   }, [toast]);
 
-  // Initialize tracks and join the channel
   const initializeCall = async (localVideoRef: HTMLDivElement, remoteVideoRef: HTMLDivElement) => {
     try {
       setIsJoining(true);
       console.log("Initializing call with room ID:", roomId);
       
-      // Check if permissions already granted or request them
       if (!permissionsGranted) {
         const granted = await requestPermissions();
         if (!granted) {
@@ -81,7 +74,6 @@ export const useVideoCall = (roomId: string) => {
         }
       }
       
-      // Release any existing tracks first
       if (localTracksRef.current.audioTrack) {
         localTracksRef.current.audioTrack.close();
         localTracksRef.current.audioTrack = null;
@@ -92,7 +84,6 @@ export const useVideoCall = (roomId: string) => {
         localTracksRef.current.videoTrack = null;
       }
       
-      // Create local tracks with more robust error handling
       let microphoneTrack: IMicrophoneAudioTrack | null = null;
       let cameraTrack: ICameraVideoTrack | null = null;
       
@@ -138,11 +129,9 @@ export const useVideoCall = (roomId: string) => {
         videoTrack: cameraTrack
       };
       
-      // Display local video
       if (localVideoRef && cameraTrack) {
         console.log("Playing local video track to element:", localVideoRef);
         try {
-          // Set a timeout to ensure DOM is ready
           setTimeout(async () => {
             if (cameraTrack && localVideoRef) {
               try {
@@ -163,8 +152,6 @@ export const useVideoCall = (roomId: string) => {
         });
       }
       
-      // Generate a token for the Agora channel
-      console.log("Generating Agora token...");
       const uid = Math.floor(Math.random() * 100000).toString();
       const tokenData = await generateToken(uid);
       
@@ -174,10 +161,8 @@ export const useVideoCall = (roomId: string) => {
       
       console.log("Token generated successfully:", tokenData.channelName);
       
-      // Join the Agora channel
       if (remoteVideoRef && localTracksRef.current.audioTrack && localTracksRef.current.videoTrack) {
-        // Set up user-published handler
-        const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+        const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' } as ClientConfig);
         
         client.on('user-published', async (user, mediaType) => {
           console.log(`Remote user ${user.uid} published ${mediaType} track`);
@@ -248,7 +233,6 @@ export const useVideoCall = (roomId: string) => {
         variant: "destructive",
       });
       
-      // Clean up any tracks we might have created before the error
       if (localTracksRef.current.audioTrack) {
         localTracksRef.current.audioTrack.close();
         localTracksRef.current.audioTrack = null;
@@ -265,7 +249,6 @@ export const useVideoCall = (roomId: string) => {
     }
   };
   
-  // Toggle microphone
   const toggleMic = useCallback(() => {
     if (localTracksRef.current.audioTrack) {
       if (isMicOn) {
@@ -277,7 +260,6 @@ export const useVideoCall = (roomId: string) => {
     }
   }, [isMicOn]);
   
-  // Toggle video
   const toggleVideo = useCallback(() => {
     if (localTracksRef.current.videoTrack) {
       if (isVideoOn) {
@@ -289,15 +271,12 @@ export const useVideoCall = (roomId: string) => {
     }
   }, [isVideoOn]);
   
-  // End call
   const endCall = useCallback(async () => {
     try {
-      // Leave the Agora channel
       if (agoraClientRef.current) {
         await agoraClientRef.current.leave();
       }
       
-      // Close and release local tracks
       if (localTracksRef.current.audioTrack) {
         localTracksRef.current.audioTrack.close();
       }
@@ -321,7 +300,6 @@ export const useVideoCall = (roomId: string) => {
     }
   }, []);
 
-  // Clean up on unmount
   useEffect(() => {
     return () => {
       endCall();
