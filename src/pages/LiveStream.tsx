@@ -27,13 +27,15 @@ interface LiveStreamData {
 
 const LiveStream: React.FC = () => {
   const { conferenceId } = useParams<{ conferenceId: string }>();
-  const { user, profile } = useAuth();
+  const { user, profile, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [streamData, setStreamData] = useState<LiveStreamData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isHost, setIsHost] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  
+  console.log("LiveStream page loaded with conferenceId:", conferenceId);
   
   // Fetch user's profile who created the livestream
   const { profile: creatorProfile } = useProfile(streamData?.user_id);
@@ -55,13 +57,20 @@ const LiveStream: React.FC = () => {
       try {
         setIsLoading(true);
         
+        console.log("Fetching livestream data for conference:", conferenceId);
+        
         const { data: streamData, error } = await supabase
           .from('livestreams')
           .select('*')
           .eq('conference_id', conferenceId)
           .single();
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching livestream data:", error);
+          throw error;
+        }
+        
+        console.log("Found livestream data:", streamData);
         
         setStreamData(streamData as LiveStreamData);
         setIsHost(user?.id === streamData.user_id);
@@ -86,7 +95,7 @@ const LiveStream: React.FC = () => {
     };
     
     fetchStreamData();
-  }, [conferenceId, user, toast]);
+  }, [conferenceId, user?.id, toast]);
   
   const handleEndStream = async () => {
     if (!isHost || !streamData) return;
@@ -117,7 +126,7 @@ const LiveStream: React.FC = () => {
     }
   };
   
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <div className="min-h-screen bg-dark bg-dark-gradient flex items-center justify-center">
         <div className="text-center">

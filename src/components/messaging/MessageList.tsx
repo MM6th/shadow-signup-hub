@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +17,12 @@ interface Message {
   is_read: boolean;
 }
 
+interface UserData {
+  id: string;
+  username?: string;
+  email?: string;
+}
+
 interface MessageListProps {
   selectedUserId?: string;
   onUserSelect?: (userId: string) => void;
@@ -30,24 +35,59 @@ const MessageList: React.FC<MessageListProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserData[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   
-  // Fetch all users except current user
+  // Fetch all users except current user - now including those without profiles
   const fetchUsers = async () => {
     if (!user) return;
     
     try {
       setLoadingUsers(true);
-      const { data, error } = await supabase
+      console.log("Fetching users...");
+      
+      // First get profiles
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, username')
         .neq('id', user.id);
         
-      if (error) throw error;
-      setUsers(data || []);
+      if (profilesError) throw profilesError;
+      
+      // Then get all auth users
+      const { data: authUsersData, error: authUsersError } = await supabase.auth.admin.listUsers();
+      
+      if (authUsersError) {
+        console.log("Cannot access auth users list, using only profiles data");
+        setUsers(profilesData || []);
+      } else {
+        // Combine data, prioritizing profile usernames but including users without profiles
+        const combinedUsers: UserData[] = [];
+        
+        // Map of user IDs we've already added
+        const addedUserIds = new Set<string>();
+        
+        // Add users with profiles first
+        profilesData?.forEach(profile => {
+          combinedUsers.push(profile);
+          addedUserIds.add(profile.id);
+        });
+        
+        // Add auth users that don't have profiles
+        authUsersData?.users?.forEach(authUser => {
+          if (authUser.id !== user.id && !addedUserIds.has(authUser.id)) {
+            combinedUsers.push({
+              id: authUser.id,
+              email: authUser.email,
+              username: authUser.email?.split('@')[0] || 'User'
+            });
+          }
+        });
+        
+        setUsers(combinedUsers);
+      }
     } catch (error: any) {
       console.error('Error fetching users:', error);
       toast({
@@ -59,6 +99,90 @@ const MessageList: React.FC<MessageListProps> = ({
       setLoadingUsers(false);
     }
   };
+  
+  // Subscribe to message events
+  useEffect(() => {
+    if (!user) return;
+    
+    const setupSubscription = async () => {
+      console.log("Setting up message subscription for user:", user.id);
+      
+      // Check for any unread messages first
+      const { data: unreadMessages, error: unreadError } = await supabase
+        .from('messages')
+        .select('id, sender_id, sender_name')
+        .eq('receiver_id', user.id)
+        .eq('is_read', false);
+        
+      if (unreadError) {
+        console.error("Error checking unread messages:", unreadError);
+      } else if (unreadMessages?.length) {
+        console.log(`You have ${unreadMessages.length} unread messages`);
+        
+        // Group by sender
+        const unreadBySender = new Map();
+        unreadMessages.forEach(msg => {
+          const count = unreadBySender.get(msg.sender_id) || 0;
+          unreadBySender.set(msg.sender_id, count + 1);
+        });
+        
+        // Notify user about unread messages
+        unreadBySender.forEach((count, senderId) => {
+          const senderName = unreadMessages.find(m => m.sender_id === senderId)?.sender_name || 'Someone';
+          toast({
+            title: "Unread messages",
+            description: `You have ${count} unread message(s) from ${senderName}`,
+          });
+        });
+      }
+      
+      // Subscribe to new messages
+      const channel = supabase
+        .channel('messages-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `receiver_id=eq.${user.id}`
+          },
+          (payload) => {
+            // Only update if the message is from the currently selected user
+            if (payload.new.sender_id === selectedUserId) {
+              fetchMessages();
+            } else {
+              // Show toast for new message from other user
+              toast({
+                title: "New message",
+                description: `You have a new message from ${payload.new.sender_name || 'a user'}`,
+              });
+            }
+          }
+        )
+        .subscribe();
+      
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    };
+    
+    setupSubscription();
+  }, [user, selectedUserId, toast]);
+  
+  // Load users on component mount
+  useEffect(() => {
+    fetchUsers();
+  }, [user]);
+  
+  // Load messages when selected user changes
+  useEffect(() => {
+    if (selectedUserId) {
+      fetchMessages();
+    } else {
+      setMessages([]);
+    }
+  }, [selectedUserId]);
   
   // Fetch messages for selected user
   const fetchMessages = async () => {
@@ -127,7 +251,7 @@ const MessageList: React.FC<MessageListProps> = ({
         .insert({
           sender_id: user.id,
           receiver_id: selectedUserId,
-          sender_name: profileData?.username || 'User',
+          sender_name: profileData?.username || user.email?.split('@')[0] || 'User',
           content: newMessage,
           is_read: false
         });
@@ -150,62 +274,7 @@ const MessageList: React.FC<MessageListProps> = ({
       });
     }
   };
-  
-  // Subscribe to new messages
-  useEffect(() => {
-    if (!user) return;
-    
-    const channel = supabase
-      .channel('messages-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${user.id}`
-        },
-        (payload) => {
-          // Only update if the message is from the currently selected user
-          if (payload.new.sender_id === selectedUserId) {
-            fetchMessages();
-          } else {
-            // Show toast for new message from other user
-            toast({
-              title: "New message",
-              description: `You have a new message from ${payload.new.sender_name || 'a user'}`,
-            });
-          }
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, selectedUserId, toast]);
-  
-  // Load users and messages on component mount
-  useEffect(() => {
-    fetchUsers();
-  }, [user]);
-  
-  // Load messages when selected user changes
-  useEffect(() => {
-    if (selectedUserId) {
-      fetchMessages();
-    } else {
-      setMessages([]);
-    }
-  }, [selectedUserId]);
-  
-  // Share livestream link
-  const shareLink = (link: string) => {
-    if (!selectedUserId) return;
-    
-    setNewMessage(link);
-  };
-  
+
   return (
     <div className="flex flex-col rounded-lg glass-card">
       <div className="grid grid-cols-1 md:grid-cols-3 h-full min-h-[400px]">
@@ -246,7 +315,7 @@ const MessageList: React.FC<MessageListProps> = ({
                     <div className="h-8 w-8 rounded-full bg-dark-secondary flex items-center justify-center mr-3">
                       <User size={16} className="text-pi-muted" />
                     </div>
-                    <span>{u.username || 'User'}</span>
+                    <span>{u.username || u.email?.split('@')[0] || 'User'}</span>
                   </li>
                 ))}
               </ul>
@@ -254,7 +323,7 @@ const MessageList: React.FC<MessageListProps> = ({
           </ScrollArea>
         </div>
         
-        {/* Messages */}
+        {/* Messages area */}
         <div className="col-span-2 flex flex-col h-full">
           {selectedUserId ? (
             <>

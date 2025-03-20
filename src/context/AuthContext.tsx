@@ -34,13 +34,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!sessionLoading && !profileLoading) {
       const currentPath = location.pathname;
       
+      // Check if the current path is a livestream route
+      const isLivestreamRoute = currentPath.startsWith('/livestream/');
+      
       if (user) {
         // Check if the user has a profile
-        if (!profile && currentPath !== '/create-profile') {
-          // If the user doesn't have a profile and is not already on the create profile page, redirect them
+        if (!profile && currentPath !== '/create-profile' && !isLivestreamRoute) {
+          // If the user doesn't have a profile and is not already on the create profile page
+          // and not trying to access a livestream, redirect them
           navigate('/create-profile');
-        } else if (profile && (currentPath === '/' || currentPath === '/create-profile')) {
-          // If the user has a profile and is on the home or create profile page, redirect to dashboard
+        } else if (profile && (currentPath === '/' || currentPath === '/create-profile') && !isLivestreamRoute) {
+          // If the user has a profile and is on the home or create profile page
+          // and not trying to access a livestream, redirect to dashboard
           navigate('/dashboard');
         }
       }
