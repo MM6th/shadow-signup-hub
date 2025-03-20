@@ -258,7 +258,7 @@ const LivestreamTab: React.FC = () => {
                       className="flex-1"
                     >
                       <Play className="h-4 w-4 mr-2" />
-                      View Recording
+                      Play Recording
                     </Button>
                     <Button 
                       variant="outline" 

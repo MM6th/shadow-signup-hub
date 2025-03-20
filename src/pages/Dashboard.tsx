@@ -3,60 +3,15 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ProfileTab from '@/components/profile/ProfileTab';
 import ProductsTab from '@/components/products/ProductsTab';
 import LivestreamTab from '@/components/livestream/LivestreamTab';
+import AppointmentTab from '@/components/appointment/AppointmentTab';
+import ChartTab from '@/components/chart/ChartTab';
+import ScreenplayTab from '@/components/screenplay/ScreenplayTab';
+import VideoTab from '@/components/video/VideoTab';
 import { Card, CardContent } from '@/components/ui/card';
 import { ADMIN_IDS } from '@/hooks/useUserSession';
-
-// Simple placeholder component for the profile tab
-const ProfileTab = () => {
-  return (
-    <div className="bg-white rounded-lg p-6">
-      <h2 className="text-xl font-semibold mb-4">Profile Information</h2>
-      <p className="text-gray-500">Your profile information will appear here.</p>
-    </div>
-  );
-};
-
-// Simple placeholder component for the appointment tab
-const AppointmentTab = () => {
-  return (
-    <div className="bg-white rounded-lg p-6">
-      <h2 className="text-xl font-semibold mb-4">Appointments</h2>
-      <p className="text-gray-500">Your appointment management will appear here.</p>
-    </div>
-  );
-};
-
-// Simple placeholder component for the chart tab
-const ChartTab = () => {
-  return (
-    <div className="bg-white rounded-lg p-6">
-      <h2 className="text-xl font-semibold mb-4">Charts</h2>
-      <p className="text-gray-500">Your chart data will appear here.</p>
-    </div>
-  );
-};
-
-// Simple placeholder component for the screenplay tab
-const ScreenplayTab = () => {
-  return (
-    <div className="bg-white rounded-lg p-6">
-      <h2 className="text-xl font-semibold mb-4">Screenplays</h2>
-      <p className="text-gray-500">Your screenplay data will appear here.</p>
-    </div>
-  );
-};
-
-// Simple placeholder component for the video tab
-const VideoTab = () => {
-  return (
-    <div className="bg-white rounded-lg p-6">
-      <h2 className="text-xl font-semibold mb-4">Videos</h2>
-      <p className="text-gray-500">Your video content will appear here.</p>
-    </div>
-  );
-};
 
 const Dashboard = () => {
   const { user } = useAuth();
