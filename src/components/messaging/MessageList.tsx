@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { useProfile } from '@/hooks/useProfile';
 
 interface Message {
   id: string;
@@ -23,15 +22,6 @@ interface UserData {
   id: string;
   username?: string;
   email?: string;
-}
-
-// Define a type for Supabase auth user
-interface SupabaseAuthUser {
-  id: string;
-  email?: string;
-  user_metadata?: {
-    email?: string;
-  };
 }
 
 interface MessageListProps {
@@ -51,18 +41,21 @@ const MessageList: React.FC<MessageListProps> = ({
   const [loading, setLoading] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   
-  // Fetch all users except current user - improved approach
+  // Fetch all users from profiles table
   const fetchUsers = async () => {
     if (!user) return;
     
     try {
       setLoadingUsers(true);
-      console.log("Fetching users...");
+      console.log("Fetching users for messaging... Current user ID:", user.id);
       
-      // Get profiles with better error handling
+      // Get ALL profiles (we'll filter out current user after)
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, username');
+      
+      // Log the raw response for debugging
+      console.log("Raw profiles response:", profilesData, profilesError);
         
       if (profilesError) {
         console.error("Error fetching profiles:", profilesError);
@@ -74,28 +67,32 @@ const MessageList: React.FC<MessageListProps> = ({
         return;
       }
       
-      // Log profiles for debugging
-      console.log("Profiles fetched:", profilesData);
+      if (!profilesData || profilesData.length === 0) {
+        console.log("No profiles found in the database");
+        setUsers([]);
+        return;
+      }
       
       // Filter out current user from profiles
-      const otherProfiles = profilesData?.filter(profile => profile.id !== user.id) || [];
+      const otherProfiles = profilesData.filter(profile => profile.id !== user.id);
+      console.log("Filtered profiles (excluding current user):", otherProfiles);
       
       // Map profiles to UserData format
       const userData: UserData[] = otherProfiles.map(profile => ({
         id: profile.id,
         username: profile.username || 'User',
-        email: profile.username // Use username if no email available
+        email: profile.username // Use username as fallback for email display
       }));
       
       // Set users with the filtered and mapped profiles
       setUsers(userData);
-      console.log("Users set:", userData);
+      console.log("Final users list set:", userData);
       
     } catch (error: any) {
       console.error('Error fetching users:', error);
       toast({
         title: "Error",
-        description: "Could not load users",
+        description: "Could not load users: " + error.message,
         variant: "destructive",
       });
     } finally {
@@ -173,9 +170,12 @@ const MessageList: React.FC<MessageListProps> = ({
     setupSubscription();
   }, [user, selectedUserId, toast]);
   
-  // Load users on component mount
+  // Load users on component mount and when user changes
   useEffect(() => {
-    fetchUsers();
+    if (user) {
+      console.log("User changed or component mounted, fetching users");
+      fetchUsers();
+    }
   }, [user]);
   
   // Load messages when selected user changes
