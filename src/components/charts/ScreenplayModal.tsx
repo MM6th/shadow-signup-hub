@@ -19,6 +19,7 @@ import { useAuth } from '@/context/AuthContext';
 interface ScreenplayModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => Promise<void>; // Added onSuccess prop
 }
 
 const formSchema = z.object({
@@ -29,7 +30,7 @@ const formSchema = z.object({
   bookText: z.string().optional(),
 });
 
-export function ScreenplayModal({ open, onOpenChange }: ScreenplayModalProps) {
+export function ScreenplayModal({ open, onOpenChange, onSuccess }: ScreenplayModalProps) {
   const [activeTab, setActiveTab] = useState('photo-upload');
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);

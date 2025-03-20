@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Video, PlusCircle } from 'lucide-react';
@@ -7,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { VideoUploader } from '@/components/VideoUploader';
+import VideoUploader from '@/components/VideoUploader';
 
 const VideoTab: React.FC = () => {
   const { user } = useAuth();
