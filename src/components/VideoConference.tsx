@@ -50,6 +50,15 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     remoteTracks
   } = useWebRTC(roomId);
 
+  // Update viewer count when connection status changes
+  useEffect(() => {
+    if (isConnected) {
+      setViewerCount(2); // Host + guest
+    } else {
+      setViewerCount(1); // Just the host
+    }
+  }, [isConnected]);
+
   // Call duration timer
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -63,6 +72,21 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
       if (timer) clearInterval(timer);
     };
   }, [isConnected]);
+
+  // Log connection status changes
+  useEffect(() => {
+    console.log("VideoConference connection status:", { isConnected, isHost });
+  }, [isConnected, isHost]);
+
+  // Log tracks for debugging
+  useEffect(() => {
+    console.log("Current tracks:", {
+      localVideo: localTracks.videoTrack?.id,
+      localAudio: localTracks.audioTrack?.id,
+      remoteVideo: remoteTracks.videoTrack?.id,
+      remoteAudio: remoteTracks.audioTrack?.id,
+    });
+  }, [localTracks, remoteTracks]);
 
   // Explicitly request camera/mic permissions, then initialize call
   const handleRequestPermissions = async () => {
@@ -88,6 +112,12 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
             // Show the call button if this is the host
             if (isHost) {
               setShowCallButton(true);
+            } else {
+              // If not host, wait a bit and then attempt to make a call too
+              // This helps with connection from both sides
+              setTimeout(() => {
+                makeCall();
+              }, 1000);
             }
           } catch (initError: any) {
             console.error("VideoConference: Error initializing call:", initError);

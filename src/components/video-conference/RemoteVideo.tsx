@@ -19,6 +19,13 @@ const RemoteVideo: React.FC<RemoteVideoProps> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
+    console.log("RemoteVideo effect triggered:", { 
+      isConnected, 
+      hasVideoTrack: !!videoTrack, 
+      videoMuted,
+      trackId: videoTrack?.id 
+    });
+    
     // Create or update video element when track changes or visibility changes
     if (containerRef.current) {
       // Clean up any existing video element
@@ -27,7 +34,7 @@ const RemoteVideo: React.FC<RemoteVideoProps> = ({
         videoRef.current = null;
       }
 
-      if (videoTrack && !videoMuted) {
+      if (videoTrack && !videoMuted && isConnected) {
         console.log("RemoteVideo: Creating video element for track", videoTrack.id);
         
         try {
@@ -61,7 +68,7 @@ const RemoteVideo: React.FC<RemoteVideoProps> = ({
         videoRef.current = null;
       }
     };
-  }, [videoTrack, videoMuted]);
+  }, [videoTrack, videoMuted, isConnected]);
 
   return (
     <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video">
@@ -72,23 +79,27 @@ const RemoteVideo: React.FC<RemoteVideoProps> = ({
       />
       {(!isConnected || videoMuted) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800">
-          <div className="w-20 h-20 rounded-full bg-gray-700 flex items-center justify-center mb-3">
-            <span className="text-white text-xl">
-              {isConnected ? 'Video Off' : 'Waiting...'}
-            </span>
-          </div>
-          
-          {!isConnected && (
-            <div className="text-center px-4">
-              <p className="text-pi-muted mb-2">Waiting for someone to join</p>
-              <div className="flex items-center justify-center mb-2">
-                <Share2 size={16} className="mr-2 text-pi-muted" />
-                <span className="text-sm">Share your livestream link to invite others</span>
+          {!isConnected ? (
+            <>
+              <div className="w-20 h-20 rounded-full bg-gray-700 flex items-center justify-center mb-3">
+                <span className="text-white text-xl">Waiting...</span>
               </div>
-              <div className="flex items-center justify-center">
-                <Link size={16} className="mr-2 text-pi-muted" />
-                <span className="text-xs text-pi-muted">Others can join by opening the link you share</span>
+              
+              <div className="text-center px-4">
+                <p className="text-pi-muted mb-2">Waiting for someone to join</p>
+                <div className="flex items-center justify-center mb-2">
+                  <Share2 size={16} className="mr-2 text-pi-muted" />
+                  <span className="text-sm">Share your livestream link to invite others</span>
+                </div>
+                <div className="flex items-center justify-center">
+                  <Link size={16} className="mr-2 text-pi-muted" />
+                  <span className="text-xs text-pi-muted">Others can join by opening the link you share</span>
+                </div>
               </div>
+            </>
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-gray-700 flex items-center justify-center">
+              <span className="text-white text-xl">Video Off</span>
             </div>
           )}
         </div>
