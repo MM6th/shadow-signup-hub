@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -27,9 +26,10 @@ type FormValues = z.infer<typeof formSchema>;
 interface LiveStreamModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void; // Added onSuccess prop
 }
 
-const LiveStreamModal: React.FC<LiveStreamModalProps> = ({ open, onOpenChange }) => {
+const LiveStreamModal: React.FC<LiveStreamModalProps> = ({ open, onOpenChange, onSuccess }) => {
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -87,6 +87,11 @@ const LiveStreamModal: React.FC<LiveStreamModalProps> = ({ open, onOpenChange })
       
       // Reset the form
       reset();
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
       
       // Navigate to the live stream page
       navigate(`/livestream/${conferenceId}`);

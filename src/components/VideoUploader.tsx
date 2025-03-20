@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, X, Play, AlertCircle, Image } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +12,7 @@ import VideoPlayer from './VideoPlayer';
 
 interface VideoUploaderProps {
   userId: string;
+  onSuccess?: () => void; // Added onSuccess prop
 }
 
 // Max file size: 3GB in bytes
@@ -24,7 +24,7 @@ interface VideoMetadata {
   thumbnail?: File | null;
 }
 
-const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
+const VideoUploader: React.FC<VideoUploaderProps> = ({ userId, onSuccess }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [videos, setVideos] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -306,6 +306,11 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ userId }) => {
       
       // Refresh the videos list
       await fetchUserVideos();
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error: any) {
       console.error('Error uploading video:', error);
       toast({

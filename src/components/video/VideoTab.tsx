@@ -47,7 +47,6 @@ const VideoTab: React.FC = () => {
   };
 
   const handleViewVideo = (videoPath: string) => {
-    // Open video player or navigate to video page
     window.open(videoPath, '_blank');
   };
 
@@ -114,10 +113,15 @@ const VideoTab: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Upload Video</DialogTitle>
           </DialogHeader>
-          <VideoUploader onSuccess={() => {
-            setIsModalOpen(false);
-            fetchVideos();
-          }} />
+          {user && (
+            <VideoUploader 
+              userId={user.id} 
+              onSuccess={() => {
+                setIsModalOpen(false);
+                fetchVideos();
+              }} 
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
