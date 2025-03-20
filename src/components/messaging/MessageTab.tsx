@@ -1,10 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MessageList from './MessageList';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { RefreshCcw } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const MessageTab: React.FC = () => {
   const { user } = useAuth();
@@ -19,6 +20,17 @@ const MessageTab: React.FC = () => {
       description: "Message list has been refreshed",
     });
   };
+  
+  // Force refresh initially to ensure users are loaded
+  useEffect(() => {
+    if (user) {
+      // Log the current user ID for debugging
+      console.log("Current user in MessageTab:", user.id);
+      
+      // Clear any possible stale data
+      setRefreshKey(prev => prev + 1);
+    }
+  }, [user]);
   
   return (
     <div className="space-y-4">

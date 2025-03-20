@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { useProfile } from '@/hooks/useProfile';
 
 interface Message {
   id: string;
@@ -50,7 +51,7 @@ const MessageList: React.FC<MessageListProps> = ({
   const [loading, setLoading] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   
-  // Fetch all users except current user - now including those without profiles
+  // Fetch all users except current user - improved approach
   const fetchUsers = async () => {
     if (!user) return;
     
@@ -58,47 +59,38 @@ const MessageList: React.FC<MessageListProps> = ({
       setLoadingUsers(true);
       console.log("Fetching users...");
       
-      // First get profiles
+      // Get profiles with better error handling
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, username')
-        .neq('id', user.id);
+        .select('id, username');
         
-      if (profilesError) throw profilesError;
-      
-      // Then get all auth users
-      const { data: authUsersResponse, error: authUsersError } = await supabase.auth.admin.listUsers();
-      
-      if (authUsersError) {
-        console.log("Cannot access auth users list, using only profiles data");
-        setUsers(profilesData || []);
-      } else {
-        // Combine data, prioritizing profile usernames but including users without profiles
-        const combinedUsers: UserData[] = [];
-        
-        // Map of user IDs we've already added
-        const addedUserIds = new Set<string>();
-        
-        // Add users with profiles first
-        profilesData?.forEach(profile => {
-          combinedUsers.push(profile);
-          addedUserIds.add(profile.id);
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        toast({
+          title: "Error",
+          description: "Could not load user profiles",
+          variant: "destructive",
         });
-        
-        // Add auth users that don't have profiles
-        const authUsers = authUsersResponse?.users as SupabaseAuthUser[] || [];
-        authUsers.forEach(authUser => {
-          if (authUser.id !== user.id && !addedUserIds.has(authUser.id)) {
-            combinedUsers.push({
-              id: authUser.id,
-              email: authUser.email || authUser.user_metadata?.email,
-              username: authUser.email?.split('@')[0] || 'User'
-            });
-          }
-        });
-        
-        setUsers(combinedUsers);
+        return;
       }
+      
+      // Log profiles for debugging
+      console.log("Profiles fetched:", profilesData);
+      
+      // Filter out current user from profiles
+      const otherProfiles = profilesData?.filter(profile => profile.id !== user.id) || [];
+      
+      // Map profiles to UserData format
+      const userData: UserData[] = otherProfiles.map(profile => ({
+        id: profile.id,
+        username: profile.username || 'User',
+        email: profile.username // Use username if no email available
+      }));
+      
+      // Set users with the filtered and mapped profiles
+      setUsers(userData);
+      console.log("Users set:", userData);
+      
     } catch (error: any) {
       console.error('Error fetching users:', error);
       toast({
