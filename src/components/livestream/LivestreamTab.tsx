@@ -21,12 +21,26 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+interface Livestream {
+  id: string;
+  title: string;
+  thumbnail_url: string | null;
+  conference_id: string;
+  user_id: string;
+  created_at: string;
+  ended_at: string | null;
+  is_active: boolean;
+  views: number;
+  enable_crypto: boolean;
+  enable_paypal: boolean;
+}
+
 const LivestreamTab: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [livestreams, setLivestreams] = useState<any[]>([]);
+  const [livestreams, setLivestreams] = useState<Livestream[]>([]);
   const [loading, setLoading] = useState(true);
   const [streamToDelete, setStreamToDelete] = useState<string | null>(null);
 
@@ -94,6 +108,11 @@ const LivestreamTab: React.FC = () => {
     }
   };
 
+  // Helper function to determine if a stream is truly active
+  const isStreamActive = (stream: Livestream): boolean => {
+    return stream.is_active === true && stream.ended_at === null;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -135,7 +154,7 @@ const LivestreamTab: React.FC = () => {
                   </div>
                 )}
                 
-                {stream.is_active === true && (
+                {isStreamActive(stream) && (
                   <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
                     Live
                   </div>
@@ -147,7 +166,7 @@ const LivestreamTab: React.FC = () => {
                 <div className="flex justify-between text-sm text-gray-500">
                   <span>Views: {stream.views || 0}</span>
                   <span>
-                    {stream.is_active === true
+                    {isStreamActive(stream)
                       ? 'Started ' + formatDistanceToNow(new Date(stream.created_at), { addSuffix: true })
                       : 'Ended ' + formatDistanceToNow(new Date(stream.ended_at || stream.created_at), { addSuffix: true })
                     }
@@ -160,7 +179,7 @@ const LivestreamTab: React.FC = () => {
                   className="flex-1 mr-2" 
                   onClick={() => handleJoinLivestream(stream.conference_id, stream.is_active)}
                 >
-                  {stream.is_active === true ? (
+                  {isStreamActive(stream) ? (
                     <>Join</>
                   ) : (
                     <>
