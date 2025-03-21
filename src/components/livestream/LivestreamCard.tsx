@@ -25,13 +25,19 @@ interface LivestreamCardProps {
 
 const LivestreamCard: React.FC<LivestreamCardProps> = ({ stream, onDelete }) => {
   const navigate = useNavigate();
+  const active = isStreamActive(stream);
 
   const handleJoinLivestream = (conferenceId: string) => {
     navigate(`/livestream/${conferenceId}`);
   };
 
-  // Determine if the stream has ended
-  const hasEnded = !isStreamActive(stream);
+  console.log('Stream status check:', {
+    id: stream.id,
+    title: stream.title,
+    is_active: stream.is_active,
+    ended_at: stream.ended_at,
+    isActiveResult: active
+  });
 
   return (
     <Card key={stream.id} className="overflow-hidden">
@@ -48,7 +54,7 @@ const LivestreamCard: React.FC<LivestreamCardProps> = ({ stream, onDelete }) => 
           </div>
         )}
         
-        {isStreamActive(stream) && (
+        {active && (
           <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
             Live
           </div>
@@ -60,9 +66,9 @@ const LivestreamCard: React.FC<LivestreamCardProps> = ({ stream, onDelete }) => 
         <div className="flex justify-between text-sm text-gray-500">
           <span>Views: {stream.views || 0}</span>
           <span>
-            {hasEnded
-              ? 'Ended ' + formatDistanceToNow(new Date(stream.ended_at || stream.created_at), { addSuffix: true })
-              : 'Started ' + formatDistanceToNow(new Date(stream.created_at), { addSuffix: true })
+            {active
+              ? 'Started ' + formatDistanceToNow(new Date(stream.created_at), { addSuffix: true })
+              : 'Ended ' + formatDistanceToNow(new Date(stream.ended_at || stream.created_at), { addSuffix: true })
             }
           </span>
         </div>
@@ -73,7 +79,7 @@ const LivestreamCard: React.FC<LivestreamCardProps> = ({ stream, onDelete }) => 
           className="flex-1 mr-2" 
           onClick={() => handleJoinLivestream(stream.conference_id)}
         >
-          {isStreamActive(stream) ? (
+          {active ? (
             <>Join</>
           ) : (
             <>

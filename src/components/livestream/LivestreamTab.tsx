@@ -36,7 +36,10 @@ const LivestreamTab: React.FC = () => {
         
       if (error) throw error;
       
+      // Log the data to debug
       console.log('Fetched livestreams:', data);
+      
+      // Ensure data is properly set
       setLivestreams(data || []);
     } catch (error: any) {
       console.error('Error fetching livestreams:', error);

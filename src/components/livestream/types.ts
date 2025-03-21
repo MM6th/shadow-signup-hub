@@ -14,6 +14,7 @@ export interface LivestreamType {
 }
 
 // Helper function to determine if a stream is truly active
+// A stream is only active if is_active is true AND ended_at is null
 export const isStreamActive = (stream: LivestreamType): boolean => {
   return stream.is_active === true && stream.ended_at === null;
 };
