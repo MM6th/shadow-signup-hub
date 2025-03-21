@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -26,7 +27,7 @@ type FormValues = z.infer<typeof formSchema>;
 interface LiveStreamModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void; // Added onSuccess prop
+  onSuccess?: () => void; 
 }
 
 const LiveStreamModal: React.FC<LiveStreamModalProps> = ({ open, onOpenChange, onSuccess }) => {
@@ -77,6 +78,23 @@ const LiveStreamModal: React.FC<LiveStreamModalProps> = ({ open, onOpenChange, o
       
       if (error) throw error;
       
+      // Create an initial WebRTC session
+      const { error: sessionError } = await supabase
+        .from('webrtc_sessions')
+        .insert({
+          id: conferenceId,
+          data: {
+            sessionId: conferenceId,
+            candidatesOffer: [],
+            candidatesAnswer: []
+          }
+        });
+        
+      if (sessionError) {
+        console.error("WebRTC session creation error:", sessionError);
+        // Continue anyway, the session will be created when starting the stream
+      }
+      
       toast({
         title: "Live stream created",
         description: "Your live stream has been set up successfully",
@@ -122,7 +140,7 @@ const LiveStreamModal: React.FC<LiveStreamModalProps> = ({ open, onOpenChange, o
         <DialogHeader>
           <DialogTitle>Start a New Live Stream</DialogTitle>
           <DialogDescription>
-            Set up your cosmic live stream to connect with your audience
+            Set up your livestream to connect with your audience
           </DialogDescription>
         </DialogHeader>
         

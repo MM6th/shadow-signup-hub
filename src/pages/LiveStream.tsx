@@ -4,8 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { useAgoraVideo } from '@/hooks/useAgoraVideo';
-import AgoraRTC, { ClientConfig } from 'agora-rtc-sdk-ng';
+import { useWebRTCStream } from '@/hooks/useWebRTCStream';
 import {
   Card,
   CardContent,
@@ -15,64 +14,44 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import LocalVideo from '@/components/video-conference/LocalVideo';
-import RemoteVideo from '@/components/video-conference/RemoteVideo';
-import { Send, Mic, MicOff, Video as VideoIcon, VideoOff, Copy, Users, Settings, X } from 'lucide-react';
+import { Send, Mic, MicOff, Video as VideoIcon, VideoOff, Copy, Users, X } from 'lucide-react';
 import PaymentDialog from '@/components/PaymentDialog';
 import { ADMIN_IDS } from '@/hooks/useUserSession';
-
-// AgoraRTC client options
-const rtcClientOptions: ClientConfig = {
-  mode: 'rtc',
-  codec: 'vp8',
-};
 
 const LiveStream: React.FC = () => {
   const { conferenceId } = useParams<{ conferenceId: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { generateToken, joinChannel } = useAgoraVideo(conferenceId || '');
+  const { 
+    isLoading, 
+    isConnected, 
+    startStream, 
+    joinStream, 
+    endStream, 
+    playRecording,
+    error 
+  } = useWebRTCStream(conferenceId || '');
   
   const [livestreamData, setLivestreamData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [hasPaid, setHasPaid] = useState(false);
   const [isHost, setIsHost] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
-  const [localVideoTrack, setLocalVideoTrack] = useState<any>(null);
-  const [localAudioTrack, setLocalAudioTrack] = useState<any>(null);
-  const [remoteVideoTrack, setRemoteVideoTrack] = useState<any>(null);
-  const [remoteAudioTrack, setRemoteAudioTrack] = useState<any>(null);
-  const [remoteUid, setRemoteUid] = useState<string | null>(null);
   const [isAudioOn, setIsAudioOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
 
   // Refs
-  const rtcClient = useRef<any>(null);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   
   // Check if current user is an admin
   const isAdmin = user ? ADMIN_IDS.includes(user.id) : false;
@@ -83,7 +62,7 @@ const LiveStream: React.FC = () => {
       if (!conferenceId) return;
       
       try {
-        setIsLoading(true);
+        setIsLoadingData(true);
         
         // Get livestream data
         const { data, error } = await supabase
@@ -111,6 +90,12 @@ const LiveStream: React.FC = () => {
           }
         }
         
+        // If the stream is not active, try to get recording URL
+        if (!data.is_active) {
+          const recordingUrlResult = await playRecording();
+          setRecordingUrl(recordingUrlResult);
+        }
+        
       } catch (error: any) {
         console.error('Error fetching livestream data:', error);
         toast({
@@ -122,92 +107,19 @@ const LiveStream: React.FC = () => {
         // Navigate back if livestream doesn't exist
         navigate('/dashboard');
       } finally {
-        setIsLoading(false);
+        setIsLoadingData(false);
       }
     };
     
     fetchLivestreamData();
-  }, [conferenceId, user, navigate, toast]);
-  
-  // Initialize Agora client when component mounts
-  useEffect(() => {
-    const initializeClient = async () => {
-      try {
-        // Create RTC client
-        const client = AgoraRTC.createClient(rtcClientOptions);
-        rtcClient.current = client;
-        
-        // Set up event handlers
-        client.on('user-published', async (user, mediaType) => {
-          await client.subscribe(user, mediaType);
-          console.log('Subscribe success:', user.uid, mediaType);
-          
-          if (mediaType === 'video') {
-            setRemoteVideoTrack(user.videoTrack);
-            setRemoteUid(user.uid.toString());
-          }
-          
-          if (mediaType === 'audio') {
-            setRemoteAudioTrack(user.audioTrack);
-            user.audioTrack?.play();
-          }
-          
-          // Increase viewer count for host
-          if (isHost) {
-            setViewerCount(prev => prev + 1);
-          }
-        });
-        
-        client.on('user-unpublished', (user, mediaType) => {
-          console.log('Unsubscribe:', user.uid, mediaType);
-          
-          if (mediaType === 'video') {
-            setRemoteVideoTrack(null);
-          }
-          
-          if (mediaType === 'audio') {
-            setRemoteAudioTrack(null);
-          }
-          
-          // Decrease viewer count for host
-          if (isHost) {
-            setViewerCount(prev => Math.max(0, prev - 1));
-          }
-        });
-        
-        client.on('user-left', (user) => {
-          console.log('User left:', user.uid);
-          if (user.uid.toString() === remoteUid) {
-            setRemoteVideoTrack(null);
-            setRemoteAudioTrack(null);
-            setRemoteUid(null);
-          }
-          
-          // Decrease viewer count for host
-          if (isHost) {
-            setViewerCount(prev => Math.max(0, prev - 1));
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error initializing Agora client:', error);
-      }
-    };
-    
-    initializeClient();
-    
-    // Clean up when component unmounts
-    return () => {
-      leaveChannel();
-    };
-  }, [isHost]);
+  }, [conferenceId, user, navigate, toast, playRecording, isAdmin]);
   
   // Join the channel when hasPaid changes to true
   useEffect(() => {
-    if (hasPaid && !isConnected && !isJoining) {
+    if (hasPaid && !isConnected && !isJoining && livestreamData?.is_active) {
       handleJoinStream();
     }
-  }, [hasPaid, isConnected, isJoining]);
+  }, [hasPaid, isConnected, isJoining, livestreamData]);
   
   const handleJoinStream = async () => {
     if (!user || !conferenceId || isJoining || isConnected) return;
@@ -215,33 +127,34 @@ const LiveStream: React.FC = () => {
     try {
       setIsJoining(true);
       
-      // Generate token
-      const tokenData = await generateToken(user.id);
-      
-      if (!tokenData) {
-        throw new Error('Failed to generate token');
+      let stream;
+      if (isHost) {
+        // Start stream as host
+        stream = await startStream();
+      } else {
+        // Join stream as viewer
+        stream = await joinStream();
       }
       
-      // Create local audio and video tracks
-      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-      const videoTrack = await AgoraRTC.createCameraVideoTrack();
+      if (!stream) {
+        throw new Error('Failed to get media stream');
+      }
       
-      setLocalAudioTrack(audioTrack);
-      setLocalVideoTrack(videoTrack);
-      
-      // Join the channel
-      await joinChannel(
-        rtcClient.current,
-        audioTrack,
-        videoTrack,
-        tokenData.token,
-        tokenData.channelName
-      );
-      
-      setIsConnected(true);
+      // Save reference to the stream
+      if (isHost) {
+        localStreamRef.current = stream;
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+      } else {
+        remoteStreamRef.current = stream;
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = stream;
+        }
+      }
       
       // Increment livestream views
-      if (!isHost) {
+      if (!isHost && livestreamData) {
         await supabase
           .from('livestreams')
           .update({ views: livestreamData.views + 1 })
@@ -260,43 +173,33 @@ const LiveStream: React.FC = () => {
     }
   };
   
-  const leaveChannel = async () => {
-    try {
-      // Release local tracks
-      localAudioTrack?.close();
-      localVideoTrack?.close();
-      
-      // Leave the channel
-      if (rtcClient.current) {
-        await rtcClient.current.leave();
+  const handleEndStream = () => {
+    // Stop streaming and clean up
+    endStream();
+    
+    // Navigate back to dashboard
+    navigate('/dashboard');
+  };
+  
+  const toggleAudio = () => {
+    if (localStreamRef.current) {
+      const audioTracks = localStreamRef.current.getAudioTracks();
+      if (audioTracks.length > 0) {
+        const newState = !isAudioOn;
+        audioTracks.forEach(track => track.enabled = newState);
+        setIsAudioOn(newState);
       }
-      
-      // Reset state
-      setLocalAudioTrack(null);
-      setLocalVideoTrack(null);
-      setRemoteVideoTrack(null);
-      setRemoteAudioTrack(null);
-      setRemoteUid(null);
-      setIsConnected(false);
-      
-    } catch (error) {
-      console.error('Error leaving channel:', error);
     }
   };
   
-  const toggleAudio = async () => {
-    if (localAudioTrack) {
-      const newState = !isAudioOn;
-      localAudioTrack.setEnabled(newState);
-      setIsAudioOn(newState);
-    }
-  };
-  
-  const toggleVideo = async () => {
-    if (localVideoTrack) {
-      const newState = !isVideoOn;
-      localVideoTrack.setEnabled(newState);
-      setIsVideoOn(newState);
+  const toggleVideo = () => {
+    if (localStreamRef.current) {
+      const videoTracks = localStreamRef.current.getVideoTracks();
+      if (videoTracks.length > 0) {
+        const newState = !isVideoOn;
+        videoTracks.forEach(track => track.enabled = newState);
+        setIsVideoOn(newState);
+      }
     }
   };
   
@@ -345,7 +248,19 @@ const LiveStream: React.FC = () => {
     setNewMessage('');
   };
   
-  if (isLoading) {
+  const handleWatchRecording = () => {
+    if (recordingUrl) {
+      window.open(recordingUrl, '_blank');
+    } else {
+      toast({
+        title: "Recording unavailable",
+        description: "The recording for this stream is not available",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  if (isLoadingData) {
     return (
       <div className="container mx-auto py-12 flex justify-center">
         <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full"></div>
@@ -363,6 +278,48 @@ const LiveStream: React.FC = () => {
             <Button onClick={() => navigate('/dashboard')}>
               Return to Dashboard
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  // For completed streams, show the recording player
+  if (!livestreamData.is_active) {
+    return (
+      <div className="container mx-auto py-12">
+        <Card>
+          <CardHeader>
+            <CardTitle>{livestreamData.title}</CardTitle>
+            <div className="text-sm text-gray-500">
+              Recorded livestream - {new Date(livestreamData.created_at).toLocaleDateString()}
+            </div>
+          </CardHeader>
+          <CardContent className="p-8 text-center">
+            <div className="aspect-video bg-gray-100 mb-4 rounded overflow-hidden">
+              {recordingUrl ? (
+                <video 
+                  controls 
+                  className="w-full h-full"
+                  poster={livestreamData.thumbnail_url || undefined}
+                >
+                  <source src={recordingUrl} type="video/webm" />
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                  <VideoIcon className="h-16 w-16 text-gray-400" />
+                </div>
+              )}
+            </div>
+            <div className="flex justify-center gap-4">
+              <Button onClick={handleWatchRecording} disabled={!recordingUrl}>
+                {recordingUrl ? 'Open Full Recording' : 'Recording Unavailable'}
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/dashboard')}>
+                Return to Dashboard
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -423,7 +380,7 @@ const LiveStream: React.FC = () => {
             <div>
               <h1 className="text-2xl font-bold">{livestreamData.title}</h1>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline">Live</Badge>
+                <Badge variant="outline" className="bg-red-500 text-white">Live</Badge>
                 <span className="text-sm text-gray-500">
                   <Users className="h-4 w-4 inline mr-1" />
                   {viewerCount} {viewerCount === 1 ? 'viewer' : 'viewers'}
@@ -440,37 +397,95 @@ const LiveStream: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-grow">
-            {/* Main video - remote for viewers, local for host */}
+            {/* Main video */}
             <div className="md:col-span-2">
-              {isHost ? (
-                <LocalVideo 
-                  videoTrack={localVideoTrack} 
-                  isVideoOn={isVideoOn} 
-                  isHost={true}
-                />
-              ) : (
-                <RemoteVideo 
-                  isConnected={isConnected} 
-                  videoTrack={remoteVideoTrack}
-                  videoMuted={false}
-                />
-              )}
+              <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden relative">
+                {isHost ? (
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                )}
+                
+                {isJoining && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70">
+                    <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full"></div>
+                  </div>
+                )}
+                
+                {!isConnected && !isJoining && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70">
+                    <div className="text-center">
+                      <VideoIcon className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                      <p className="text-white">Waiting to connect...</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             
-            {/* Secondary video - local for viewers, remote for host */}
-            <div>
-              {isHost ? (
-                <RemoteVideo 
-                  isConnected={isConnected} 
-                  videoTrack={remoteVideoTrack}
-                  videoMuted={false}
-                />
-              ) : (
-                <LocalVideo 
-                  videoTrack={localVideoTrack} 
-                  isVideoOn={isVideoOn}
-                />
-              )}
+            {/* Secondary content - chat */}
+            <div className="flex flex-col h-full">
+              <Card className="h-full flex flex-col">
+                <CardHeader className="p-4">
+                  <CardTitle className="text-lg">Live Chat</CardTitle>
+                </CardHeader>
+                
+                <CardContent className="flex-grow overflow-y-auto p-4">
+                  {messages.length === 0 ? (
+                    <div className="text-center text-gray-500 h-full flex items-center justify-center">
+                      <p>No messages yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {messages.map((message) => (
+                        <div key={message.id} className="p-2 border-b">
+                          <div className="flex justify-between">
+                            <span className="font-medium">{message.sender}</span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(message.timestamp).toLocaleTimeString([], { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </span>
+                          </div>
+                          <p>{message.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+                
+                <CardFooter className="p-4 border-t">
+                  <form 
+                    className="flex w-full gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }}
+                  >
+                    <Input
+                      placeholder="Type a message..."
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      className="flex-grow"
+                    />
+                    <Button type="submit" disabled={!newMessage.trim()}>
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </form>
+                </CardFooter>
+              </Card>
             </div>
           </div>
           
@@ -480,7 +495,7 @@ const LiveStream: React.FC = () => {
               <Button
                 variant={isAudioOn ? "default" : "destructive"}
                 onClick={toggleAudio}
-                disabled={!isConnected}
+                disabled={!isConnected || !isHost}
               >
                 {isAudioOn ? <Mic className="h-4 w-4 mr-2" /> : <MicOff className="h-4 w-4 mr-2" />}
                 {isAudioOn ? "Mute" : "Unmute"}
@@ -489,71 +504,18 @@ const LiveStream: React.FC = () => {
               <Button
                 variant={isVideoOn ? "default" : "destructive"}
                 onClick={toggleVideo}
-                disabled={!isConnected}
+                disabled={!isConnected || !isHost}
               >
-                {isVideoOn ? <VideoOff className="h-4 w-4 mr-2" /> : <VideoIcon className="h-4 w-4 mr-2" />}
+                {isVideoOn ? <VideoIcon className="h-4 w-4 mr-2" /> : <VideoOff className="h-4 w-4 mr-2" />}
                 {isVideoOn ? "Hide Video" : "Show Video"}
               </Button>
             </div>
             
-            <Button variant="destructive" onClick={() => navigate('/dashboard')}>
-              End & Exit
+            <Button variant="destructive" onClick={handleEndStream}>
+              <X className="h-4 w-4 mr-2" />
+              {isHost ? "End Stream" : "Leave Stream"}
             </Button>
           </div>
-        </div>
-        
-        {/* Chat sidebar */}
-        <div className="md:w-1/4 flex flex-col h-full">
-          <Card className="h-full flex flex-col">
-            <CardHeader className="p-4">
-              <CardTitle className="text-lg">Live Chat</CardTitle>
-            </CardHeader>
-            
-            <CardContent className="flex-grow overflow-y-auto p-4">
-              {messages.length === 0 ? (
-                <div className="text-center text-gray-500 h-full flex items-center justify-center">
-                  <p>No messages yet</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {messages.map((message) => (
-                    <div key={message.id} className="p-2 border-b">
-                      <div className="flex justify-between">
-                        <span className="font-medium">{message.sender}</span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(message.timestamp).toLocaleTimeString([], { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </span>
-                      </div>
-                      <p>{message.content}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-            
-            <CardFooter className="p-4 border-t">
-              <form 
-                className="flex w-full gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSendMessage();
-                }}
-              >
-                <Input
-                  placeholder="Type a message..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  className="flex-grow"
-                />
-                <Button type="submit" disabled={!newMessage.trim()}>
-                  <Send className="h-4 w-4" />
-                </Button>
-              </form>
-            </CardFooter>
-          </Card>
         </div>
       </div>
     </div>

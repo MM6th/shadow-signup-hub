@@ -1,14 +1,24 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, Video } from 'lucide-react';
+import { PlusCircle, Video, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import LiveStreamModal from '@/components/LiveStreamModal'; // Fixed import
+import LiveStreamModal from '@/components/LiveStreamModal';
 import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const LivestreamTab: React.FC = () => {
   const { user } = useAuth();
@@ -17,6 +27,7 @@ const LivestreamTab: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [livestreams, setLivestreams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [streamToDelete, setStreamToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLivestreams();
@@ -51,6 +62,34 @@ const LivestreamTab: React.FC = () => {
 
   const handleJoinLivestream = (conferenceId: string, isActive: boolean) => {
     navigate(`/livestream/${conferenceId}`);
+  };
+  
+  const handleDeleteStream = async (streamId: string) => {
+    try {
+      const { error } = await supabase
+        .from('livestreams')
+        .delete()
+        .eq('id', streamId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Livestream deleted successfully",
+      });
+      
+      // Refresh the list
+      fetchLivestreams();
+    } catch (error: any) {
+      console.error('Error deleting livestream:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete livestream",
+        variant: "destructive",
+      });
+    } finally {
+      setStreamToDelete(null);
+    }
   };
 
   return (
@@ -114,13 +153,35 @@ const LivestreamTab: React.FC = () => {
                 </div>
               </CardContent>
               
-              <CardFooter className="p-4 pt-0">
+              <CardFooter className="p-4 pt-0 flex justify-between">
                 <Button 
-                  className="w-full" 
+                  className="flex-1 mr-2" 
                   onClick={() => handleJoinLivestream(stream.conference_id, stream.is_active)}
                 >
                   {stream.is_active ? 'Join' : 'Play Recording'}
                 </Button>
+                
+                <AlertDialog open={streamToDelete === stream.id} onOpenChange={(open) => !open && setStreamToDelete(null)}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="icon" onClick={() => setStreamToDelete(stream.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Livestream</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete this livestream? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDeleteStream(stream.id)}>
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </CardFooter>
             </Card>
           ))}
