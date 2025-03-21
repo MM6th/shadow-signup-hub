@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAgoraVideo } from '@/hooks/useAgoraVideo';
@@ -32,7 +31,6 @@ export const useVideoCall = (roomId: string) => {
   
   const { generateToken, joinChannel, isLoading: isTokenLoading, error: tokenError } = useAgoraVideo(roomId);
   
-  // Update connection error when token error changes
   useEffect(() => {
     if (tokenError) {
       setConnectionError(tokenError);
@@ -50,7 +48,6 @@ export const useVideoCall = (roomId: string) => {
       
       console.log("Camera and microphone permissions granted successfully");
       
-      // Clean up the temporary stream
       stream.getTracks().forEach(track => track.stop());
       
       setPermissionsGranted(true);
@@ -178,7 +175,6 @@ export const useVideoCall = (roomId: string) => {
       if (remoteVideoRef && localTracksRef.current.audioTrack && localTracksRef.current.videoTrack) {
         const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' } as ClientConfig);
         
-        // Add detailed event listeners for better debugging
         client.on("connection-state-change", (curState, prevState) => {
           console.log(`Client connection state changed from ${prevState} to ${curState}`);
           if (curState === "CONNECTED") {
@@ -247,7 +243,6 @@ export const useVideoCall = (roomId: string) => {
         
         console.log("Joining channel:", tokenData.channelName);
         try {
-          // Set a timeout to ensure we don't wait forever
           const joinPromise = joinChannel(
             client,
             localTracksRef.current.audioTrack,
@@ -256,12 +251,10 @@ export const useVideoCall = (roomId: string) => {
             tokenData.channelName
           );
           
-          // Create a timeout promise
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error("Timeout: Join channel operation took too long")), 20000);
           });
           
-          // Race the join operation against the timeout
           agoraClientRef.current = await Promise.race([joinPromise, timeoutPromise]);
           
           setIsConnected(true);
