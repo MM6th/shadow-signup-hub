@@ -1,48 +1,22 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PlusCircle, Video, Trash2, Play } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import LiveStreamModal from '@/components/LiveStreamModal';
-import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-
-interface Livestream {
-  id: string;
-  title: string;
-  thumbnail_url: string | null;
-  conference_id: string;
-  user_id: string;
-  created_at: string;
-  ended_at: string | null;
-  is_active: boolean;
-  views: number;
-  enable_crypto: boolean;
-  enable_paypal: boolean;
-}
+import LivestreamCard from './LivestreamCard';
+import EmptyState from './EmptyState';
+import LoadingState from './LoadingState';
+import { LivestreamType } from './types';
 
 const LivestreamTab: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [livestreams, setLivestreams] = useState<Livestream[]>([]);
+  const [livestreams, setLivestreams] = useState<LivestreamType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [streamToDelete, setStreamToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLivestreams();
@@ -75,10 +49,6 @@ const LivestreamTab: React.FC = () => {
       setLoading(false);
     }
   };
-
-  const handleJoinLivestream = (conferenceId: string, isActive: boolean) => {
-    navigate(`/livestream/${conferenceId}`);
-  };
   
   const handleDeleteStream = async (streamId: string) => {
     try {
@@ -103,14 +73,7 @@ const LivestreamTab: React.FC = () => {
         description: "Failed to delete livestream",
         variant: "destructive",
       });
-    } finally {
-      setStreamToDelete(null);
     }
-  };
-
-  // Helper function to determine if a stream is truly active
-  const isStreamActive = (stream: Livestream): boolean => {
-    return stream.is_active === true && stream.ended_at === null;
   };
 
   return (
@@ -124,94 +87,17 @@ const LivestreamTab: React.FC = () => {
       </div>
       
       {loading ? (
-        <div className="flex justify-center items-center py-10">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
+        <LoadingState />
       ) : livestreams.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center py-10">
-            <Video className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Livestreams</h3>
-            <p className="text-gray-500">
-              You haven't created any livestreams yet.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {livestreams.map((stream) => (
-            <Card key={stream.id} className="overflow-hidden">
-              <div className="aspect-video bg-gray-100 relative">
-                {stream.thumbnail_url ? (
-                  <img 
-                    src={stream.thumbnail_url} 
-                    alt={stream.title} 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                    <Video className="h-12 w-12 text-gray-400" />
-                  </div>
-                )}
-                
-                {isStreamActive(stream) && (
-                  <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                    Live
-                  </div>
-                )}
-              </div>
-              
-              <CardContent className="p-4">
-                <h3 className="font-medium text-lg mb-2">{stream.title}</h3>
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>Views: {stream.views || 0}</span>
-                  <span>
-                    {isStreamActive(stream)
-                      ? 'Started ' + formatDistanceToNow(new Date(stream.created_at), { addSuffix: true })
-                      : 'Ended ' + formatDistanceToNow(new Date(stream.ended_at || stream.created_at), { addSuffix: true })
-                    }
-                  </span>
-                </div>
-              </CardContent>
-              
-              <CardFooter className="p-4 pt-0 flex justify-between">
-                <Button 
-                  className="flex-1 mr-2" 
-                  onClick={() => handleJoinLivestream(stream.conference_id, stream.is_active)}
-                >
-                  {isStreamActive(stream) ? (
-                    <>Join</>
-                  ) : (
-                    <>
-                      <Play className="h-4 w-4 mr-2" />
-                      Play Recording
-                    </>
-                  )}
-                </Button>
-                
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="icon" onClick={() => setStreamToDelete(stream.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Livestream</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete this livestream? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDeleteStream(stream.id)}>
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </CardFooter>
-            </Card>
+            <LivestreamCard 
+              key={stream.id} 
+              stream={stream} 
+              onDelete={handleDeleteStream} 
+            />
           ))}
         </div>
       )}
