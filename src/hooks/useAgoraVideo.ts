@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -116,10 +117,9 @@ export const useAgoraVideo = (appointmentId: string) => {
             // This ensures we're passing the correct type to client.join
             let uidToUse: number | null = null;
             
-            // Handle string UID from user input
-            const userId = typeof client.uid === 'string' ? client.uid : null;
-            if (userId) {
-              const parsedUid = parseInt(userId, 10);
+            // Parse the numeric UID from the string or use null
+            if (client.uid && typeof client.uid === 'string') {
+              const parsedUid = parseInt(client.uid, 10);
               if (!isNaN(parsedUid)) {
                 uidToUse = parsedUid;
               }
