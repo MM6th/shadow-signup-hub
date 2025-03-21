@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAgoraVideo } from '@/hooks/useAgoraVideo';
-import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack, IRemoteVideoTrack, IRemoteAudioTrack, ClientConfig, ConnectionState } from 'agora-rtc-sdk-ng';
+import AgoraRTC from 'agora-rtc-sdk-ng';
 
 export const useVideoCall = (roomId: string) => {
   const { toast } = useToast();
@@ -14,16 +14,16 @@ export const useVideoCall = (roomId: string) => {
   
   const agoraClientRef = useRef<any>(null);
   const localTracksRef = useRef<{
-    audioTrack: IMicrophoneAudioTrack | null;
-    videoTrack: ICameraVideoTrack | null;
+    audioTrack: any | null;
+    videoTrack: any | null;
   }>({
     audioTrack: null,
     videoTrack: null
   });
   
   const remoteTracksRef = useRef<{
-    audioTrack: IRemoteAudioTrack | null;
-    videoTrack: IRemoteVideoTrack | null;
+    audioTrack: any | null;
+    videoTrack: any | null;
   }>({
     audioTrack: null,
     videoTrack: null
@@ -95,8 +95,8 @@ export const useVideoCall = (roomId: string) => {
         localTracksRef.current.videoTrack = null;
       }
       
-      let microphoneTrack: IMicrophoneAudioTrack | null = null;
-      let cameraTrack: ICameraVideoTrack | null = null;
+      let microphoneTrack: any = null;
+      let cameraTrack: any = null;
       
       try {
         console.log("Creating microphone and camera tracks...");
@@ -173,9 +173,9 @@ export const useVideoCall = (roomId: string) => {
       console.log("Token generated successfully:", tokenData.channelName);
       
       if (remoteVideoRef && localTracksRef.current.audioTrack && localTracksRef.current.videoTrack) {
-        const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' } as ClientConfig);
+        const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
         
-        client.on("connection-state-change", (curState, prevState) => {
+        client.on("connection-state-change", (curState: string, prevState: string) => {
           console.log(`Client connection state changed from ${prevState} to ${curState}`);
           if (curState === "CONNECTED") {
             setIsConnected(true);
@@ -200,7 +200,7 @@ export const useVideoCall = (roomId: string) => {
           }
         });
         
-        client.on('user-published', async (user, mediaType) => {
+        client.on('user-published', async (user: any, mediaType: string) => {
           console.log(`Remote user ${user.uid} published ${mediaType} track`);
           await client.subscribe(user, mediaType);
           
@@ -231,7 +231,7 @@ export const useVideoCall = (roomId: string) => {
           }
         });
         
-        client.on('user-unpublished', (user, mediaType) => {
+        client.on('user-unpublished', (user: any, mediaType: string) => {
           console.log(`Remote user ${user.uid} unpublished ${mediaType} track`);
           if (mediaType === 'video') {
             remoteTracksRef.current.videoTrack = null;
@@ -243,19 +243,11 @@ export const useVideoCall = (roomId: string) => {
         
         console.log("Joining channel:", tokenData.channelName);
         try {
-          const joinPromise = joinChannel(
-            client,
-            localTracksRef.current.audioTrack,
-            localTracksRef.current.videoTrack,
+          agoraClientRef.current = await joinChannel(
             tokenData.token,
-            tokenData.channelName
+            tokenData.channelName,
+            uid
           );
-          
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error("Timeout: Join channel operation took too long")), 20000);
-          });
-          
-          agoraClientRef.current = await Promise.race([joinPromise, timeoutPromise]);
           
           setIsConnected(true);
           setConnectionError(null);

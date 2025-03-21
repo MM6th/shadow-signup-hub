@@ -1,13 +1,7 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import AgoraRTC, { 
-  IAgoraRTCClient, 
-  ILocalAudioTrack, 
-  ILocalVideoTrack, 
-  ConnectionState 
-} from 'agora-rtc-sdk-ng';
+import AgoraRTC from 'agora-rtc-sdk-ng';
 
 interface TokenData {
   token: string;
@@ -21,11 +15,11 @@ interface UseAgoraVideoResult {
   token: string | null;
   channelName: string | null;
   error: string | null;
-  agoraClient: IAgoraRTCClient | null;
-  localAudioTrack: ILocalAudioTrack | null;
-  localVideoTrack: ILocalVideoTrack | null;
+  agoraClient: any | null;
+  localAudioTrack: any | null;
+  localVideoTrack: any | null;
   generateToken: (uid: string) => Promise<TokenData | null>;
-  joinChannel: (agoraToken: string, agoraChannelName: string, uid: string | number) => Promise<IAgoraRTCClient | undefined>;
+  joinChannel: (agoraToken: string, agoraChannelName: string, uid: string | number) => Promise<any | undefined>;
   startLivestream: (uid: string) => Promise<void>;
   stopLivestream: () => Promise<void>;
 }
@@ -38,9 +32,9 @@ export const useAgoraVideo = (appointmentId: string): UseAgoraVideoResult => {
   const { toast } = useToast();
   
   // Use refs to maintain references across renders
-  const agoraClientRef = useRef<IAgoraRTCClient | null>(null);
-  const localAudioTrackRef = useRef<ILocalAudioTrack | null>(null);
-  const localVideoTrackRef = useRef<ILocalVideoTrack | null>(null);
+  const agoraClientRef = useRef<any | null>(null);
+  const localAudioTrackRef = useRef<any | null>(null);
+  const localVideoTrackRef = useRef<any | null>(null);
   const isLivestreamingRef = useRef(false);
 
   // Agora app ID from environment or configuration
@@ -135,7 +129,7 @@ export const useAgoraVideo = (appointmentId: string): UseAgoraVideoResult => {
         uid: uid
       });
       
-      client.on("connection-state-change", (curState, prevState) => {
+      client.on("connection-state-change", (curState: string, prevState: string) => {
         console.log("Connection state changed from", prevState, "to", curState);
         
         if (curState === "CONNECTED") {
@@ -184,8 +178,8 @@ export const useAgoraVideo = (appointmentId: string): UseAgoraVideoResult => {
         });
       };
       
-      const uid = await joinWithTimeout();
-      console.log('Joined channel with UID:', uid);
+      const joinedUid = await joinWithTimeout();
+      console.log('Joined channel with UID:', joinedUid);
       
       console.log("Publishing local tracks...");
       try {
