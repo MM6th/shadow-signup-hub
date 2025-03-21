@@ -87,11 +87,41 @@ const handler = async (req: Request): Promise<Response> => {
     // Get user ID from JWT token
     const {
       data: { user },
+      error: authError
     } = await supabaseClient.auth.getUser();
+
+    if (authError) {
+      console.error("Auth error:", authError);
+      return new Response(
+        JSON.stringify({ 
+          error: "Authentication error", 
+          message: authError.message || "Failed to authenticate user"
+        }),
+        { 
+          status: 401, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
 
     if (!user) {
       console.error("User not authenticated");
-      throw new Error("User not authenticated");
+      return new Response(
+        JSON.stringify({ 
+          error: "User not authenticated", 
+          message: "You must be logged in to generate a token" 
+        }),
+        { 
+          status: 401, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
     }
 
     // Parse request body
@@ -100,7 +130,16 @@ const handler = async (req: Request): Promise<Response> => {
       requestBody = await req.json();
     } catch (err) {
       console.error("Failed to parse request body:", err);
-      throw new Error("Invalid request body");
+      return new Response(
+        JSON.stringify({ error: "Invalid request body" }),
+        { 
+          status: 400, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
     }
 
     const { channelName, uid, role = 'publisher', expirationTimeInSeconds = 3600 }: TokenRequest = requestBody;
@@ -108,11 +147,29 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Request params:", { channelName, uid, role, expirationTimeInSeconds });
     
     if (!channelName) {
-      throw new Error('Channel name is required');
+      return new Response(
+        JSON.stringify({ error: 'Channel name is required' }),
+        { 
+          status: 400, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
     }
 
     if (!uid) {
-      throw new Error('User ID is required');
+      return new Response(
+        JSON.stringify({ error: 'User ID is required' }),
+        { 
+          status: 400, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
     }
 
     // Get the App Certificate from environment variables/secrets
@@ -120,14 +177,32 @@ const handler = async (req: Request): Promise<Response> => {
     
     if (!appCertificate) {
       console.error("AGORA_APP_CERTIFICATE not found in environment");
-      throw new Error('Agora App Certificate is not configured in Edge Function secrets');
+      return new Response(
+        JSON.stringify({ error: 'Agora App Certificate is not configured in Edge Function secrets' }),
+        { 
+          status: 500, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
     }
 
     // Generate the token
     const token = generateAgoraToken(channelName, uid, role, expirationTimeInSeconds, appCertificate);
 
     if (!token) {
-      throw new Error('Failed to generate token');
+      return new Response(
+        JSON.stringify({ error: 'Failed to generate token' }),
+        { 
+          status: 500, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
     }
 
     const responseBody = { 
@@ -154,7 +229,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ error: error.message || 'Failed to generate token' }),
       { 
-        status: 400, 
+        status: 500, 
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders

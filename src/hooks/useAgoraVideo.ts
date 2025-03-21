@@ -27,7 +27,20 @@ export const useAgoraVideo = (appointmentId: string) => {
       
       console.log("Generating token for channel:", generatedChannelName, "with UID:", uid);
       
-      // Call our edge function to generate a token
+      // First, get the current session to ensure we have a valid auth token
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Error getting session:", sessionError);
+        throw new Error('Authentication error: ' + sessionError.message);
+      }
+      
+      if (!sessionData.session) {
+        console.error("No active session found");
+        throw new Error('You must be logged in to generate a token');
+      }
+      
+      // Call our edge function to generate a token with proper authentication
       const { data, error } = await supabase.functions.invoke('generate-agora-token', {
         body: {
           channelName: generatedChannelName,
