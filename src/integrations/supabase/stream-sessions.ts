@@ -12,42 +12,64 @@ export interface StreamSessionData {
   updated_at: string;
 }
 
-// Helper functions to interact with stream sessions via RPC
 export const getOrCreateStreamSession = async (sessionId: string): Promise<StreamSessionData | null> => {
   try {
-    const { data, error } = await supabase.functions.invoke('stream_session_utils', {
-      body: {
-        name: 'get_or_create_stream_session',
-        params: {
-          session_id: sessionId,
-          user_id: (await supabase.auth.getSession()).data.session?.user.id
-        }
-      }
-    });
+    // First check if a session already exists
+    const { data: existingSession, error: getError } = await supabase
+      .from('stream_sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .single();
+      
+    if (getError && getError.code !== 'PGRST116') { // PGRST116 is "not found"
+      console.error('Error fetching stream session:', getError);
+      return null;
+    }
     
-    if (error) throw error;
-    return data;
+    if (existingSession) {
+      return existingSession as StreamSessionData;
+    }
+    
+    // Create new session if it doesn't exist
+    const { data: session, error: createError } = await supabase
+      .from('stream_sessions')
+      .insert({
+        id: sessionId,
+        host_id: (await supabase.auth.getSession()).data.session?.user.id,
+        offer_candidates: [],
+        answer_candidates: []
+      })
+      .select()
+      .single();
+      
+    if (createError) {
+      console.error('Error creating stream session:', createError);
+      return null;
+    }
+    
+    return session as StreamSessionData;
   } catch (error) {
-    console.error('Error getting or creating stream session:', error);
+    console.error('Error in getOrCreateStreamSession:', error);
     return null;
   }
 };
 
 export const getStreamSession = async (sessionId: string): Promise<StreamSessionData | null> => {
   try {
-    const { data, error } = await supabase.functions.invoke('stream_session_utils', {
-      body: {
-        name: 'get_stream_session',
-        params: {
-          session_id: sessionId
-        }
-      }
-    });
+    const { data, error } = await supabase
+      .from('stream_sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .single();
+      
+    if (error) {
+      console.error('Error fetching stream session:', error);
+      return null;
+    }
     
-    if (error) throw error;
-    return data;
+    return data as StreamSessionData;
   } catch (error) {
-    console.error('Error getting stream session:', error);
+    console.error('Error in getStreamSession:', error);
     return null;
   }
 };
@@ -57,20 +79,19 @@ export const updateSessionOffer = async (
   offer: RTCSessionDescriptionInit
 ): Promise<boolean> => {
   try {
-    const { error } = await supabase.functions.invoke('stream_session_utils', {
-      body: {
-        name: 'update_session_offer',
-        params: {
-          session_id: sessionId,
-          offer_data: offer
-        }
-      }
-    });
+    const { error } = await supabase
+      .from('stream_sessions')
+      .update({ offer })
+      .eq('id', sessionId);
+      
+    if (error) {
+      console.error('Error updating session offer:', error);
+      return false;
+    }
     
-    if (error) throw error;
     return true;
   } catch (error) {
-    console.error('Error updating session offer:', error);
+    console.error('Error in updateSessionOffer:', error);
     return false;
   }
 };
@@ -80,20 +101,19 @@ export const updateSessionAnswer = async (
   answer: RTCSessionDescriptionInit
 ): Promise<boolean> => {
   try {
-    const { error } = await supabase.functions.invoke('stream_session_utils', {
-      body: {
-        name: 'update_session_answer',
-        params: {
-          session_id: sessionId,
-          answer_data: answer
-        }
-      }
-    });
+    const { error } = await supabase
+      .from('stream_sessions')
+      .update({ answer })
+      .eq('id', sessionId);
+      
+    if (error) {
+      console.error('Error updating session answer:', error);
+      return false;
+    }
     
-    if (error) throw error;
     return true;
   } catch (error) {
-    console.error('Error updating session answer:', error);
+    console.error('Error in updateSessionAnswer:', error);
     return false;
   }
 };
@@ -103,20 +123,34 @@ export const appendOfferCandidate = async (
   candidate: RTCIceCandidateInit
 ): Promise<boolean> => {
   try {
-    const { error } = await supabase.functions.invoke('stream_session_utils', {
-      body: {
-        name: 'append_offer_candidate',
-        params: {
-          session_id: sessionId,
-          candidate: JSON.stringify(candidate)
-        }
-      }
-    });
+    // First get current candidates
+    const { data: session, error: getError } = await supabase
+      .from('stream_sessions')
+      .select('offer_candidates')
+      .eq('id', sessionId)
+      .single();
+      
+    if (getError) {
+      console.error('Error fetching session for candidates:', getError);
+      return false;
+    }
     
-    if (error) throw error;
+    // Append new candidate and update
+    const candidatesArray = [...(session.offer_candidates || []), candidate];
+    
+    const { error: updateError } = await supabase
+      .from('stream_sessions')
+      .update({ offer_candidates: candidatesArray })
+      .eq('id', sessionId);
+      
+    if (updateError) {
+      console.error('Error updating offer candidates:', updateError);
+      return false;
+    }
+    
     return true;
   } catch (error) {
-    console.error('Error appending offer candidate:', error);
+    console.error('Error in appendOfferCandidate:', error);
     return false;
   }
 };
@@ -126,20 +160,34 @@ export const appendAnswerCandidate = async (
   candidate: RTCIceCandidateInit
 ): Promise<boolean> => {
   try {
-    const { error } = await supabase.functions.invoke('stream_session_utils', {
-      body: {
-        name: 'append_answer_candidate',
-        params: {
-          session_id: sessionId,
-          candidate: JSON.stringify(candidate)
-        }
-      }
-    });
+    // First get current candidates
+    const { data: session, error: getError } = await supabase
+      .from('stream_sessions')
+      .select('answer_candidates')
+      .eq('id', sessionId)
+      .single();
+      
+    if (getError) {
+      console.error('Error fetching session for candidates:', getError);
+      return false;
+    }
     
-    if (error) throw error;
+    // Append new candidate and update
+    const candidatesArray = [...(session.answer_candidates || []), candidate];
+    
+    const { error: updateError } = await supabase
+      .from('stream_sessions')
+      .update({ answer_candidates: candidatesArray })
+      .eq('id', sessionId);
+      
+    if (updateError) {
+      console.error('Error updating answer candidates:', updateError);
+      return false;
+    }
+    
     return true;
   } catch (error) {
-    console.error('Error appending answer candidate:', error);
+    console.error('Error in appendAnswerCandidate:', error);
     return false;
   }
 };

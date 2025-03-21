@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,7 +48,6 @@ const LiveStream: React.FC = () => {
     endStream
   } = useStreamConnection(conferenceId || '');
   
-  // Fetch livestream data
   useEffect(() => {
     const fetchLivestreamData = async () => {
       if (!conferenceId) return;
@@ -68,11 +66,9 @@ const LiveStream: React.FC = () => {
         console.log("Fetched livestream data:", data);
         setLivestreamData(data);
         
-        // Check if user is host
         if (user && data.user_id === user.id) {
           setHasPaid(true);
         } else {
-          // For demo, auto-approve non-hosts
           setHasPaid(true);
         }
         
@@ -93,7 +89,6 @@ const LiveStream: React.FC = () => {
     fetchLivestreamData();
   }, [conferenceId, user, navigate, toast]);
   
-  // Set up video streams
   useEffect(() => {
     if (localStream && localVideoRef.current) {
       localVideoRef.current.srcObject = localStream;
@@ -104,13 +99,11 @@ const LiveStream: React.FC = () => {
     }
   }, [localStream, remoteStream]);
   
-  // Start streaming when ready
   useEffect(() => {
     const initializeStream = async () => {
       if (!livestreamData || !hasPaid || !user || isConnected) return;
       
       try {
-        // Check if user is the host
         const isUserHost = user.id === livestreamData.user_id;
         
         if (isUserHost) {
@@ -121,7 +114,6 @@ const LiveStream: React.FC = () => {
           await joinStream();
         }
         
-        // Increment view count for viewers
         if (!isUserHost && livestreamData) {
           await supabase
             .from('livestreams')
@@ -139,6 +131,22 @@ const LiveStream: React.FC = () => {
   const handleEndStream = () => {
     endStream();
     navigate('/dashboard');
+    
+    if (isHost && livestreamData) {
+      supabase
+        .from('livestreams')
+        .update({ 
+          is_active: false,
+          ended_at: new Date().toISOString()
+        })
+        .eq('id', livestreamData.id)
+        .then(() => {
+          console.log('Livestream marked as ended');
+        })
+        .catch((err) => {
+          console.error('Error marking livestream as ended:', err);
+        });
+    }
   };
   
   const toggleAudio = () => {
