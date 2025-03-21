@@ -31,13 +31,11 @@ export const useAgoraVideo = (appointmentId: string): UseAgoraVideoResult => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
-  // Use refs to maintain references across renders
   const agoraClientRef = useRef<any | null>(null);
   const localAudioTrackRef = useRef<any | null>(null);
   const localVideoTrackRef = useRef<any | null>(null);
   const isLivestreamingRef = useRef(false);
 
-  // Agora app ID from environment or configuration
   const AGORA_APP_ID = 'fe3e46a0094f486b91a0e90ac8e4379a';
 
   const generateToken = useCallback(async (uid: string): Promise<TokenData | null> => {
@@ -105,7 +103,6 @@ export const useAgoraVideo = (appointmentId: string): UseAgoraVideoResult => {
     agoraChannelName: string,
     uid: string | number
   ) => {
-    // Ensure client is initialized
     if (!agoraClientRef.current) {
       agoraClientRef.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
     }
@@ -152,7 +149,6 @@ export const useAgoraVideo = (appointmentId: string): UseAgoraVideoResult => {
           }, 15000);
           
           try {
-            // Convert the UID to a number explicitly
             const numericUid = typeof uid === 'string' ? parseInt(uid, 10) : uid;
             
             if (typeof uid === 'string' && isNaN(parseInt(uid, 10))) {
@@ -161,7 +157,6 @@ export const useAgoraVideo = (appointmentId: string): UseAgoraVideoResult => {
             
             console.log("Joining with converted UID:", numericUid);
             
-            // Join with the proper numeric UID
             const joinedUid = await client.join(
               AGORA_APP_ID,
               agoraChannelName,
@@ -229,22 +224,18 @@ export const useAgoraVideo = (appointmentId: string): UseAgoraVideoResult => {
     setError(null);
 
     try {
-      // Initialize Agora client if not already done
       if (!agoraClientRef.current) {
         console.log("Creating Agora client...");
         agoraClientRef.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
       }
 
-      // Generate token
       const tokenData = await generateToken(uid);
       if (!tokenData || !tokenData.token || !tokenData.channelName) {
         throw new Error("Failed to generate token for livestream");
       }
 
-      // Initialize tracks
       await initializeTracks();
 
-      // Join the channel and start broadcasting
       await joinChannel(tokenData.token, tokenData.channelName, uid);
       console.log("Livestream started successfully");
       
@@ -252,7 +243,6 @@ export const useAgoraVideo = (appointmentId: string): UseAgoraVideoResult => {
       console.error("Error starting livestream:", err);
       setError(err.message || "Failed to start livestream");
       
-      // Cleanup if there was an error
       await stopLivestream();
     } finally {
       setIsLoading(false);
@@ -266,7 +256,6 @@ export const useAgoraVideo = (appointmentId: string): UseAgoraVideoResult => {
       if (client && isLivestreamingRef.current) {
         console.log("Stopping livestream...");
         
-        // Unpublish tracks if they exist
         if (localAudioTrackRef.current || localVideoTrackRef.current) {
           const tracks = [];
           if (localAudioTrackRef.current) tracks.push(localAudioTrackRef.current);
@@ -278,11 +267,9 @@ export const useAgoraVideo = (appointmentId: string): UseAgoraVideoResult => {
           }
         }
         
-        // Leave the channel
         await client.leave();
         console.log("Left Agora channel");
         
-        // Cleanup tracks
         if (localAudioTrackRef.current) {
           localAudioTrackRef.current.close();
           localAudioTrackRef.current = null;

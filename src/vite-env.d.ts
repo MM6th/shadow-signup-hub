@@ -63,18 +63,15 @@ declare module 'agora-rtc-sdk-ng' {
     codec: string;
   }
 
-  // Main AgoraRTC export
-  export default interface AgoraRTC {
-    createClient(config: ClientConfig): IAgoraRTCClient;
-    createMicrophoneAudioTrack(options?: any): Promise<ILocalAudioTrack>;
-    createCameraVideoTrack(options?: any): Promise<ILocalVideoTrack>;
-    createMicrophoneAndCameraTracks(audioOptions?: any, videoOptions?: any): Promise<[ILocalAudioTrack, ILocalVideoTrack]>;
-  }
-
-  export const createClient: (config: ClientConfig) => IAgoraRTCClient;
-  export const createMicrophoneAudioTrack: (options?: any) => Promise<ILocalAudioTrack>;
-  export const createCameraVideoTrack: (options?: any) => Promise<ILocalVideoTrack>;
-  export const createMicrophoneAndCameraTracks: (audioOptions?: any, videoOptions?: any) => Promise<[ILocalAudioTrack, ILocalVideoTrack]>;
-
   export type ConnectionState = 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'RECONNECTING' | 'DISCONNECTING';
 }
+
+// Make AgoraRTC available as a value that can be imported
+declare const AgoraRTC: {
+  createClient(config: import('agora-rtc-sdk-ng').ClientConfig): import('agora-rtc-sdk-ng').IAgoraRTCClient;
+  createMicrophoneAudioTrack(options?: any): Promise<import('agora-rtc-sdk-ng').ILocalAudioTrack>;
+  createCameraVideoTrack(options?: any): Promise<import('agora-rtc-sdk-ng').ILocalVideoTrack>;
+  createMicrophoneAndCameraTracks(audioOptions?: any, videoOptions?: any): Promise<[import('agora-rtc-sdk-ng').ILocalAudioTrack, import('agora-rtc-sdk-ng').ILocalVideoTrack]>;
+};
+
+export default AgoraRTC;
