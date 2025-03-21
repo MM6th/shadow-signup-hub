@@ -200,7 +200,7 @@ export const useVideoCall = (roomId: string) => {
           }
         });
         
-        client.on('user-published', async (user: any, mediaType: string) => {
+        client.on('user-published', async (user: any, mediaType: 'audio' | 'video') => {
           console.log(`Remote user ${user.uid} published ${mediaType} track`);
           await client.subscribe(user, mediaType);
           
