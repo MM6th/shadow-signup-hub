@@ -1,9 +1,8 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { RtcTokenBuilder, RtcRole } from "https://esm.sh/agora-token@2.0.3";
 
-const AGORA_APP_ID = "0763309372ab4637918e71cb13f52323";
+const AGORA_APP_ID = "fe3e46a0094f486b91a0e90ac8e4379a";
 
 function generateAgoraToken(channelName: string, uid: string, role: string, expirationTimeInSeconds: number, appCertificate: string) {
   try {

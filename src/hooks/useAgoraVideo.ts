@@ -98,7 +98,7 @@ export const useAgoraVideo = (appointmentId: string) => {
       
       // Join the channel
       const uid = await client.join(
-        '0763309372ab4637918e71cb13f52323', // Agora App ID
+        'fe3e46a0094f486b91a0e90ac8e4379a', // Updated Agora App ID
         agoraChannelName,
         agoraToken,
         null // Use null for a random UID, or specify a number
