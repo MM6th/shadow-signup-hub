@@ -75,37 +75,6 @@ export const useAgoraVideo = (appointmentId: string): UseAgoraVideoResult => {
     }
   }, [createClient, joinAgoraChannel, localAudioTrack, localVideoTrack, setError]);
 
-  const startLivestream = useCallback(async (uid: string) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      createClient();
-
-      const tokenData = await generateToken(uid);
-      if (!tokenData || !tokenData.token || !tokenData.channelName) {
-        throw new Error("Failed to generate token for livestream");
-      }
-
-      // Create local tracks
-      await createTracks();
-
-      // Join channel with the token
-      await joinChannel(tokenData.token, tokenData.channelName, uid);
-      console.log("Livestream started successfully");
-      isLivestreamingRef.current = true;
-      
-    } catch (err: any) {
-      console.error("Error starting livestream:", err);
-      setError(err.message || "Failed to start livestream");
-      setTokenError(err.message || "Failed to start livestream");
-      
-      await stopLivestream();
-    } finally {
-      setIsLoading(false);
-    }
-  }, [createClient, createTracks, generateToken, joinChannel, stopLivestream, setTokenError]);
-
   const stopLivestream = useCallback(async () => {
     try {
       if (isLivestreamingRef.current) {
@@ -131,6 +100,57 @@ export const useAgoraVideo = (appointmentId: string): UseAgoraVideoResult => {
       setError(`Failed to stop livestream: ${err.message}`);
     }
   }, [unpublishTracks, leaveChannel, closeTracks, localAudioTrack, localVideoTrack]);
+
+  const startLivestream = useCallback(async (uid: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      createClient();
+
+      const tokenData = await generateToken(uid);
+      if (!tokenData || !tokenData.token || !tokenData.channelName) {
+        throw new Error("Failed to generate token for livestream");
+      }
+
+      // Create local tracks
+      await createTracks();
+
+      // Join channel with the token
+      await joinChannel(tokenData.token, tokenData.channelName, uid);
+      console.log("Livestream started successfully");
+      isLivestreamingRef.current = true;
+      
+    } catch (err: any) {
+      console.error("Error starting livestream:", err);
+      setError(err.message || "Failed to start livestream");
+      setTokenError(err.message || "Failed to start livestream");
+      
+      // Call the stopLivestream function directly to avoid the circular reference
+      try {
+        if (isLivestreamingRef.current) {
+          console.log("Cleaning up after livestream error...");
+          
+          const tracks = [];
+          if (localAudioTrack) tracks.push(localAudioTrack);
+          if (localVideoTrack) tracks.push(localVideoTrack);
+          
+          if (tracks.length > 0) {
+            await unpublishTracks(tracks);
+          }
+          
+          await leaveChannel();
+          closeTracks();
+          
+          isLivestreamingRef.current = false;
+        }
+      } catch (cleanupErr: any) {
+        console.error("Error during cleanup:", cleanupErr);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [createClient, createTracks, generateToken, joinChannel, unpublishTracks, leaveChannel, closeTracks, localAudioTrack, localVideoTrack, setTokenError]);
 
   return {
     isLoading,

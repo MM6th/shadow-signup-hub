@@ -46,7 +46,8 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     toggleVideo,
     endCall,
     localTracks,
-    remoteTracks
+    remoteTracks,
+    connectionError
   } = useVideoCall(roomId);
 
   useEffect(() => {
@@ -292,7 +293,7 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
           </div>
           
           <CallControls 
-            isMicOn={isAudioOn}
+            isMicOn={isMicOn}
             isVideoOn={isVideoOn}
             isConnected={permissionsGranted}
             isJoining={isJoining}
@@ -328,4 +329,3 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
 };
 
 export default VideoConference;
-
