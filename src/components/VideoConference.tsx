@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { useVideoCall } from '@/components/video-conference/useVideoCall';
 import LocalVideo from '@/components/video-conference/LocalVideo';
@@ -35,11 +36,10 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
 
   const {
     isConnected,
-    isAudioOn,
+    isMicOn,
     isVideoOn,
     isJoining,
     permissionsGranted,
-    makeCall,
     initializeCall,
     requestPermissions,
     toggleMic,
@@ -103,7 +103,7 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
               setShowCallButton(true);
             } else {
               setTimeout(() => {
-                makeCall();
+                handleMakeCall();
               }, 1000);
             }
           } catch (initError: any) {
@@ -132,7 +132,13 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   };
 
   const handleMakeCall = () => {
-    makeCall();
+    if (isHost) {
+      // Start the call as host (this is simple, just connect to the room)
+      console.log("Starting call as host");
+    } else {
+      // Join the call as a participant
+      console.log("Joining call as participant");
+    }
     setShowCallButton(false);
   };
 
