@@ -12,3 +12,8 @@ export interface LivestreamType {
   enable_crypto: boolean;
   enable_paypal: boolean;
 }
+
+// Helper function to determine if a stream is truly active
+export const isStreamActive = (stream: LivestreamType): boolean => {
+  return stream.is_active === true && stream.ended_at === null;
+};

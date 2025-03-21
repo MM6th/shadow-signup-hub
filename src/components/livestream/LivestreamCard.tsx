@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { LivestreamType } from '@/components/livestream/types';
+import { LivestreamType, isStreamActive } from '@/components/livestream/types';
 
 interface LivestreamCardProps {
   stream: LivestreamType;
@@ -30,10 +30,8 @@ const LivestreamCard: React.FC<LivestreamCardProps> = ({ stream, onDelete }) => 
     navigate(`/livestream/${conferenceId}`);
   };
 
-  // Helper function to determine if a stream is truly active
-  const isStreamActive = (stream: LivestreamType): boolean => {
-    return stream.is_active === true && stream.ended_at === null;
-  };
+  // Determine if the stream has ended
+  const hasEnded = !isStreamActive(stream);
 
   return (
     <Card key={stream.id} className="overflow-hidden">
@@ -62,9 +60,9 @@ const LivestreamCard: React.FC<LivestreamCardProps> = ({ stream, onDelete }) => 
         <div className="flex justify-between text-sm text-gray-500">
           <span>Views: {stream.views || 0}</span>
           <span>
-            {isStreamActive(stream)
-              ? 'Started ' + formatDistanceToNow(new Date(stream.created_at), { addSuffix: true })
-              : 'Ended ' + formatDistanceToNow(new Date(stream.ended_at || stream.created_at), { addSuffix: true })
+            {hasEnded
+              ? 'Ended ' + formatDistanceToNow(new Date(stream.ended_at || stream.created_at), { addSuffix: true })
+              : 'Started ' + formatDistanceToNow(new Date(stream.created_at), { addSuffix: true })
             }
           </span>
         </div>
