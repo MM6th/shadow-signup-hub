@@ -116,10 +116,10 @@ export const useAgoraVideo = (appointmentId: string) => {
             // This ensures we're passing the correct type to client.join
             let uidToUse: number | null = null;
             
-            // For Agora SDK, we need a number UID, not a string
-            // Parse the UID from a string to a number
-            if (typeof client.uid === 'string') {
-              const parsedUid = parseInt(client.uid, 10);
+            // Handle string UID from user input
+            const userId = typeof client.uid === 'string' ? client.uid : null;
+            if (userId) {
+              const parsedUid = parseInt(userId, 10);
               if (!isNaN(parsedUid)) {
                 uidToUse = parsedUid;
               }
