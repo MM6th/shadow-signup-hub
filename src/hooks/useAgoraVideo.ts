@@ -113,11 +113,11 @@ export const useAgoraVideo = (appointmentId: string) => {
           }, 15000);
           
           try {
-            // Convert the client.uid to a number, or use null if it's not a valid number
-            // This is the key fix: Making sure we're passing a number or null to client.join
+            // Convert the provided UID to a number if possible, otherwise use null
+            // This ensures we're passing the correct type to client.join
             let uidToUse: number | null = null;
             
-            if (client.uid) {
+            if (client.uid !== undefined && client.uid !== null) {
               // Ensure we're working with a string first
               const uidString = String(client.uid);
               const parsedUid = parseInt(uidString, 10);
