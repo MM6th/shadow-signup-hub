@@ -126,7 +126,7 @@ export const useAgoraVideo = (appointmentId: string) => {
             const uidAsNumber = parseInt(uid, 10);
             // Use the parsed number UID if valid, otherwise use null to let Agora assign a random UID
             const joinedUid = await client.join(
-              'fe3e46a0094f486b91a0e90ac8e4379a', // Updated Agora App ID
+              'fe3e46a0094f486b91a0e90ac8e4379a', // Agora App ID
               agoraChannelName,
               agoraToken,
               isNaN(uidAsNumber) ? null : uidAsNumber
