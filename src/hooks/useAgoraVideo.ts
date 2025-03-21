@@ -126,7 +126,7 @@ export const useAgoraVideo = (appointmentId: string) => {
             
             // If client.uid exists and is a string, try to convert it to a number
             if (client.uid) {
-              const parsedUid = parseInt(client.uid.toString(), 10);
+              const parsedUid = parseInt(String(client.uid), 10);
               if (!isNaN(parsedUid)) {
                 uidToUse = parsedUid;
               }
