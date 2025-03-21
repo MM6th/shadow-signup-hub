@@ -1,27 +1,30 @@
 
 import { supabase } from './client';
 
-interface WebRTCSession {
+// Define the JSON structure for RTCSessionDescription
+interface WebRTCSessionData {
+  sessionId: string;
+  offer?: RTCSessionDescriptionInit;
+  answer?: RTCSessionDescriptionInit;
+  candidatesOffer?: RTCIceCandidateInit[];
+  candidatesAnswer?: RTCIceCandidateInit[];
+}
+
+export interface WebRTCSession {
   id: string;
-  data: {
-    sessionId: string;
-    offer?: RTCSessionDescriptionInit;
-    answer?: RTCSessionDescriptionInit;
-    candidatesOffer?: RTCIceCandidateInit[];
-    candidatesAnswer?: RTCIceCandidateInit[];
-  };
+  data: WebRTCSessionData;
   created_at: string;
   updated_at: string;
 }
 
-export async function createWebRTCSession(id: string, sessionData: any): Promise<WebRTCSession | null> {
+export async function createWebRTCSession(id: string, sessionData: WebRTCSessionData): Promise<WebRTCSession | null> {
   try {
     const { data, error } = await supabase
       .from('webrtc_sessions')
       .insert({
         id,
         data: sessionData
-      } as any)
+      })
       .select()
       .single();
       
@@ -39,9 +42,10 @@ export async function getWebRTCSession(id: string): Promise<WebRTCSession | null
       .from('webrtc_sessions')
       .select('*')
       .eq('id', id)
-      .single() as any;
+      .single();
       
     if (error) throw error;
+    // Make sure we return with the correct type
     return data as WebRTCSession;
   } catch (error) {
     console.error('Error fetching WebRTC session:', error);
@@ -49,13 +53,13 @@ export async function getWebRTCSession(id: string): Promise<WebRTCSession | null
   }
 }
 
-export async function updateWebRTCSession(id: string, sessionData: any): Promise<boolean> {
+export async function updateWebRTCSession(id: string, sessionData: WebRTCSessionData): Promise<boolean> {
   try {
     const { error } = await supabase
       .from('webrtc_sessions')
       .update({
         data: sessionData
-      } as any)
+      })
       .eq('id', id);
       
     if (error) throw error;

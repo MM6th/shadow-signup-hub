@@ -1,7 +1,7 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getWebRTCSession, updateWebRTCSession, WebRTCSession } from '@/integrations/supabase/webrtc-sessions';
 
 interface RTCSessionData {
   sessionId: string;
@@ -21,15 +21,12 @@ export const useWebRTCStream = (streamId: string) => {
   const localStream = useRef<MediaStream | null>(null);
   const remoteStream = useRef<MediaStream | null>(null);
   
-  // Store ice candidates until peer connection is ready
   const iceCandidates = useRef<RTCIceCandidate[]>([]);
 
-  // Initialize WebRTC
   const initializeWebRTC = useCallback(async (): Promise<boolean> => {
     try {
       setIsLoading(true);
       
-      // Create a new peer connection
       const configuration = {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
@@ -39,7 +36,6 @@ export const useWebRTCStream = (streamId: string) => {
       
       peerConnection.current = new RTCPeerConnection(configuration);
       
-      // Create new streams
       remoteStream.current = new MediaStream();
       
       return true;
@@ -57,7 +53,6 @@ export const useWebRTCStream = (streamId: string) => {
     }
   }, [toast]);
 
-  // Start a livestream (host)
   const startStream = useCallback(async (): Promise<MediaStream | null> => {
     try {
       if (!peerConnection.current) {
@@ -65,13 +60,11 @@ export const useWebRTCStream = (streamId: string) => {
         if (!initialized) return null;
       }
       
-      // Get user media
       localStream.current = await navigator.mediaDevices.getUserMedia({ 
         video: true, 
         audio: true 
       });
       
-      // Add tracks to peer connection
       if (peerConnection.current && localStream.current) {
         localStream.current.getTracks().forEach(track => {
           if (peerConnection.current && localStream.current) {
@@ -80,20 +73,14 @@ export const useWebRTCStream = (streamId: string) => {
         });
       }
       
-      // Set up event handlers for the peer connection
       if (peerConnection.current) {
-        // Handle ICE candidates
         peerConnection.current.onicecandidate = (event) => {
           if (event.candidate) {
-            // Store ice candidates
             iceCandidates.current.push(event.candidate);
-            
-            // Update database with new ice candidate
             updateSessionWithCandidate(event.candidate, true);
           }
         };
         
-        // Handle connection state changes
         peerConnection.current.onconnectionstatechange = () => {
           if (peerConnection.current) {
             console.log("Connection state:", peerConnection.current.connectionState);
@@ -105,26 +92,27 @@ export const useWebRTCStream = (streamId: string) => {
           }
         };
         
-        // Create and store the offer
         const offer = await peerConnection.current.createOffer();
         await peerConnection.current.setLocalDescription(offer);
         
-        // Save the session to the database
         const sessionData: RTCSessionData = {
           sessionId: streamId,
           offer: offer,
           candidatesOffer: []
         };
         
-        await supabase
-          .from('webrtc_sessions')
-          .upsert({ 
-            id: streamId,
-            data: sessionData,
-            created_at: new Date().toISOString()
-          } as any);
+        try {
+          await supabase
+            .from('webrtc_sessions')
+            .upsert({ 
+              id: streamId,
+              data: sessionData,
+              created_at: new Date().toISOString()
+            });
+        } catch (err) {
+          console.error('Error storing session:', err);
+        }
           
-        // Listen for answers
         const subscription = supabase
           .channel(`webrtc_sessions:id=eq.${streamId}`)
           .on('postgres_changes', { 
@@ -133,31 +121,27 @@ export const useWebRTCStream = (streamId: string) => {
             table: 'webrtc_sessions',
             filter: `id=eq.${streamId}`
           }, async (payload) => {
-            const data = payload.new.data as RTCSessionData;
+            const sessionData = payload.new.data as RTCSessionData;
             
-            // If we have an answer but haven't set it yet
-            if (data.answer && peerConnection.current?.currentRemoteDescription === null) {
-              const remoteDesc = new RTCSessionDescription(data.answer);
+            if (sessionData.answer && peerConnection.current?.currentRemoteDescription === null) {
+              const remoteDesc = new RTCSessionDescription(sessionData.answer);
               await peerConnection.current?.setRemoteDescription(remoteDesc);
               
-              // Add any ice candidates from answer
-              if (data.candidatesAnswer && data.candidatesAnswer.length > 0) {
-                for (const candidate of data.candidatesAnswer) {
+              if (sessionData.candidatesAnswer && sessionData.candidatesAnswer.length > 0) {
+                for (const candidate of sessionData.candidatesAnswer) {
                   await peerConnection.current?.addIceCandidate(new RTCIceCandidate(candidate));
                 }
               }
             }
             
-            // If there are new answer candidates
-            if (data.candidatesAnswer && data.candidatesAnswer.length > 0) {
-              for (const candidate of data.candidatesAnswer) {
+            if (sessionData.candidatesAnswer && sessionData.candidatesAnswer.length > 0) {
+              for (const candidate of sessionData.candidatesAnswer) {
                 await peerConnection.current?.addIceCandidate(new RTCIceCandidate(candidate));
               }
             }
           })
           .subscribe();
           
-        // Return the local stream for displaying in UI
         return localStream.current;
       }
       
@@ -173,8 +157,7 @@ export const useWebRTCStream = (streamId: string) => {
       return null;
     }
   }, [initializeWebRTC, streamId, toast]);
-  
-  // Join a livestream (viewer)
+
   const joinStream = useCallback(async (): Promise<MediaStream | null> => {
     try {
       if (!peerConnection.current) {
@@ -182,49 +165,34 @@ export const useWebRTCStream = (streamId: string) => {
         if (!initialized) return null;
       }
       
-      // Fetch the session data
-      const { data, error } = await supabase
-        .from('webrtc_sessions')
-        .select('*')
-        .eq('id', streamId)
-        .single() as any;
-        
-      if (error) throw error;
-      if (!data) throw new Error('Session not found');
+      const session = await getWebRTCSession(streamId);
       
-      const sessionData = data.data as RTCSessionData;
+      if (!session) throw new Error('Session not found');
+      const sessionData = session.data as RTCSessionData;
       if (!sessionData.offer) throw new Error('No offer found in session');
       
-      // Set the remote description (offer)
       const remoteDesc = new RTCSessionDescription(sessionData.offer);
       await peerConnection.current.setRemoteDescription(remoteDesc);
       
-      // Handle ICE candidates from the offer
       if (sessionData.candidatesOffer && sessionData.candidatesOffer.length > 0) {
         for (const candidate of sessionData.candidatesOffer) {
           await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
         }
       }
       
-      // Handle incoming tracks
       peerConnection.current.ontrack = (event) => {
         if (remoteStream.current && event.track) {
           remoteStream.current.addTrack(event.track);
         }
       };
       
-      // Handle ICE candidates
       peerConnection.current.onicecandidate = (event) => {
         if (event.candidate) {
-          // Store locally
           iceCandidates.current.push(event.candidate);
-          
-          // Update database with new ice candidate
           updateSessionWithCandidate(event.candidate, false);
         }
       };
       
-      // Handle connection state changes
       peerConnection.current.onconnectionstatechange = () => {
         if (peerConnection.current) {
           console.log("Connection state:", peerConnection.current.connectionState);
@@ -236,43 +204,37 @@ export const useWebRTCStream = (streamId: string) => {
         }
       };
       
-      // Create and send answer
       const answer = await peerConnection.current.createAnswer();
       await peerConnection.current.setLocalDescription(answer);
       
-      // Update the session with our answer
-      await supabase
-        .from('webrtc_sessions')
-        .update({
-          data: {
-            ...sessionData,
-            answer: answer,
-            candidatesAnswer: []
-          }
-        } as any)
-        .eq('id', streamId);
+      if (session && sessionData) {
+        const updatedSessionData: RTCSessionData = {
+          ...sessionData,
+          answer: answer,
+          candidatesAnswer: sessionData.candidatesAnswer || []
+        };
         
-      // Listen for offer candidate updates
-      const subscription = supabase
-        .channel(`webrtc_sessions:id=eq.${streamId}`)
-        .on('postgres_changes', { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'webrtc_sessions',
-          filter: `id=eq.${streamId}`
-        }, async (payload) => {
-          const data = payload.new.data as RTCSessionData;
-          
-          // If there are new offer candidates
-          if (data.candidatesOffer && data.candidatesOffer.length > 0) {
-            for (const candidate of data.candidatesOffer) {
-              await peerConnection.current?.addIceCandidate(new RTCIceCandidate(candidate));
+        await updateWebRTCSession(streamId, updatedSessionData);
+        
+        const subscription = supabase
+          .channel(`webrtc_sessions:id=eq.${streamId}`)
+          .on('postgres_changes', { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'webrtc_sessions',
+            filter: `id=eq.${streamId}`
+          }, async (payload) => {
+            const data = payload.new.data as RTCSessionData;
+            
+            if (data.candidatesOffer && data.candidatesOffer.length > 0) {
+              for (const candidate of data.candidatesOffer) {
+                await peerConnection.current?.addIceCandidate(new RTCIceCandidate(candidate));
+              }
             }
-          }
-        })
-        .subscribe();
+          })
+          .subscribe();
+      }
       
-      // Return the remote stream for display
       return remoteStream.current;
     } catch (err: any) {
       console.error('Error joining WebRTC stream:', err);
@@ -286,22 +248,13 @@ export const useWebRTCStream = (streamId: string) => {
     }
   }, [initializeWebRTC, streamId, toast]);
 
-  // Helper to update session with ICE candidates
   const updateSessionWithCandidate = async (candidate: RTCIceCandidate, isOffer: boolean) => {
     try {
-      // Get the current session data
-      const { data, error } = await supabase
-        .from('webrtc_sessions')
-        .select('*')
-        .eq('id', streamId)
-        .single() as any;
-        
-      if (error) throw error;
-      if (!data) throw new Error('Session not found');
+      const session = await getWebRTCSession(streamId);
       
-      const sessionData = data.data as RTCSessionData;
+      if (!session) throw new Error('Session not found');
+      const sessionData = session.data as RTCSessionData;
       
-      // Update the appropriate candidates array
       if (isOffer) {
         const candidatesOffer = sessionData.candidatesOffer || [];
         candidatesOffer.push(candidate.toJSON());
@@ -312,20 +265,14 @@ export const useWebRTCStream = (streamId: string) => {
         sessionData.candidatesAnswer = candidatesAnswer;
       }
       
-      // Update the session
-      await supabase
-        .from('webrtc_sessions')
-        .update({ data: sessionData } as any)
-        .eq('id', streamId);
+      await updateWebRTCSession(streamId, sessionData);
     } catch (err) {
       console.error('Error updating session with ICE candidate:', err);
     }
   };
 
-  // End stream and clean up
   const endStream = useCallback(() => {
     try {
-      // Close media streams
       if (localStream.current) {
         localStream.current.getTracks().forEach(track => track.stop());
         localStream.current = null;
@@ -336,38 +283,38 @@ export const useWebRTCStream = (streamId: string) => {
         remoteStream.current = null;
       }
       
-      // Close peer connection
       if (peerConnection.current) {
         peerConnection.current.close();
         peerConnection.current = null;
       }
       
-      // Update connection state
       setIsConnected(false);
       
-      // Mark livestream as ended in database if we're the host
-      supabase
-        .from('livestreams')
-        .update({ is_active: false, ended_at: new Date().toISOString() })
-        .eq('conference_id', streamId)
-        .then(() => {
-          console.log('Livestream marked as ended');
-        })
-        .catch(err => {
-          console.error('Error marking livestream as ended:', err);
-        });
+      try {
+        supabase
+          .from('livestreams')
+          .update({ is_active: false, ended_at: new Date().toISOString() })
+          .eq('conference_id', streamId)
+          .then(({ error }) => {
+            if (error) {
+              console.error('Error marking livestream as ended:', error);
+            } else {
+              console.log('Livestream marked as ended');
+            }
+          });
+      } catch (err) {
+        console.error('Error ending stream:', err);
+      }
       
     } catch (err) {
       console.error('Error ending stream:', err);
     }
   }, [streamId]);
-  
-  // Play recorded stream
+
   const playRecording = useCallback(async (): Promise<string | null> => {
     try {
       setIsLoading(true);
       
-      // Get recording URL from storage
       const { data, error } = await supabase
         .storage
         .from('livestream_recordings')
