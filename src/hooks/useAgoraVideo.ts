@@ -123,12 +123,13 @@ export const useAgoraVideo = (appointmentId: string) => {
           try {
             // Join the channel
             // Convert string UID to number if it's a numeric string
-            const uidInput = parseInt(uid, 10);
+            const uidAsNumber = parseInt(uid, 10);
+            // Use the parsed number UID if valid, otherwise use null to let Agora assign a random UID
             const joinedUid = await client.join(
               'fe3e46a0094f486b91a0e90ac8e4379a', // Updated Agora App ID
               agoraChannelName,
               agoraToken,
-              isNaN(uidInput) ? null : uidInput // Use null for a random UID, or specify a number
+              isNaN(uidAsNumber) ? null : uidAsNumber
             );
             clearTimeout(timeout);
             resolve(joinedUid);
