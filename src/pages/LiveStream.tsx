@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -115,7 +114,6 @@ const LiveStream: React.FC = () => {
           await joinStream();
         }
         
-        // Fix the promise chain to properly handle errors
         if (!isUserHost && livestreamData) {
           try {
             await supabase
@@ -139,19 +137,23 @@ const LiveStream: React.FC = () => {
     navigate('/dashboard');
     
     if (isHost && livestreamData) {
-      supabase
-        .from('livestreams')
-        .update({ 
-          is_active: false,
-          ended_at: new Date().toISOString()
-        })
-        .eq('id', livestreamData.id)
-        .then(() => {
-          console.log('Livestream marked as ended');
-        })
-        .catch((err) => {
-          console.error('Error marking livestream as ended:', err);
-        });
+      try {
+        supabase
+          .from('livestreams')
+          .update({ 
+            is_active: false,
+            ended_at: new Date().toISOString()
+          })
+          .eq('id', livestreamData.id)
+          .then(() => {
+            console.log('Livestream marked as ended');
+          })
+          .catch((err) => {
+            console.error('Error marking livestream as ended:', err);
+          });
+      } catch (err) {
+        console.error('Error in handleEndStream:', err);
+      }
     }
   };
   
