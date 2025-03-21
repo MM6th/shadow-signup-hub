@@ -365,16 +365,30 @@ const LiveStream: React.FC = () => {
                 <div className="text-center">
                   <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
                   <p className="text-white">Connecting to stream...</p>
+                  {error && <p className="mt-2 text-red-400 max-w-md p-2">{error}</p>}
                 </div>
               </div>
             )}
             
             {!isConnected && !isLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-                <div className="text-center">
+                <div className="text-center max-w-md px-4">
                   <VideoIcon className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                  <p className="text-white mb-2">Waiting to connect...</p>
-                  {error && <p className="text-red-400">{error}</p>}
+                  <p className="text-white mb-2">Connection issue</p>
+                  {error ? (
+                    <div className="p-3 bg-red-900/50 rounded-lg mb-3">
+                      <p className="text-red-300 text-sm">{error}</p>
+                    </div>
+                  ) : (
+                    <p className="text-gray-300 mb-3">Couldn't connect to the stream. Please try refreshing the page.</p>
+                  )}
+                  <Button 
+                    onClick={() => window.location.reload()}
+                    variant="outline"
+                    className="bg-gray-800 text-white hover:bg-gray-700"
+                  >
+                    Refresh Page
+                  </Button>
                 </div>
               </div>
             )}

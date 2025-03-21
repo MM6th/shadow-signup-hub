@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAgoraVideo } from '@/hooks/useAgoraVideo';
@@ -10,6 +11,7 @@ export const useVideoCall = (roomId: string) => {
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   
   const agoraClientRef = useRef<any>(null);
   const localTracksRef = useRef<{
@@ -28,7 +30,14 @@ export const useVideoCall = (roomId: string) => {
     videoTrack: null
   });
   
-  const { generateToken, joinChannel, isLoading: isTokenLoading } = useAgoraVideo(roomId);
+  const { generateToken, joinChannel, isLoading: isTokenLoading, error: tokenError } = useAgoraVideo(roomId);
+  
+  // Update connection error when token error changes
+  useEffect(() => {
+    if (tokenError) {
+      setConnectionError(tokenError);
+    }
+  }, [tokenError]);
 
   const requestPermissions = useCallback(async (): Promise<boolean> => {
     try {
@@ -41,6 +50,9 @@ export const useVideoCall = (roomId: string) => {
       
       console.log("Camera and microphone permissions granted successfully");
       
+      // Clean up the temporary stream
+      stream.getTracks().forEach(track => track.stop());
+      
       setPermissionsGranted(true);
       toast({
         title: "Permissions granted",
@@ -52,6 +64,7 @@ export const useVideoCall = (roomId: string) => {
       console.error("Permission error:", err);
       
       setPermissionsGranted(false);
+      setConnectionError(`Permission error: ${err.message}`);
       toast({
         title: "Permission Error",
         description: err.message || "Failed to access camera and microphone",
@@ -65,6 +78,7 @@ export const useVideoCall = (roomId: string) => {
   const initializeCall = async (localVideoRef: HTMLDivElement, remoteVideoRef: HTMLDivElement) => {
     try {
       setIsJoining(true);
+      setConnectionError(null);
       console.log("Initializing call with room ID:", roomId);
       
       if (!permissionsGranted) {
@@ -164,6 +178,32 @@ export const useVideoCall = (roomId: string) => {
       if (remoteVideoRef && localTracksRef.current.audioTrack && localTracksRef.current.videoTrack) {
         const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' } as ClientConfig);
         
+        // Add detailed event listeners for better debugging
+        client.on("connection-state-change", (curState, prevState) => {
+          console.log(`Client connection state changed from ${prevState} to ${curState}`);
+          if (curState === "CONNECTED") {
+            setIsConnected(true);
+            setConnectionError(null);
+          } else if (curState === "DISCONNECTED" || curState === "FAILED") {
+            setIsConnected(false);
+            setConnectionError(`Connection state: ${curState}`);
+          }
+        });
+        
+        client.on("token-privilege-did-expire", async () => {
+          console.log("Token expired, refreshing...");
+          try {
+            const newTokenData = await generateToken(uid);
+            if (newTokenData) {
+              await client.renewToken(newTokenData.token);
+              console.log("Token renewed successfully");
+            }
+          } catch (err) {
+            console.error("Failed to renew token:", err);
+            setConnectionError("Token expired and renewal failed");
+          }
+        });
+        
         client.on('user-published', async (user, mediaType) => {
           console.log(`Remote user ${user.uid} published ${mediaType} track`);
           await client.subscribe(user, mediaType);
@@ -207,7 +247,8 @@ export const useVideoCall = (roomId: string) => {
         
         console.log("Joining channel:", tokenData.channelName);
         try {
-          agoraClientRef.current = await joinChannel(
+          // Set a timeout to ensure we don't wait forever
+          const joinPromise = joinChannel(
             client,
             localTracksRef.current.audioTrack,
             localTracksRef.current.videoTrack,
@@ -215,18 +256,29 @@ export const useVideoCall = (roomId: string) => {
             tokenData.channelName
           );
           
+          // Create a timeout promise
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error("Timeout: Join channel operation took too long")), 20000);
+          });
+          
+          // Race the join operation against the timeout
+          agoraClientRef.current = await Promise.race([joinPromise, timeoutPromise]);
+          
           setIsConnected(true);
+          setConnectionError(null);
           toast({
             title: "Connected to room",
             description: `You've joined room: ${roomId}`,
           });
         } catch (joinErr: any) {
           console.error("Error joining channel:", joinErr);
+          setConnectionError(`Failed to join channel: ${joinErr.message}`);
           throw new Error(`Failed to join channel: ${joinErr.message}`);
         }
       }
     } catch (error: any) {
       console.error('Error initializing Agora:', error);
+      setConnectionError(error.message || "Connection failed");
       toast({
         title: "Connection Error",
         description: error.message || "Could not connect to the video call. Please try again.",
@@ -312,6 +364,7 @@ export const useVideoCall = (roomId: string) => {
     isVideoOn,
     isJoining,
     permissionsGranted,
+    connectionError,
     localTracks: localTracksRef.current,
     remoteTracks: remoteTracksRef.current,
     initializeCall,

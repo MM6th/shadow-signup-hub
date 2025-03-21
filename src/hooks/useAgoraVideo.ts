@@ -96,14 +96,49 @@ export const useAgoraVideo = (appointmentId: string) => {
         tokenLength: agoraToken.length
       });
       
-      // Join the channel
-      const uid = await client.join(
-        'fe3e46a0094f486b91a0e90ac8e4379a', // Updated Agora App ID
-        agoraChannelName,
-        agoraToken,
-        null // Use null for a random UID, or specify a number
-      );
+      // Set client event handlers for better debugging
+      client.on("connection-state-change", (curState, prevState) => {
+        console.log("Connection state changed from", prevState, "to", curState);
+        
+        if (curState === "CONNECTED") {
+          setIsLoading(false);
+          setError(null);
+        } else if (curState === "DISCONNECTED" || curState === "FAILED") {
+          setError(`Connection failed: ${curState}`);
+          setIsLoading(false);
+        }
+      });
       
+      // Join the channel with a timeout
+      console.log("Attempting to join Agora channel...");
+      
+      // Create a promise with timeout for joining
+      const joinWithTimeout = async () => {
+        return new Promise<number>(async (resolve, reject) => {
+          // Set timeout of 15 seconds
+          const timeout = setTimeout(() => {
+            reject(new Error("Timeout: Failed to join Agora channel after 15 seconds"));
+          }, 15000);
+          
+          try {
+            // Join the channel
+            const uid = await client.join(
+              'fe3e46a0094f486b91a0e90ac8e4379a', // Updated Agora App ID
+              agoraChannelName,
+              agoraToken,
+              null // Use null for a random UID, or specify a number
+            );
+            clearTimeout(timeout);
+            resolve(uid);
+          } catch (error) {
+            clearTimeout(timeout);
+            reject(error);
+          }
+        });
+      };
+      
+      // Join with timeout handling
+      const uid = await joinWithTimeout();
       console.log('Joined channel with UID:', uid);
       
       // Publish local tracks with retry logic
@@ -121,8 +156,10 @@ export const useAgoraVideo = (appointmentId: string) => {
       
       // Return client for later use
       return client;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error joining Agora channel:", error);
+      setError(`Failed to join Agora channel: ${error.message}`);
+      setIsLoading(false);
       throw error;
     }
   }, []);
