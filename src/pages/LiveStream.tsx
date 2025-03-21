@@ -138,19 +138,19 @@ const LiveStream: React.FC = () => {
     
     if (isHost && livestreamData) {
       try {
-        supabase
+        const { error } = supabase
           .from('livestreams')
           .update({ 
             is_active: false,
             ended_at: new Date().toISOString()
           })
-          .eq('id', livestreamData.id)
-          .then(() => {
-            console.log('Livestream marked as ended');
-          })
-          .catch((err) => {
-            console.error('Error marking livestream as ended:', err);
-          });
+          .eq('id', livestreamData.id);
+          
+        if (error) {
+          console.error('Error marking livestream as ended:', error);
+        } else {
+          console.log('Livestream marked as ended');
+        }
       } catch (err) {
         console.error('Error in handleEndStream:', err);
       }
