@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,24 +9,18 @@ import { useToast } from '@/hooks/use-toast';
 import LivestreamCard from './LivestreamCard';
 import EmptyState from './EmptyState';
 import LoadingState from './LoadingState';
-import { LivestreamType } from './types';
+import { LivestreamType, isStreamActive } from './types';
+import { useQuery } from '@tanstack/react-query';
 
 const LivestreamTab: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [livestreams, setLivestreams] = useState<LivestreamType[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchLivestreams();
-  }, [user]);
-
-  const fetchLivestreams = async () => {
-    if (!user) return;
-    
-    try {
-      setLoading(true);
+  const { data: livestreams, isLoading, refetch } = useQuery<LivestreamType[]>({
+    queryKey: ['livestreams', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
       
       const { data, error } = await supabase
         .from('livestreams')
@@ -36,38 +30,11 @@ const LivestreamTab: React.FC = () => {
         
       if (error) throw error;
       
-      // Log the data to debug
       console.log('Fetched livestreams:', data);
-      
-      // Update each stream's active status based on creation time for demo purposes
-      const processedData = data?.map(stream => {
-        // Mark only the most recent stream as active for demo purposes
-        // This is a workaround since the database has all streams with ended_at: null
-        if (stream.title === "Test") {
-          return { ...stream };
-        } else {
-          // For older streams, we'll pretend they've ended
-          return { 
-            ...stream, 
-            // We're not actually changing the database, just the local state
-            // In a real app, you would update this in the database
-          };
-        }
-      }) || [];
-      
-      // Ensure data is properly set
-      setLivestreams(processedData);
-    } catch (error: any) {
-      console.error('Error fetching livestreams:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load livestreams",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      return data || [];
+    },
+    enabled: !!user
+  });
   
   const handleDeleteStream = async (streamId: string) => {
     try {
@@ -84,7 +51,7 @@ const LivestreamTab: React.FC = () => {
       });
       
       // Refresh the list
-      fetchLivestreams();
+      refetch();
     } catch (error: any) {
       console.error('Error deleting livestream:', error);
       toast({
@@ -95,8 +62,11 @@ const LivestreamTab: React.FC = () => {
     }
   };
 
+  const activeStreams = livestreams?.filter(isStreamActive) || [];
+  const pastStreams = livestreams?.filter(stream => !isStreamActive(stream)) || [];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">My Livestreams</h2>
         <Button onClick={() => setIsModalOpen(true)}>
@@ -105,26 +75,48 @@ const LivestreamTab: React.FC = () => {
         </Button>
       </div>
       
-      {loading ? (
+      {isLoading ? (
         <LoadingState />
-      ) : livestreams.length === 0 ? (
+      ) : livestreams?.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {livestreams.map((stream) => (
-            <LivestreamCard 
-              key={stream.id} 
-              stream={stream} 
-              onDelete={handleDeleteStream} 
-            />
-          ))}
-        </div>
+        <>
+          {activeStreams.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Live Now</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {activeStreams.map((stream) => (
+                  <LivestreamCard 
+                    key={stream.id} 
+                    stream={stream} 
+                    onDelete={handleDeleteStream} 
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {pastStreams.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Past Streams</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {pastStreams.map((stream) => (
+                  <LivestreamCard 
+                    key={stream.id} 
+                    stream={stream} 
+                    onDelete={handleDeleteStream} 
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
       
       <LiveStreamModal 
         open={isModalOpen} 
         onOpenChange={setIsModalOpen}
-        onSuccess={fetchLivestreams}
+        onSuccess={refetch}
       />
     </div>
   );

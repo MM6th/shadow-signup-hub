@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { LivestreamType, isStreamActive } from '@/components/livestream/types';
+import { LivestreamType, isStreamActive } from './types';
 
 interface LivestreamCardProps {
   stream: LivestreamType;
@@ -27,12 +27,12 @@ const LivestreamCard: React.FC<LivestreamCardProps> = ({ stream, onDelete }) => 
   const navigate = useNavigate();
   const active = isStreamActive(stream);
 
-  const handleJoinLivestream = (conferenceId: string) => {
-    navigate(`/livestream/${conferenceId}`);
+  const handleJoinLivestream = () => {
+    navigate(`/livestream/${stream.conference_id}`);
   };
 
   return (
-    <Card key={stream.id} className="overflow-hidden">
+    <Card className="overflow-hidden">
       <div className="aspect-video bg-gray-100 relative">
         {stream.thumbnail_url ? (
           <img 
@@ -69,14 +69,14 @@ const LivestreamCard: React.FC<LivestreamCardProps> = ({ stream, onDelete }) => 
       <CardFooter className="p-4 pt-0 flex justify-between">
         <Button 
           className="flex-1 mr-2" 
-          onClick={() => handleJoinLivestream(stream.conference_id)}
+          onClick={handleJoinLivestream}
         >
           {active ? (
-            <>Join</>
+            <>Join Stream</>
           ) : (
             <>
               <Play className="h-4 w-4 mr-2" />
-              Play Recording
+              View Recording
             </>
           )}
         </Button>

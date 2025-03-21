@@ -78,20 +78,18 @@ const LiveStreamModal: React.FC<LiveStreamModalProps> = ({ open, onOpenChange, o
       
       if (error) throw error;
       
-      // Create an initial WebRTC session with type assertion
+      // Create an initial stream session
       const { error: sessionError } = await supabase
-        .from('webrtc_sessions')
+        .from('stream_sessions')
         .insert({
           id: conferenceId,
-          data: {
-            sessionId: conferenceId,
-            candidatesOffer: [],
-            candidatesAnswer: []
-          }
-        } as any); // Using type assertion to bypass TypeScript check
+          host_id: user.id,
+          offer_candidates: [],
+          answer_candidates: []
+        });
         
       if (sessionError) {
-        console.error("WebRTC session creation error:", sessionError);
+        console.error("Stream session creation error:", sessionError);
         // Continue anyway, the session will be created when starting the stream
       }
       
