@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAgoraVideo } from '@/hooks/useAgoraVideo';
@@ -231,7 +232,7 @@ export const useVideoCall = (roomId: string) => {
           }
         });
         
-        client.on('user-unpublished', (user: any, mediaType: string) => {
+        client.on('user-unpublished', (user: any, mediaType: 'audio' | 'video') => {
           console.log(`Remote user ${user.uid} unpublished ${mediaType} track`);
           if (mediaType === 'video') {
             remoteTracksRef.current.videoTrack = null;
