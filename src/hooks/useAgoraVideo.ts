@@ -1,8 +1,13 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import AgoraRTC, { IAgoraRTCClient, ILocalAudioTrack, ILocalVideoTrack, ConnectionState } from 'agora-rtc-sdk-ng';
+import AgoraRTC, { 
+  IAgoraRTCClient, 
+  ILocalAudioTrack, 
+  ILocalVideoTrack, 
+  ConnectionState 
+} from 'agora-rtc-sdk-ng';
 
 interface TokenData {
   token: string;
@@ -11,12 +16,35 @@ interface TokenData {
   expirationTimeInSeconds: number;
 }
 
-export const useAgoraVideo = (appointmentId: string) => {
-  const [isLoading, setIsLoading] = useState(true);
+interface UseAgoraVideoResult {
+  isLoading: boolean;
+  token: string | null;
+  channelName: string | null;
+  error: string | null;
+  agoraClient: IAgoraRTCClient | null;
+  localAudioTrack: ILocalAudioTrack | null;
+  localVideoTrack: ILocalVideoTrack | null;
+  generateToken: (uid: string) => Promise<TokenData | null>;
+  joinChannel: (agoraToken: string, agoraChannelName: string, uid: string | number) => Promise<IAgoraRTCClient | undefined>;
+  startLivestream: (uid: string) => Promise<void>;
+  stopLivestream: () => Promise<void>;
+}
+
+export const useAgoraVideo = (appointmentId: string): UseAgoraVideoResult => {
+  const [isLoading, setIsLoading] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [channelName, setChannelName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Use refs to maintain references across renders
+  const agoraClientRef = useRef<IAgoraRTCClient | null>(null);
+  const localAudioTrackRef = useRef<ILocalAudioTrack | null>(null);
+  const localVideoTrackRef = useRef<ILocalVideoTrack | null>(null);
+  const isLivestreamingRef = useRef(false);
+
+  // Agora app ID from environment or configuration
+  const AGORA_APP_ID = 'fe3e46a0094f486b91a0e90ac8e4379a';
 
   const generateToken = useCallback(async (uid: string): Promise<TokenData | null> => {
     try {
@@ -79,17 +107,32 @@ export const useAgoraVideo = (appointmentId: string) => {
   }, [appointmentId, toast]);
 
   const joinChannel = useCallback(async (
-    client: IAgoraRTCClient,
-    localAudioTrack: ILocalAudioTrack, 
-    localVideoTrack: ILocalVideoTrack,
     agoraToken: string,
-    agoraChannelName: string
+    agoraChannelName: string,
+    uid: string | number
   ) => {
+    // Ensure client is initialized
+    if (!agoraClientRef.current) {
+      agoraClientRef.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+    }
+    
+    const client = agoraClientRef.current;
+    
+    if (!localAudioTrackRef.current || !localVideoTrackRef.current) {
+      console.error("Local tracks not initialized");
+      setError("Audio and video tracks must be initialized before joining channel");
+      return undefined;
+    }
+    
+    const localAudioTrack = localAudioTrackRef.current;
+    const localVideoTrack = localVideoTrackRef.current;
+
     try {
       console.log("Joining channel with:", { 
         tokenProvided: !!agoraToken, 
         channelName: agoraChannelName,
-        tokenLength: agoraToken.length
+        tokenLength: agoraToken.length,
+        uid: uid
       });
       
       client.on("connection-state-change", (curState, prevState) => {
@@ -98,9 +141,11 @@ export const useAgoraVideo = (appointmentId: string) => {
         if (curState === "CONNECTED") {
           setIsLoading(false);
           setError(null);
+          isLivestreamingRef.current = true;
         } else if (curState === "DISCONNECTED") {
           setError(`Connection failed: ${curState}`);
           setIsLoading(false);
+          isLivestreamingRef.current = false;
         }
       });
       
@@ -113,27 +158,23 @@ export const useAgoraVideo = (appointmentId: string) => {
           }, 15000);
           
           try {
-            // Convert the provided UID to a number if possible, otherwise use null
-            // This ensures we're passing the correct type to client.join
-            let uidToUse: number | null = null;
+            // Convert the UID to a number explicitly
+            const numericUid = typeof uid === 'string' ? parseInt(uid, 10) : uid;
             
-            // Parse the numeric UID from the string or use null
-            if (client.uid && typeof client.uid === 'string') {
-              const parsedUid = parseInt(client.uid, 10);
-              if (!isNaN(parsedUid)) {
-                uidToUse = parsedUid;
-              }
+            if (typeof uid === 'string' && isNaN(parseInt(uid, 10))) {
+              throw new Error("Invalid UID format: must be a numeric value");
             }
             
-            console.log("Joining with UID:", uidToUse);
+            console.log("Joining with converted UID:", numericUid);
             
-            // Now pass the properly typed UID to the join method
+            // Join with the proper numeric UID
             const joinedUid = await client.join(
-              'fe3e46a0094f486b91a0e90ac8e4379a',
+              AGORA_APP_ID,
               agoraChannelName,
               agoraToken,
-              uidToUse
+              numericUid
             );
+            
             clearTimeout(timeout);
             resolve(joinedUid);
           } catch (error) {
@@ -164,6 +205,110 @@ export const useAgoraVideo = (appointmentId: string) => {
       setIsLoading(false);
       throw error;
     }
+  }, [AGORA_APP_ID]);
+
+  const initializeTracks = useCallback(async () => {
+    try {
+      if (!localAudioTrackRef.current) {
+        localAudioTrackRef.current = await AgoraRTC.createMicrophoneAudioTrack();
+        console.log("Microphone audio track created");
+      }
+      
+      if (!localVideoTrackRef.current) {
+        localVideoTrackRef.current = await AgoraRTC.createCameraVideoTrack();
+        console.log("Camera video track created");
+      }
+      
+      return {
+        audioTrack: localAudioTrackRef.current,
+        videoTrack: localVideoTrackRef.current
+      };
+    } catch (err: any) {
+      console.error("Error initializing tracks:", err);
+      setError(`Failed to initialize audio/video: ${err.message}`);
+      throw err;
+    }
+  }, []);
+
+  const startLivestream = useCallback(async (uid: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Initialize Agora client if not already done
+      if (!agoraClientRef.current) {
+        console.log("Creating Agora client...");
+        agoraClientRef.current = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+      }
+
+      // Generate token
+      const tokenData = await generateToken(uid);
+      if (!tokenData || !tokenData.token || !tokenData.channelName) {
+        throw new Error("Failed to generate token for livestream");
+      }
+
+      // Initialize tracks
+      await initializeTracks();
+
+      // Join the channel and start broadcasting
+      await joinChannel(tokenData.token, tokenData.channelName, uid);
+      console.log("Livestream started successfully");
+      
+    } catch (err: any) {
+      console.error("Error starting livestream:", err);
+      setError(err.message || "Failed to start livestream");
+      
+      // Cleanup if there was an error
+      await stopLivestream();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [generateToken, initializeTracks, joinChannel]);
+
+  const stopLivestream = useCallback(async () => {
+    try {
+      const client = agoraClientRef.current;
+      
+      if (client && isLivestreamingRef.current) {
+        console.log("Stopping livestream...");
+        
+        // Unpublish tracks if they exist
+        if (localAudioTrackRef.current || localVideoTrackRef.current) {
+          const tracks = [];
+          if (localAudioTrackRef.current) tracks.push(localAudioTrackRef.current);
+          if (localVideoTrackRef.current) tracks.push(localVideoTrackRef.current);
+          
+          if (tracks.length > 0) {
+            await client.unpublish(tracks);
+            console.log("Unpublished local tracks");
+          }
+        }
+        
+        // Leave the channel
+        await client.leave();
+        console.log("Left Agora channel");
+        
+        // Cleanup tracks
+        if (localAudioTrackRef.current) {
+          localAudioTrackRef.current.close();
+          localAudioTrackRef.current = null;
+          console.log("Closed audio track");
+        }
+        
+        if (localVideoTrackRef.current) {
+          localVideoTrackRef.current.close();
+          localVideoTrackRef.current = null;
+          console.log("Closed video track");
+        }
+        
+        isLivestreamingRef.current = false;
+      } else {
+        console.log("No active livestream to stop");
+      }
+    } catch (err: any) {
+      console.error("Error stopping livestream:", err);
+      setError(`Failed to stop livestream: ${err.message}`);
+    }
   }, []);
 
   return {
@@ -171,7 +316,12 @@ export const useAgoraVideo = (appointmentId: string) => {
     token,
     channelName,
     error,
+    agoraClient: agoraClientRef.current,
+    localAudioTrack: localAudioTrackRef.current,
+    localVideoTrack: localVideoTrackRef.current,
     generateToken,
     joinChannel,
+    startLivestream,
+    stopLivestream
   };
 };
