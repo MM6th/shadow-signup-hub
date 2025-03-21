@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { useVideoCall } from '@/components/video-conference/useVideoCall';
 import LocalVideo from '@/components/video-conference/LocalVideo';
