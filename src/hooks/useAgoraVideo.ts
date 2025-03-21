@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -112,11 +113,24 @@ export const useAgoraVideo = (appointmentId: string) => {
           }, 15000);
           
           try {
-            const uidNumber = parseInt(String(client.uid || ''), 10);
-            const uidToUse = !isNaN(uidNumber) ? uidNumber : null;
+            // Convert the client.uid to a number, or use null if it's not a valid number
+            // This is the key fix: Making sure we're passing a number or null to client.join
+            let uidToUse: number | null = null;
+            
+            if (client.uid) {
+              // Ensure we're working with a string first
+              const uidString = String(client.uid);
+              const parsedUid = parseInt(uidString, 10);
+              
+              // Only use the parsed UID if it's a valid number
+              if (!isNaN(parsedUid)) {
+                uidToUse = parsedUid;
+              }
+            }
             
             console.log("Joining with UID:", uidToUse);
             
+            // Now pass the properly typed UID to the join method
             const joinedUid = await client.join(
               'fe3e46a0094f486b91a0e90ac8e4379a',
               agoraChannelName,
