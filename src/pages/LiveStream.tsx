@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -114,11 +115,16 @@ const LiveStream: React.FC = () => {
           await joinStream();
         }
         
+        // Fix the promise chain to properly handle errors
         if (!isUserHost && livestreamData) {
-          await supabase
-            .from('livestreams')
-            .update({ views: livestreamData.views + 1 })
-            .eq('id', livestreamData.id);
+          try {
+            await supabase
+              .from('livestreams')
+              .update({ views: livestreamData.views + 1 })
+              .eq('id', livestreamData.id);
+          } catch (error) {
+            console.error("Error updating view count:", error);
+          }
         }
       } catch (error) {
         console.error("Error initializing stream:", error);

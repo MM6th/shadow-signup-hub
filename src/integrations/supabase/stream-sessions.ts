@@ -1,5 +1,6 @@
 
 import { supabase } from './client';
+import { Json } from './types';
 
 export interface StreamSessionData {
   id: string;
@@ -11,6 +12,17 @@ export interface StreamSessionData {
   created_at: string;
   updated_at: string;
 }
+
+// Helper functions to convert between RTCSessionDescriptionInit and Json
+const jsonToRTCSessionDescription = (json: Json | null): RTCSessionDescriptionInit | undefined => {
+  if (!json) return undefined;
+  return json as unknown as RTCSessionDescriptionInit;
+};
+
+const jsonToRTCIceCandidateArray = (jsonArray: Json[] | null): RTCIceCandidateInit[] => {
+  if (!jsonArray) return [];
+  return jsonArray.map(item => item as unknown as RTCIceCandidateInit);
+};
 
 export const getOrCreateStreamSession = async (sessionId: string): Promise<StreamSessionData | null> => {
   try {
@@ -27,7 +39,14 @@ export const getOrCreateStreamSession = async (sessionId: string): Promise<Strea
     }
     
     if (existingSession) {
-      return existingSession as StreamSessionData;
+      // Convert from database types to our interface
+      return {
+        ...existingSession,
+        offer: jsonToRTCSessionDescription(existingSession.offer),
+        answer: jsonToRTCSessionDescription(existingSession.answer),
+        offer_candidates: jsonToRTCIceCandidateArray(existingSession.offer_candidates),
+        answer_candidates: jsonToRTCIceCandidateArray(existingSession.answer_candidates),
+      } as StreamSessionData;
     }
     
     // Create new session if it doesn't exist
@@ -47,7 +66,14 @@ export const getOrCreateStreamSession = async (sessionId: string): Promise<Strea
       return null;
     }
     
-    return session as StreamSessionData;
+    // Convert from database types to our interface
+    return {
+      ...session,
+      offer: jsonToRTCSessionDescription(session.offer),
+      answer: jsonToRTCSessionDescription(session.answer),
+      offer_candidates: jsonToRTCIceCandidateArray(session.offer_candidates),
+      answer_candidates: jsonToRTCIceCandidateArray(session.answer_candidates),
+    } as StreamSessionData;
   } catch (error) {
     console.error('Error in getOrCreateStreamSession:', error);
     return null;
@@ -67,7 +93,14 @@ export const getStreamSession = async (sessionId: string): Promise<StreamSession
       return null;
     }
     
-    return data as StreamSessionData;
+    // Convert from database types to our interface
+    return {
+      ...data,
+      offer: jsonToRTCSessionDescription(data.offer),
+      answer: jsonToRTCSessionDescription(data.answer),
+      offer_candidates: jsonToRTCIceCandidateArray(data.offer_candidates),
+      answer_candidates: jsonToRTCIceCandidateArray(data.answer_candidates),
+    } as StreamSessionData;
   } catch (error) {
     console.error('Error in getStreamSession:', error);
     return null;
@@ -81,7 +114,7 @@ export const updateSessionOffer = async (
   try {
     const { error } = await supabase
       .from('stream_sessions')
-      .update({ offer })
+      .update({ offer: offer as unknown as Json })
       .eq('id', sessionId);
       
     if (error) {
@@ -103,7 +136,7 @@ export const updateSessionAnswer = async (
   try {
     const { error } = await supabase
       .from('stream_sessions')
-      .update({ answer })
+      .update({ answer: answer as unknown as Json })
       .eq('id', sessionId);
       
     if (error) {
@@ -136,7 +169,7 @@ export const appendOfferCandidate = async (
     }
     
     // Append new candidate and update
-    const candidatesArray = [...(session.offer_candidates || []), candidate];
+    const candidatesArray = [...(session.offer_candidates || []), candidate as unknown as Json];
     
     const { error: updateError } = await supabase
       .from('stream_sessions')
@@ -173,7 +206,7 @@ export const appendAnswerCandidate = async (
     }
     
     // Append new candidate and update
-    const candidatesArray = [...(session.answer_candidates || []), candidate];
+    const candidatesArray = [...(session.answer_candidates || []), candidate as unknown as Json];
     
     const { error: updateError } = await supabase
       .from('stream_sessions')
