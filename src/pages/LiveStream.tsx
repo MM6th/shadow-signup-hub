@@ -132,13 +132,13 @@ const LiveStream: React.FC = () => {
     initializeStream();
   }, [livestreamData, hasPaid, user, isConnected, startStream, joinStream]);
   
-  const handleEndStream = () => {
+  const handleEndStream = async () => {
     endStream();
     navigate('/dashboard');
     
     if (isHost && livestreamData) {
       try {
-        const { error } = supabase
+        const { error } = await supabase
           .from('livestreams')
           .update({ 
             is_active: false,
