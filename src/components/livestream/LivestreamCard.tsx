@@ -31,14 +31,6 @@ const LivestreamCard: React.FC<LivestreamCardProps> = ({ stream, onDelete }) => 
     navigate(`/livestream/${conferenceId}`);
   };
 
-  console.log('Stream status check:', {
-    id: stream.id,
-    title: stream.title,
-    is_active: stream.is_active,
-    ended_at: stream.ended_at,
-    isActiveResult: active
-  });
-
   return (
     <Card key={stream.id} className="overflow-hidden">
       <div className="aspect-video bg-gray-100 relative">
