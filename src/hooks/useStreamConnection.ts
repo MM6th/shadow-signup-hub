@@ -2,6 +2,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  getOrCreateStreamSession,
+  getStreamSession,
+  updateSessionOffer,
+  updateSessionAnswer,
+  appendOfferCandidate,
+  appendAnswerCandidate,
+  StreamSessionData
+} from '@/integrations/supabase/stream-sessions';
 
 interface StreamSession {
   id: string;
@@ -95,14 +104,10 @@ export const useStreamConnection = (streamId: string) => {
     try {
       if (isHost) {
         // Host adds candidate to offerCandidates
-        await supabase.from('stream_sessions').update({
-          offer_candidates: supabase.sql`array_append(offer_candidates, ${JSON.stringify(event.candidate.toJSON())})`
-        }).eq('id', streamId);
+        await appendOfferCandidate(streamId, event.candidate.toJSON());
       } else {
         // Viewer adds candidate to answerCandidates
-        await supabase.from('stream_sessions').update({
-          answer_candidates: supabase.sql`array_append(answer_candidates, ${JSON.stringify(event.candidate.toJSON())})`
-        }).eq('id', streamId);
+        await appendAnswerCandidate(streamId, event.candidate.toJSON());
       }
     } catch (err) {
       console.error("Error saving ICE candidate:", err);
@@ -136,21 +141,35 @@ export const useStreamConnection = (streamId: string) => {
     };
   }, [streamId]);
 
+  // Convert Supabase session data to StreamSession format
+  const convertSessionData = (data: StreamSessionData): StreamSession => {
+    return {
+      id: data.id,
+      offer: data.offer,
+      answer: data.answer,
+      offerCandidates: data.offer_candidates || [],
+      answerCandidates: data.answer_candidates || []
+    };
+  };
+
   // Handle session updates from Supabase
   const handleSessionUpdate = async (payload: any) => {
     console.log("Session update received:", payload);
     
-    const session = payload.new;
-    sessionRef.current = session;
-    
     try {
+      const sessionData = await getStreamSession(streamId);
+      if (!sessionData) return;
+      
+      const session = convertSessionData(sessionData);
+      sessionRef.current = session;
+      
       if (!isHost && session.offer && !peerConnection.current?.remoteDescription) {
         console.log("Setting remote description (offer)");
         await peerConnection.current?.setRemoteDescription(new RTCSessionDescription(session.offer));
         
         // Process any existing ICE candidates
-        if (session.offer_candidates) {
-          for (const candidate of session.offer_candidates) {
+        if (session.offerCandidates.length > 0) {
+          for (const candidate of session.offerCandidates) {
             console.log("Adding ICE candidate from offer");
             await peerConnection.current?.addIceCandidate(new RTCIceCandidate(candidate));
           }
@@ -162,9 +181,9 @@ export const useStreamConnection = (streamId: string) => {
         await peerConnection.current?.setLocalDescription(answer);
         
         // Save answer to Supabase
-        await supabase.from('stream_sessions').update({
-          answer: answer
-        }).eq('id', streamId);
+        if (answer) {
+          await updateSessionAnswer(streamId, answer);
+        }
       }
       
       if (isHost && session.answer && !peerConnection.current?.remoteDescription) {
@@ -172,8 +191,8 @@ export const useStreamConnection = (streamId: string) => {
         await peerConnection.current?.setRemoteDescription(new RTCSessionDescription(session.answer));
         
         // Process any existing ICE candidates
-        if (session.answer_candidates) {
-          for (const candidate of session.answer_candidates) {
+        if (session.answerCandidates.length > 0) {
+          for (const candidate of session.answerCandidates) {
             console.log("Adding ICE candidate from answer");
             await peerConnection.current?.addIceCandidate(new RTCIceCandidate(candidate));
           }
@@ -181,8 +200,8 @@ export const useStreamConnection = (streamId: string) => {
       }
       
       // Process new ICE candidates
-      if (!isHost && session.offer_candidates) {
-        for (const candidate of session.offer_candidates) {
+      if (!isHost && session.offerCandidates.length > 0) {
+        for (const candidate of session.offerCandidates) {
           if (!peerConnection.current?.remoteDescription) continue;
           console.log("Adding ICE candidate from offer");
           try {
@@ -193,8 +212,8 @@ export const useStreamConnection = (streamId: string) => {
         }
       }
       
-      if (isHost && session.answer_candidates) {
-        for (const candidate of session.answer_candidates) {
+      if (isHost && session.answerCandidates.length > 0) {
+        for (const candidate of session.answerCandidates) {
           if (!peerConnection.current?.remoteDescription) continue;
           console.log("Adding ICE candidate from answer");
           try {
@@ -219,34 +238,12 @@ export const useStreamConnection = (streamId: string) => {
       console.log("Starting stream as host for:", streamId);
       
       // Create a new session or get existing one
-      const { data: sessionData, error: sessionError } = await supabase
-        .from('stream_sessions')
-        .select('*')
-        .eq('id', streamId)
-        .single();
-        
-      if (sessionError && sessionError.code !== 'PGRST116') {
-        // PGRST116 is "no rows returned" - we'll create a new session in that case
-        console.error("Error getting session:", sessionError);
-        throw new Error("Failed to get stream session");
+      const sessionData = await getOrCreateStreamSession(streamId);
+      if (!sessionData) {
+        throw new Error("Failed to create stream session");
       }
       
-      if (!sessionData) {
-        // Create a new session
-        const { error: createError } = await supabase
-          .from('stream_sessions')
-          .insert({
-            id: streamId,
-            host_id: (await supabase.auth.getSession()).data.session?.user.id,
-            offer_candidates: [],
-            answer_candidates: []
-          });
-          
-        if (createError) {
-          console.error("Error creating session:", createError);
-          throw new Error("Failed to create stream session");
-        }
-      }
+      sessionRef.current = convertSessionData(sessionData);
       
       // Set up subscription
       setupSubscription();
@@ -275,9 +272,7 @@ export const useStreamConnection = (streamId: string) => {
       await pc.setLocalDescription(offer);
       
       // Save offer to Supabase
-      await supabase.from('stream_sessions').update({
-        offer: offer
-      }).eq('id', streamId);
+      await updateSessionOffer(streamId, offer);
       
       setIsLoading(false);
       return stream;
@@ -303,22 +298,16 @@ export const useStreamConnection = (streamId: string) => {
       console.log("Joining stream as viewer for:", streamId);
       
       // Get session
-      const { data: sessionData, error: sessionError } = await supabase
-        .from('stream_sessions')
-        .select('*')
-        .eq('id', streamId)
-        .single();
-        
-      if (sessionError) {
-        console.error("Error getting session:", sessionError);
+      const sessionData = await getStreamSession(streamId);
+      if (!sessionData) {
         throw new Error("Failed to get stream session");
       }
       
-      if (!sessionData || !sessionData.offer) {
+      if (!sessionData.offer) {
         throw new Error("Stream not found or not started");
       }
       
-      sessionRef.current = sessionData;
+      sessionRef.current = convertSessionData(sessionData);
       
       // Set up subscription
       setupSubscription();
@@ -331,7 +320,7 @@ export const useStreamConnection = (streamId: string) => {
       await pc.setRemoteDescription(new RTCSessionDescription(sessionData.offer));
       
       // Process any existing ICE candidates
-      if (sessionData.offer_candidates) {
+      if (sessionData.offer_candidates.length > 0) {
         for (const candidate of sessionData.offer_candidates) {
           console.log("Adding ICE candidate from offer");
           await pc.addIceCandidate(new RTCIceCandidate(candidate));
@@ -344,9 +333,7 @@ export const useStreamConnection = (streamId: string) => {
       await pc.setLocalDescription(answer);
       
       // Save answer to Supabase
-      await supabase.from('stream_sessions').update({
-        answer: answer
-      }).eq('id', streamId);
+      await updateSessionAnswer(streamId, answer);
       
       setIsLoading(false);
       return remoteStream;

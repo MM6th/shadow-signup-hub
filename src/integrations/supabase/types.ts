@@ -644,6 +644,39 @@ export type Database = {
         }
         Relationships: []
       }
+      stream_sessions: {
+        Row: {
+          answer: Json | null
+          answer_candidates: Json[] | null
+          created_at: string
+          host_id: string
+          id: string
+          offer: Json | null
+          offer_candidates: Json[] | null
+          updated_at: string
+        }
+        Insert: {
+          answer?: Json | null
+          answer_candidates?: Json[] | null
+          created_at?: string
+          host_id: string
+          id: string
+          offer?: Json | null
+          offer_candidates?: Json[] | null
+          updated_at?: string
+        }
+        Update: {
+          answer?: Json | null
+          answer_candidates?: Json[] | null
+          created_at?: string
+          host_id?: string
+          id?: string
+          offer?: Json | null
+          offer_candidates?: Json[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       video_demand_meters: {
         Row: {
           created_at: string | null
