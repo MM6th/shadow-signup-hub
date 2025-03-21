@@ -1,6 +1,5 @@
-
 import React, { useRef, useEffect, useState } from 'react';
-import { useWebRTC } from '@/hooks/useWebRTC';
+import { useVideoCall } from '@/components/video-conference/useVideoCall';
 import LocalVideo from '@/components/video-conference/LocalVideo';
 import RemoteVideo from '@/components/video-conference/RemoteVideo';
 import CallControls from '@/components/video-conference/CallControls';
@@ -48,9 +47,8 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     endCall,
     localTracks,
     remoteTracks
-  } = useWebRTC(roomId);
+  } = useVideoCall(roomId);
 
-  // Update viewer count when connection status changes
   useEffect(() => {
     if (isConnected) {
       setViewerCount(2); // Host + guest
@@ -59,7 +57,6 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     }
   }, [isConnected]);
 
-  // Call duration timer
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isConnected) {
@@ -73,12 +70,10 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     };
   }, [isConnected]);
 
-  // Log connection status changes
   useEffect(() => {
     console.log("VideoConference connection status:", { isConnected, isHost });
   }, [isConnected, isHost]);
 
-  // Log tracks for debugging
   useEffect(() => {
     console.log("Current tracks:", {
       localVideo: localTracks.videoTrack?.id,
@@ -88,7 +83,6 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     });
   }, [localTracks, remoteTracks]);
 
-  // Explicitly request camera/mic permissions, then initialize call
   const handleRequestPermissions = async () => {
     try {
       setShowPermissionMessage(true);
@@ -96,25 +90,18 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
       
       console.log("VideoConference: Requesting camera and microphone permissions...");
       
-      // Request permissions first
       const permissionsGranted = await requestPermissions();
       
       if (permissionsGranted) {
-        console.log("VideoConference: Permissions granted, initializing call...");
-        // Hide the permission button
         setShowPermissionButton(false);
         
-        // Initialize the call if we have the refs
         if (localVideoRef.current && remoteVideoRef.current) {
           try {
             await initializeCall(localVideoRef.current, remoteVideoRef.current);
             console.log("VideoConference: Call initialized successfully");
-            // Show the call button if this is the host
             if (isHost) {
               setShowCallButton(true);
             } else {
-              // If not host, wait a bit and then attempt to make a call too
-              // This helps with connection from both sides
               setTimeout(() => {
                 makeCall();
               }, 1000);
@@ -162,7 +149,6 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
   };
   
   const handleCopyRoomId = () => {
-    // Create a shareable link
     const shareableLink = `${window.location.origin}/livestream/${roomId}`;
     navigator.clipboard.writeText(shareableLink);
     toast({
@@ -180,7 +166,6 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
     handleRequestPermissions();
   };
 
-  // Generate shareable link
   const shareableLink = `${window.location.origin}/livestream/${roomId}`;
 
   return (
@@ -337,3 +322,4 @@ const VideoConference: React.FC<VideoConferenceProps> = ({
 };
 
 export default VideoConference;
+
