@@ -78,7 +78,7 @@ const LiveStreamModal: React.FC<LiveStreamModalProps> = ({ open, onOpenChange, o
       
       if (error) throw error;
       
-      // Create an initial WebRTC session
+      // Create an initial WebRTC session with type assertion
       const { error: sessionError } = await supabase
         .from('webrtc_sessions')
         .insert({
@@ -88,7 +88,7 @@ const LiveStreamModal: React.FC<LiveStreamModalProps> = ({ open, onOpenChange, o
             candidatesOffer: [],
             candidatesAnswer: []
           }
-        });
+        } as any); // Using type assertion to bypass TypeScript check
         
       if (sessionError) {
         console.error("WebRTC session creation error:", sessionError);

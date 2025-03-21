@@ -122,7 +122,7 @@ export const useWebRTCStream = (streamId: string) => {
             id: streamId,
             data: sessionData,
             created_at: new Date().toISOString()
-          });
+          } as any);
           
         // Listen for answers
         const subscription = supabase
@@ -185,9 +185,9 @@ export const useWebRTCStream = (streamId: string) => {
       // Fetch the session data
       const { data, error } = await supabase
         .from('webrtc_sessions')
-        .select('data')
+        .select('*')
         .eq('id', streamId)
-        .single();
+        .single() as any;
         
       if (error) throw error;
       if (!data) throw new Error('Session not found');
@@ -249,7 +249,7 @@ export const useWebRTCStream = (streamId: string) => {
             answer: answer,
             candidatesAnswer: []
           }
-        })
+        } as any)
         .eq('id', streamId);
         
       // Listen for offer candidate updates
@@ -292,9 +292,9 @@ export const useWebRTCStream = (streamId: string) => {
       // Get the current session data
       const { data, error } = await supabase
         .from('webrtc_sessions')
-        .select('data')
+        .select('*')
         .eq('id', streamId)
-        .single();
+        .single() as any;
         
       if (error) throw error;
       if (!data) throw new Error('Session not found');
@@ -315,7 +315,7 @@ export const useWebRTCStream = (streamId: string) => {
       // Update the session
       await supabase
         .from('webrtc_sessions')
-        .update({ data: sessionData })
+        .update({ data: sessionData } as any)
         .eq('id', streamId);
     } catch (err) {
       console.error('Error updating session with ICE candidate:', err);

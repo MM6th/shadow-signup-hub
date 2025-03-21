@@ -18,6 +18,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 const LivestreamTab: React.FC = () => {
@@ -161,7 +162,7 @@ const LivestreamTab: React.FC = () => {
                   {stream.is_active ? 'Join' : 'Play Recording'}
                 </Button>
                 
-                <AlertDialog open={streamToDelete === stream.id} onOpenChange={(open) => !open && setStreamToDelete(null)}>
+                <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" size="icon" onClick={() => setStreamToDelete(stream.id)}>
                       <Trash2 className="h-4 w-4" />

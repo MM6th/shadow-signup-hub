@@ -15,7 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Send, Mic, MicOff, Video as VideoIcon, VideoOff, Copy, Users, X } from 'lucide-react';
+import { Send, Mic, MicOff, Video as VideoIcon, VideoOff, Copy, Users, X, Play } from 'lucide-react';
 import PaymentDialog from '@/components/PaymentDialog';
 import { ADMIN_IDS } from '@/hooks/useUserSession';
 
@@ -314,7 +314,8 @@ const LiveStream: React.FC = () => {
             </div>
             <div className="flex justify-center gap-4">
               <Button onClick={handleWatchRecording} disabled={!recordingUrl}>
-                {recordingUrl ? 'Open Full Recording' : 'Recording Unavailable'}
+                <Play className="h-4 w-4 mr-2" />
+                {recordingUrl ? 'Play Recording' : 'Recording Unavailable'}
               </Button>
               <Button variant="outline" onClick={() => navigate('/dashboard')}>
                 Return to Dashboard
