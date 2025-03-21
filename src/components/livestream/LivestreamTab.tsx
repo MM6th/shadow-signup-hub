@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, Video, Trash2 } from 'lucide-react';
+import { PlusCircle, Video, Trash2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -143,7 +144,7 @@ const LivestreamTab: React.FC = () => {
               <CardContent className="p-4">
                 <h3 className="font-medium text-lg mb-2">{stream.title}</h3>
                 <div className="flex justify-between text-sm text-gray-500">
-                  <span>Views: {stream.views}</span>
+                  <span>Views: {stream.views || 0}</span>
                   <span>
                     {stream.is_active 
                       ? 'Started ' + formatDistanceToNow(new Date(stream.created_at), { addSuffix: true })
@@ -158,7 +159,14 @@ const LivestreamTab: React.FC = () => {
                   className="flex-1 mr-2" 
                   onClick={() => handleJoinLivestream(stream.conference_id, stream.is_active)}
                 >
-                  {stream.is_active ? 'Join' : 'Play Recording'}
+                  {stream.is_active ? (
+                    <>Join</>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-2" />
+                      Play Recording
+                    </>
+                  )}
                 </Button>
                 
                 <AlertDialog>
