@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import AgoraRTC, { IAgoraRTCClient, ILocalAudioTrack, ILocalVideoTrack } from 'agora-rtc-sdk-ng';
+import AgoraRTC, { IAgoraRTCClient, ILocalAudioTrack, ILocalVideoTrack, ConnectionState } from 'agora-rtc-sdk-ng';
 
 interface TokenData {
   token: string;
@@ -103,7 +103,7 @@ export const useAgoraVideo = (appointmentId: string) => {
         if (curState === "CONNECTED") {
           setIsLoading(false);
           setError(null);
-        } else if (curState === "DISCONNECTED" || curState === "FAILED") {
+        } else if (curState === "DISCONNECTED") {
           setError(`Connection failed: ${curState}`);
           setIsLoading(false);
         }
@@ -122,11 +122,13 @@ export const useAgoraVideo = (appointmentId: string) => {
           
           try {
             // Join the channel
+            // Convert string UID to number if it's a numeric string
+            const uidNumber = parseInt(uid, 10);
             const uid = await client.join(
               'fe3e46a0094f486b91a0e90ac8e4379a', // Updated Agora App ID
               agoraChannelName,
               agoraToken,
-              null // Use null for a random UID, or specify a number
+              isNaN(uidNumber) ? null : uidNumber // Use null for a random UID, or specify a number
             );
             clearTimeout(timeout);
             resolve(uid);

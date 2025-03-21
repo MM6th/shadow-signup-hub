@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAgoraVideo } from '@/hooks/useAgoraVideo';
-import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack, IRemoteVideoTrack, IRemoteAudioTrack, ClientConfig } from 'agora-rtc-sdk-ng';
+import AgoraRTC, { ICameraVideoTrack, IMicrophoneAudioTrack, IRemoteVideoTrack, IRemoteAudioTrack, ClientConfig, ConnectionState } from 'agora-rtc-sdk-ng';
 
 export const useVideoCall = (roomId: string) => {
   const { toast } = useToast();
@@ -184,7 +184,7 @@ export const useVideoCall = (roomId: string) => {
           if (curState === "CONNECTED") {
             setIsConnected(true);
             setConnectionError(null);
-          } else if (curState === "DISCONNECTED" || curState === "FAILED") {
+          } else if (curState === "DISCONNECTED") {
             setIsConnected(false);
             setConnectionError(`Connection state: ${curState}`);
           }
