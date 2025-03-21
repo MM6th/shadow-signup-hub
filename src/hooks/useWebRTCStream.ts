@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -8,6 +9,7 @@ export const useWebRTCStream = (streamId: string) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<string>('initializing');
   const { toast } = useToast();
 
   const peerConnection = useRef<RTCPeerConnection | null>(null);
@@ -15,28 +17,66 @@ export const useWebRTCStream = (streamId: string) => {
   const remoteStream = useRef<MediaStream | null>(null);
   
   const iceCandidates = useRef<RTCIceCandidate[]>([]);
+  const subscriptionRef = useRef<any>(null);
 
   const initializeWebRTC = useCallback(async (): Promise<boolean> => {
     try {
       setIsLoading(true);
+      setConnectionStatus('initializing');
+      console.log(`[WebRTC] Initializing WebRTC for stream: ${streamId}`);
       
+      // More comprehensive ICE server configuration
       const configuration = {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
-        ]
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun3.l.google.com:19302' },
+          { urls: 'stun:stun4.l.google.com:19302' },
+        ],
+        iceCandidatePoolSize: 10
       };
       
+      // Clean up any existing connection
+      if (peerConnection.current) {
+        peerConnection.current.close();
+        peerConnection.current = null;
+      }
+      
       peerConnection.current = new RTCPeerConnection(configuration);
+      
+      // Set up debugging listeners for connection state
+      if (peerConnection.current) {
+        peerConnection.current.addEventListener('connectionstatechange', () => {
+          const state = peerConnection.current?.connectionState;
+          console.log(`[WebRTC] Connection state changed: ${state}`);
+          setConnectionStatus(state || 'unknown');
+        });
+        
+        peerConnection.current.addEventListener('iceconnectionstatechange', () => {
+          const state = peerConnection.current?.iceConnectionState;
+          console.log(`[WebRTC] ICE connection state changed: ${state}`);
+        });
+        
+        peerConnection.current.addEventListener('icegatheringstatechange', () => {
+          const state = peerConnection.current?.iceGatheringState;
+          console.log(`[WebRTC] ICE gathering state changed: ${state}`);
+        });
+        
+        peerConnection.current.addEventListener('negotiationneeded', () => {
+          console.log(`[WebRTC] Negotiation needed`);
+        });
+      }
       
       remoteStream.current = new MediaStream();
       
       return true;
     } catch (err: any) {
-      console.error('Error initializing WebRTC:', err);
+      console.error('[WebRTC] Error initializing WebRTC:', err);
       setError(err.message || 'Failed to initialize WebRTC');
+      setConnectionStatus('failed');
       toast({
-        title: "Error",
+        title: "WebRTC Error",
         description: err.message || 'Failed to initialize WebRTC',
         variant: "destructive",
       });
@@ -44,23 +84,29 @@ export const useWebRTCStream = (streamId: string) => {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, streamId]);
 
   const startStream = useCallback(async (): Promise<MediaStream | null> => {
     try {
+      console.log(`[WebRTC] Starting stream as host for: ${streamId}`);
+      
       if (!peerConnection.current) {
         const initialized = await initializeWebRTC();
         if (!initialized) return null;
       }
       
+      console.log('[WebRTC] Requesting user media...');
       localStream.current = await navigator.mediaDevices.getUserMedia({ 
         video: true, 
         audio: true 
       });
       
+      console.log('[WebRTC] User media obtained successfully. Adding tracks to peer connection.');
+      
       if (peerConnection.current && localStream.current) {
         localStream.current.getTracks().forEach(track => {
           if (peerConnection.current && localStream.current) {
+            console.log(`[WebRTC] Adding track: ${track.kind} to peer connection`);
             peerConnection.current.addTrack(track, localStream.current);
           }
         });
@@ -69,23 +115,36 @@ export const useWebRTCStream = (streamId: string) => {
       if (peerConnection.current) {
         peerConnection.current.onicecandidate = (event) => {
           if (event.candidate) {
+            console.log(`[WebRTC] New ICE candidate: ${event.candidate.candidate}`);
             iceCandidates.current.push(event.candidate);
             updateSessionWithCandidate(event.candidate, true);
+          } else {
+            console.log('[WebRTC] ICE candidate gathering complete');
           }
         };
         
         peerConnection.current.onconnectionstatechange = () => {
           if (peerConnection.current) {
-            console.log("Connection state:", peerConnection.current.connectionState);
+            console.log(`[WebRTC] Connection state changed: ${peerConnection.current.connectionState}`);
+            setConnectionStatus(peerConnection.current.connectionState);
+            
             if (peerConnection.current.connectionState === 'connected') {
+              console.log('[WebRTC] Connection established successfully!');
               setIsConnected(true);
+              toast({
+                title: "Connected",
+                description: "Livestream connection established successfully",
+              });
             } else if (['disconnected', 'failed', 'closed'].includes(peerConnection.current.connectionState)) {
+              console.log(`[WebRTC] Connection ${peerConnection.current.connectionState}`);
               setIsConnected(false);
             }
           }
         };
         
+        console.log('[WebRTC] Creating offer...');
         const offer = await peerConnection.current.createOffer();
+        console.log('[WebRTC] Setting local description...');
         await peerConnection.current.setLocalDescription(offer);
         
         const sessionData: WebRTCSessionData = {
@@ -94,6 +153,7 @@ export const useWebRTCStream = (streamId: string) => {
           candidatesOffer: []
         };
         
+        console.log('[WebRTC] Storing session data in database...');
         try {
           await supabase
             .from('webrtc_sessions')
@@ -102,48 +162,75 @@ export const useWebRTCStream = (streamId: string) => {
               data: sessionData as unknown as Json,
               created_at: new Date().toISOString()
             });
+          console.log('[WebRTC] Session data stored successfully.');
         } catch (err) {
-          console.error('Error storing session:', err);
+          console.error('[WebRTC] Error storing session:', err);
         }
-          
-        const subscription = supabase
-          .channel(`webrtc_sessions:id=eq.${streamId}`)
-          .on('postgres_changes', { 
-            event: 'UPDATE', 
-            schema: 'public', 
-            table: 'webrtc_sessions',
-            filter: `id=eq.${streamId}`
-          }, async (payload) => {
-            const sessionData = payload.new.data as WebRTCSessionData;
-            
-            if (sessionData.answer && peerConnection.current?.currentRemoteDescription === null) {
-              const remoteDesc = new RTCSessionDescription(sessionData.answer);
-              await peerConnection.current?.setRemoteDescription(remoteDesc);
+        
+        // Create a subscription only if one doesn't exist
+        if (!subscriptionRef.current) {
+          console.log('[WebRTC] Setting up Supabase realtime subscription...');
+          subscriptionRef.current = supabase
+            .channel(`webrtc_sessions:id=eq.${streamId}`)
+            .on('postgres_changes', { 
+              event: 'UPDATE', 
+              schema: 'public', 
+              table: 'webrtc_sessions',
+              filter: `id=eq.${streamId}`
+            }, async (payload) => {
+              console.log('[WebRTC] Received session update:', payload.new);
+              const sessionData = payload.new.data as WebRTCSessionData;
               
-              if (sessionData.candidatesAnswer && sessionData.candidatesAnswer.length > 0) {
-                for (const candidate of sessionData.candidatesAnswer) {
-                  await peerConnection.current?.addIceCandidate(new RTCIceCandidate(candidate));
+              if (sessionData.answer && peerConnection.current?.currentRemoteDescription === null) {
+                console.log('[WebRTC] Setting remote description from answer...');
+                try {
+                  const remoteDesc = new RTCSessionDescription(sessionData.answer);
+                  await peerConnection.current?.setRemoteDescription(remoteDesc);
+                  console.log('[WebRTC] Remote description set successfully.');
+                  
+                  if (sessionData.candidatesAnswer && sessionData.candidatesAnswer.length > 0) {
+                    console.log(`[WebRTC] Processing ${sessionData.candidatesAnswer.length} remote ICE candidates...`);
+                    for (const candidate of sessionData.candidatesAnswer) {
+                      try {
+                        await peerConnection.current?.addIceCandidate(new RTCIceCandidate(candidate));
+                        console.log('[WebRTC] Remote ICE candidate added successfully.');
+                      } catch (err) {
+                        console.error('[WebRTC] Error adding remote ICE candidate:', err);
+                      }
+                    }
+                  }
+                } catch (err) {
+                  console.error('[WebRTC] Error setting remote description:', err);
                 }
               }
-            }
-            
-            if (sessionData.candidatesAnswer && sessionData.candidatesAnswer.length > 0) {
-              for (const candidate of sessionData.candidatesAnswer) {
-                await peerConnection.current?.addIceCandidate(new RTCIceCandidate(candidate));
+              
+              if (sessionData.candidatesAnswer && sessionData.candidatesAnswer.length > 0) {
+                console.log(`[WebRTC] Processing ${sessionData.candidatesAnswer.length} remote ICE candidates...`);
+                for (const candidate of sessionData.candidatesAnswer) {
+                  try {
+                    await peerConnection.current?.addIceCandidate(new RTCIceCandidate(candidate));
+                    console.log('[WebRTC] Remote ICE candidate added successfully.');
+                  } catch (err) {
+                    console.error('[WebRTC] Error adding remote ICE candidate:', err);
+                  }
+                }
               }
-            }
-          })
-          .subscribe();
+            })
+            .subscribe((status) => {
+              console.log(`[WebRTC] Supabase subscription status: ${status}`);
+            });
+        }
           
         return localStream.current;
       }
       
       return null;
     } catch (err: any) {
-      console.error('Error starting WebRTC stream:', err);
+      console.error('[WebRTC] Error starting WebRTC stream:', err);
       setError(err.message || 'Failed to start stream');
+      setConnectionStatus('failed');
       toast({
-        title: "Error",
+        title: "Stream Error",
         description: err.message || 'Failed to start stream',
         variant: "destructive",
       });
@@ -243,9 +330,14 @@ export const useWebRTCStream = (streamId: string) => {
 
   const updateSessionWithCandidate = async (candidate: RTCIceCandidate, isOffer: boolean) => {
     try {
+      console.log(`[WebRTC] Updating session with new ${isOffer ? 'offer' : 'answer'} ICE candidate`);
       const session = await getWebRTCSession(streamId);
       
-      if (!session) throw new Error('Session not found');
+      if (!session) {
+        console.error('[WebRTC] Session not found when trying to update candidate');
+        throw new Error('Session not found');
+      }
+      
       const sessionData = session.data;
       
       if (isOffer) {
@@ -258,9 +350,14 @@ export const useWebRTCStream = (streamId: string) => {
         sessionData.candidatesAnswer = candidatesAnswer;
       }
       
-      await updateWebRTCSession(streamId, sessionData);
+      const result = await updateWebRTCSession(streamId, sessionData);
+      if (result) {
+        console.log('[WebRTC] Session updated with ICE candidate successfully');
+      } else {
+        console.error('[WebRTC] Failed to update session with ICE candidate');
+      }
     } catch (err) {
-      console.error('Error updating session with ICE candidate:', err);
+      console.error('[WebRTC] Error updating session with ICE candidate:', err);
     }
   };
 
@@ -334,6 +431,7 @@ export const useWebRTCStream = (streamId: string) => {
     isLoading,
     isConnected,
     error,
+    connectionStatus,
     startStream,
     joinStream,
     endStream,

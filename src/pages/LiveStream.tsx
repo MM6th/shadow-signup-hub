@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Send, Mic, MicOff, Video as VideoIcon, VideoOff, Copy, Users, X, Play } from 'lucide-react';
+import { Send, Mic, MicOff, Video as VideoIcon, VideoOff, Copy, Users, X, Play, AlertTriangle } from 'lucide-react';
 import PaymentDialog from '@/components/PaymentDialog';
 import { ADMIN_IDS } from '@/hooks/useUserSession';
 
@@ -31,7 +30,8 @@ const LiveStream: React.FC = () => {
     joinStream, 
     endStream, 
     playRecording,
-    error 
+    error,
+    connectionStatus
   } = useWebRTCStream(conferenceId || '');
   
   const [livestreamData, setLivestreamData] = useState<any>(null);
@@ -46,17 +46,17 @@ const LiveStream: React.FC = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
-
-  // Refs
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [connectionRetries, setConnectionRetries] = useState(0);
+  const maxRetries = 3;
+  
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
   
-  // Check if current user is an admin
   const isAdmin = user ? ADMIN_IDS.includes(user.id) : false;
   
-  // Fetch livestream data
   useEffect(() => {
     const fetchLivestreamData = async () => {
       if (!conferenceId) return;
@@ -64,7 +64,6 @@ const LiveStream: React.FC = () => {
       try {
         setIsLoadingData(true);
         
-        // Get livestream data
         const { data, error } = await supabase
           .from('livestreams')
           .select('*')
@@ -75,22 +74,17 @@ const LiveStream: React.FC = () => {
         
         setLivestreamData(data);
         
-        // Check if user is the host
         if (user && data.user_id === user.id) {
           setIsHost(true);
-          setHasPaid(true); // Host doesn't need to pay
+          setHasPaid(true);
         }
         
-        // Check if user has paid for this livestream
         if (user && !isHost) {
-          // For now, we'll just set hasPaid to true for admins
-          // In a real implementation, you'd check payment records
           if (isAdmin) {
             setHasPaid(true);
           }
         }
         
-        // If the stream is not active, try to get recording URL
         if (!data.is_active) {
           const recordingUrlResult = await playRecording();
           setRecordingUrl(recordingUrlResult);
@@ -104,7 +98,6 @@ const LiveStream: React.FC = () => {
           variant: "destructive",
         });
         
-        // Navigate back if livestream doesn't exist
         navigate('/dashboard');
       } finally {
         setIsLoadingData(false);
@@ -114,7 +107,6 @@ const LiveStream: React.FC = () => {
     fetchLivestreamData();
   }, [conferenceId, user, navigate, toast, playRecording, isAdmin]);
   
-  // Join the channel when hasPaid changes to true
   useEffect(() => {
     if (hasPaid && !isConnected && !isJoining && livestreamData?.is_active) {
       handleJoinStream();
@@ -129,10 +121,10 @@ const LiveStream: React.FC = () => {
       
       let stream;
       if (isHost) {
-        // Start stream as host
+        console.log("Starting stream as host...");
         stream = await startStream();
       } else {
-        // Join stream as viewer
+        console.log("Joining stream as viewer...");
         stream = await joinStream();
       }
       
@@ -140,20 +132,26 @@ const LiveStream: React.FC = () => {
         throw new Error('Failed to get media stream');
       }
       
-      // Save reference to the stream
+      console.log("Stream obtained successfully:", stream.id);
+      
       if (isHost) {
         localStreamRef.current = stream;
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
+          console.log("Local video element updated with stream");
+        } else {
+          console.error("Local video ref is null");
         }
       } else {
         remoteStreamRef.current = stream;
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = stream;
+          console.log("Remote video element updated with stream");
+        } else {
+          console.error("Remote video ref is null");
         }
       }
       
-      // Increment livestream views
       if (!isHost && livestreamData) {
         await supabase
           .from('livestreams')
@@ -174,10 +172,7 @@ const LiveStream: React.FC = () => {
   };
   
   const handleEndStream = () => {
-    // Stop streaming and clean up
     endStream();
-    
-    // Navigate back to dashboard
     navigate('/dashboard');
   };
   
@@ -260,6 +255,86 @@ const LiveStream: React.FC = () => {
     }
   };
   
+  const handleConnectionRetry = async () => {
+    if (connectionRetries >= maxRetries) {
+      toast({
+        title: "Connection Failed",
+        description: "Maximum retry attempts reached. Please try again later.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setConnectionRetries(prev => prev + 1);
+    
+    try {
+      setIsJoining(true);
+      toast({
+        title: "Retrying Connection",
+        description: `Attempt ${connectionRetries + 1} of ${maxRetries}...`
+      });
+      
+      endStream();
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (isHost) {
+        await startStream();
+      } else {
+        await joinStream();
+      }
+    } catch (err) {
+      console.error("Retry failed:", err);
+    } finally {
+      setIsJoining(false);
+    }
+  };
+  
+  const renderConnectionTroubleshooting = () => {
+    if (!isJoining && !isConnected && connectionStatus !== 'initializing') {
+      return (
+        <div className="p-4 mt-2 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-start">
+            <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 mt-0.5" />
+            <div>
+              <h4 className="font-medium">Connection Issues Detected</h4>
+              <p className="text-sm text-gray-600 mt-1 mb-3">
+                {connectionStatus === 'failed' 
+                  ? "The connection has failed. This could be due to network issues or firewall restrictions."
+                  : "Having trouble connecting to the livestream. This may be due to network conditions."}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleConnectionRetry}
+                  disabled={connectionRetries >= maxRetries || isJoining}
+                >
+                  Retry Connection
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowDebugInfo(!showDebugInfo)}
+                >
+                  {showDebugInfo ? "Hide Debug Info" : "Show Debug Info"}
+                </Button>
+              </div>
+              
+              {showDebugInfo && (
+                <div className="mt-3 p-2 bg-gray-100 rounded text-xs font-mono overflow-x-auto">
+                  <p>Connection status: {connectionStatus}</p>
+                  <p>Retries: {connectionRetries}/{maxRetries}</p>
+                  <p>User role: {isHost ? 'Host' : 'Viewer'}</p>
+                  <p>Error: {error || 'None'}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+  
   if (isLoadingData) {
     return (
       <div className="container mx-auto py-12 flex justify-center">
@@ -284,8 +359,7 @@ const LiveStream: React.FC = () => {
     );
   }
   
-  // For completed streams, show the recording player
-  if (!livestreamData.is_active) {
+  if (!livestreamData?.is_active) {
     return (
       <div className="container mx-auto py-12">
         <Card>
@@ -364,7 +438,7 @@ const LiveStream: React.FC = () => {
             title: livestreamData.title,
             price: 5.00,
             enable_paypal: true,
-            paypal_client_id: 'sb', // Replace with actual client ID
+            paypal_client_id: 'sb',
           }}
           onSuccess={handlePaymentSuccess}
         />
@@ -375,7 +449,6 @@ const LiveStream: React.FC = () => {
   return (
     <div className="container mx-auto py-4 px-4">
       <div className="flex flex-col md:flex-row gap-4 h-[calc(100vh-120px)]">
-        {/* Main content - video streams */}
         <div className="md:w-3/4 flex flex-col">
           <div className="flex justify-between items-center mb-4">
             <div>
@@ -398,7 +471,6 @@ const LiveStream: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-grow">
-            {/* Main video */}
             <div className="md:col-span-2">
               <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden relative">
                 {isHost ? (
@@ -420,7 +492,10 @@ const LiveStream: React.FC = () => {
                 
                 {isJoining && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70">
-                    <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full"></div>
+                    <div className="text-center">
+                      <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                      <p className="text-white">Connecting to livestream...</p>
+                    </div>
                   </div>
                 )}
                 
@@ -428,14 +503,16 @@ const LiveStream: React.FC = () => {
                   <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70">
                     <div className="text-center">
                       <VideoIcon className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                      <p className="text-white">Waiting to connect...</p>
+                      <p className="text-white mb-2">Waiting to connect...</p>
+                      <p className="text-gray-400 text-sm">Connection status: {connectionStatus}</p>
                     </div>
                   </div>
                 )}
               </div>
+              
+              {renderConnectionTroubleshooting()}
             </div>
             
-            {/* Secondary content - chat */}
             <div className="flex flex-col h-full">
               <Card className="h-full flex flex-col">
                 <CardHeader className="p-4">
@@ -490,7 +567,6 @@ const LiveStream: React.FC = () => {
             </div>
           </div>
           
-          {/* Controls */}
           <div className="mt-4 p-4 border rounded-lg flex justify-between items-center">
             <div className="flex space-x-2">
               <Button
