@@ -1,8 +1,9 @@
 
 import { supabase } from './client';
+import { Json } from './types';
 
 // Define the JSON structure for RTCSessionDescription
-interface WebRTCSessionData {
+export interface WebRTCSessionData {
   sessionId: string;
   offer?: RTCSessionDescriptionInit;
   answer?: RTCSessionDescriptionInit;
@@ -23,13 +24,16 @@ export async function createWebRTCSession(id: string, sessionData: WebRTCSession
       .from('webrtc_sessions')
       .insert({
         id,
-        data: sessionData
+        data: sessionData as unknown as Json
       })
       .select()
       .single();
       
     if (error) throw error;
-    return data as WebRTCSession;
+    return {
+      ...data,
+      data: data.data as unknown as WebRTCSessionData
+    } as WebRTCSession;
   } catch (error) {
     console.error('Error creating WebRTC session:', error);
     return null;
@@ -46,7 +50,10 @@ export async function getWebRTCSession(id: string): Promise<WebRTCSession | null
       
     if (error) throw error;
     // Make sure we return with the correct type
-    return data as WebRTCSession;
+    return {
+      ...data,
+      data: data.data as unknown as WebRTCSessionData
+    } as WebRTCSession;
   } catch (error) {
     console.error('Error fetching WebRTC session:', error);
     return null;
@@ -58,7 +65,7 @@ export async function updateWebRTCSession(id: string, sessionData: WebRTCSession
     const { error } = await supabase
       .from('webrtc_sessions')
       .update({
-        data: sessionData
+        data: sessionData as unknown as Json
       })
       .eq('id', id);
       

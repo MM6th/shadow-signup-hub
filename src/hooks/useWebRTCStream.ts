@@ -1,15 +1,8 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { getWebRTCSession, updateWebRTCSession, WebRTCSession } from '@/integrations/supabase/webrtc-sessions';
-
-interface RTCSessionData {
-  sessionId: string;
-  offer?: RTCSessionDescriptionInit;
-  answer?: RTCSessionDescriptionInit;
-  candidatesOffer?: RTCIceCandidateInit[];
-  candidatesAnswer?: RTCIceCandidateInit[];
-}
+import { getWebRTCSession, updateWebRTCSession, WebRTCSession, WebRTCSessionData } from '@/integrations/supabase/webrtc-sessions';
+import { Json } from '@/integrations/supabase/types';
 
 export const useWebRTCStream = (streamId: string) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -95,7 +88,7 @@ export const useWebRTCStream = (streamId: string) => {
         const offer = await peerConnection.current.createOffer();
         await peerConnection.current.setLocalDescription(offer);
         
-        const sessionData: RTCSessionData = {
+        const sessionData: WebRTCSessionData = {
           sessionId: streamId,
           offer: offer,
           candidatesOffer: []
@@ -106,7 +99,7 @@ export const useWebRTCStream = (streamId: string) => {
             .from('webrtc_sessions')
             .upsert({ 
               id: streamId,
-              data: sessionData,
+              data: sessionData as unknown as Json,
               created_at: new Date().toISOString()
             });
         } catch (err) {
@@ -121,7 +114,7 @@ export const useWebRTCStream = (streamId: string) => {
             table: 'webrtc_sessions',
             filter: `id=eq.${streamId}`
           }, async (payload) => {
-            const sessionData = payload.new.data as RTCSessionData;
+            const sessionData = payload.new.data as WebRTCSessionData;
             
             if (sessionData.answer && peerConnection.current?.currentRemoteDescription === null) {
               const remoteDesc = new RTCSessionDescription(sessionData.answer);
@@ -168,7 +161,7 @@ export const useWebRTCStream = (streamId: string) => {
       const session = await getWebRTCSession(streamId);
       
       if (!session) throw new Error('Session not found');
-      const sessionData = session.data as RTCSessionData;
+      const sessionData = session.data as WebRTCSessionData;
       if (!sessionData.offer) throw new Error('No offer found in session');
       
       const remoteDesc = new RTCSessionDescription(sessionData.offer);
@@ -208,7 +201,7 @@ export const useWebRTCStream = (streamId: string) => {
       await peerConnection.current.setLocalDescription(answer);
       
       if (session && sessionData) {
-        const updatedSessionData: RTCSessionData = {
+        const updatedSessionData: WebRTCSessionData = {
           ...sessionData,
           answer: answer,
           candidatesAnswer: sessionData.candidatesAnswer || []
@@ -224,7 +217,7 @@ export const useWebRTCStream = (streamId: string) => {
             table: 'webrtc_sessions',
             filter: `id=eq.${streamId}`
           }, async (payload) => {
-            const data = payload.new.data as RTCSessionData;
+            const data = payload.new.data as WebRTCSessionData;
             
             if (data.candidatesOffer && data.candidatesOffer.length > 0) {
               for (const candidate of data.candidatesOffer) {
@@ -253,7 +246,7 @@ export const useWebRTCStream = (streamId: string) => {
       const session = await getWebRTCSession(streamId);
       
       if (!session) throw new Error('Session not found');
-      const sessionData = session.data as RTCSessionData;
+      const sessionData = session.data;
       
       if (isOffer) {
         const candidatesOffer = sessionData.candidatesOffer || [];
